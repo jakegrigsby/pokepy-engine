@@ -1,0 +1,38 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "pokepy"
+version = "0.1.0"
+description = "Pure-Python Pokemon battle environment (Gen 9 singles) following Pokemon Showdown mechanics."
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+authors = [{ name = "Seth Karten" }]
+dependencies = [
+    "numpy>=1.24.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-xdist>=3.0.0",
+    "ruff>=0.1.0",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["pokepy"]
+
+[tool.hatch.build.targets.wheel.force-include]
+"pokepy/data/extracted" = "pokepy/data/extracted"
+
+[tool.hatch.build.targets.sdist]
+include = ["pokepy", "tests", "README.md", "LICENSE"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W"]

@@ -1,0 +1,827 @@
+"""Constants for pokepy.
+
+Verbatim with `jnp` replaced by `np` and Gen 1 / VGC stuff retained for completeness
+even though pokepy v0 only runs Gen 9 OU singles.
+"""
+
+import numpy as np
+
+# =============================================================================
+# Format Constants
+# =============================================================================
+
+# Use plain ints (the source uses an IntEnum but values are what matter).
+FORMAT_GEN1OU = 0
+FORMAT_GEN9OU = 1
+FORMAT_GEN9RANDOMS = 2
+FORMAT_VGC = 3
+
+# =============================================================================
+# Pokemon state byte layout (16 int16 slots per Pokemon)
+# =============================================================================
+
+POKEMON_SIZE = 16
+# [0]  species_id
+# [1]  current_hp
+# [2]  max_hp
+# [3]  level
+# [4]  type1 | type2 << 8
+# [5]  ability_id
+# [6]  item_id
+# [7]  atk stat
+# [8]  def stat
+# [9]  spa stat
+# [10] spd stat
+# [11] spe stat
+# [12] status | status_turns << 8
+# [13] atk_boost(4) | def_boost(4)<<4 | spa_boost(4)<<8 | spd_boost(4)<<12
+# [14] spe_boost(4) | acc_boost(4)<<4 | eva_boost(4)<<8 | tera_type(4)<<12
+# [15] flags: fainted(1) | is_active(1) | has_tera(1) | tera_used(1) | gender(2)
+
+GENDER_GENDERLESS = 0
+GENDER_MALE = 1
+GENDER_FEMALE = 2
+
+# Battle state size (unified flat int16 buffer)
+STATE_SIZE = 256
+OFF_SIDE0 = 0      # [0-95]    6 Pokemon * 16
+OFF_SIDE1 = 96     # [96-191]
+OFF_FIELD = 192    # [192-223] weather, terrain, hazards, screens, etc.
+OFF_META = 224     # [224-239] active indices, winner, RNG
+OFF_MOVES = 240    # [240-255] reserved
+
+# Meta offsets (relative to OFF_META)
+M_ACTIVE0 = 0
+M_ACTIVE1 = 1
+M_ACTIVE0B = 2  # VGC second active
+M_ACTIVE1B = 3
+M_WINNER = 4
+M_CHARGING_0 = 5   # Player 0 charging move ID (-1 = not charging)
+M_CHARGING_1 = 6   # Player 1 charging move ID
+M_WEATHER_TURNS = 7
+M_WISH_TURNS_0 = 8
+M_WISH_HP_0 = 9
+M_WISH_TURNS_1 = 10
+M_WISH_HP_1 = 11
+M_TERRAIN_TURNS = 12
+M_TERA_ORIG_TYPES_0 = 13
+M_TERA_ORIG_TYPES_1 = 14
+M_FUTURE_SIGHT = 15
+
+# Lockedmove / mustrecharge state lives in the OFF_MOVES region (240-255).
+# Showdown's `lockedmove` (data/conditions.ts:253) forces Outrage / Petal Dance
+# / Thrash / Raging Fury to repeat for 2-3 turns then confuses the user.
+# `mustrecharge` (data/conditions.ts:364) skips the user's next turn after
+# Hyper Beam / Giga Impact / Frenzy Plant / Hydro Cannon / Blast Burn /
+# Rock Wrecker / Eternabeam / Prismatic Laser / Roar of Time / Meteor Assault.
+# Layout (each int16 slot relative to OFF_MOVES):
+#   [0] M_LOCKED_MOVE_0 = move id user 0 is locked into (-1 = none)
+#   [1] M_LOCKED_TURNS_0 = remaining turns of lockedmove (0 = none, last turn confuses)
+#   [2] M_LOCKED_MOVE_1
+#   [3] M_LOCKED_TURNS_1
+#   [4] M_RECHARGE_0 = 1 if user 0 must recharge next turn
+#   [5] M_RECHARGE_1
+#   [10] M_ACTIVE_MOVE_ACTIONS_0 = current active's move attempts since switch-in
+#        (bits 0-13) + live semi-invulnerability flag (bit 14)
+#   [11] M_ACTIVE_MOVE_ACTIONS_1
+#   [12] M_PARTIAL_TRAP_TURNS_0 = remaining partiallytrapped duration for side 0
+#   [13] M_PARTIAL_TRAP_TURNS_1 = remaining partiallytrapped duration for side 1
+#   [14] M_STOCKPILE_STATE_0 = stockpile layers + tracked Def/SpD gains for side 0
+#   [15] M_STOCKPILE_STATE_1 = stockpile layers + tracked Def/SpD gains for side 1
+M_LOCKED_MOVE_0 = 0
+M_LOCKED_TURNS_0 = 1
+M_LOCKED_MOVE_1 = 2
+M_LOCKED_TURNS_1 = 3
+M_RECHARGE_0 = 4
+M_RECHARGE_1 = 5
+M_FUTURE_MOVE_0 = 6
+M_FUTURE_SRC_0 = 7
+M_FUTURE_MOVE_1 = 8
+M_FUTURE_SRC_1 = 9
+M_ACTIVE_MOVE_ACTIONS_0 = 10
+M_ACTIVE_MOVE_ACTIONS_1 = 11
+M_PARTIAL_TRAP_TURNS_0 = 12
+M_PARTIAL_TRAP_TURNS_1 = 13
+M_STOCKPILE_STATE_0 = 14
+M_STOCKPILE_STATE_1 = 15
+ACTIVE_MOVE_ACTIONS_COUNT_MASK = 0x3FFF
+ACTIVE_MOVE_ACTIONS_SEMI_INVUL = 0x4000
+
+# Field offsets (relative to OFF_FIELD)
+F_WEATHER = 0
+F_TERRAIN = 1
+F_TRICK_ROOM = 2
+F_TURN = 3
+F_HAZARDS_0 = 4
+F_HAZARDS_1 = 5
+F_PROTECT_0 = 6
+F_PROTECT_1 = 7
+F_VOLATILE_0 = 8
+F_VOLATILE_1 = 9
+F_CHOICE_LOCK_0 = 10
+F_CHOICE_LOCK_1 = 11
+F_LAST_MOVE_0 = 12
+F_LAST_MOVE_1 = 13
+F_LEECH_SEED_0 = 14
+F_LEECH_SEED_1 = 15
+F_SUBSTITUTE_0 = 16
+F_SUBSTITUTE_1 = 17
+F_DISABLE_0 = 18
+F_DISABLE_1 = 19
+F_DISABLE_TURNS_0 = 20
+F_DISABLE_TURNS_1 = 21
+F_EXTENDED_VOLATILE_0 = 22
+F_EXTENDED_VOLATILE_1 = 23
+F_PERISH_COUNT_0 = 24
+F_PERISH_COUNT_1 = 25
+F_DESTINY_BOND_0 = 26
+F_DESTINY_BOND_1 = 27
+F_YAWN_TURNS_0 = 28
+F_YAWN_TURNS_1 = 29
+F_SCREENS_0 = 30
+F_SCREENS_1 = 31
+
+# Hazard packing
+HAZARD_STEALTH_ROCK = 1
+HAZARD_SPIKES = 2
+HAZARD_TOXIC_SPIKES = 3
+HAZARD_STICKY_WEB = 4
+
+# Screen bit shifts (within F_SCREENS_x int16)
+SCREEN_REFLECT_SHIFT = 0       # 3 bits
+SCREEN_LIGHTSCREEN_SHIFT = 3   # 3 bits
+SCREEN_AURORAVEIL_SHIFT = 6    # 3 bits
+SCREEN_TAILWIND_SHIFT = 9      # 3 bits
+SCREEN_SAFEGUARD_SHIFT = 12    # 2 bits
+SCREEN_MIST_SHIFT = 14         # 2 bits
+SCREEN_LUCKYCHANT_SHIFT = 12
+SCREEN_MASK_2BIT = 0x3
+SCREEN_MASK_3BIT = 0x7
+SCREEN_MASK = 0x3
+
+# =============================================================================
+# Volatile status constants
+# =============================================================================
+
+VOLATILE_CONFUSION = 1
+VOLATILE_FLINCH = 2
+VOLATILE_TAUNT = 3
+VOLATILE_ENCORE = 4
+VOLATILE_LEECH_SEED = 5
+VOLATILE_SUBSTITUTE = 6
+VOLATILE_DISABLE = 7
+VOLATILE_FOCUS_ENERGY = 7
+VOLATILE_TORMENT = 8
+VOLATILE_ATTRACT = 9
+VOLATILE_YAWN = 10
+VOLATILE_PERISH_SONG = 11
+VOLATILE_DESTINY_BOND = 12
+VOLATILE_EMBARGO = 13
+VOLATILE_HEAL_BLOCK = 14
+VOLATILE_IMPRISON = 15
+VOLATILE_INGRAIN = 16
+VOLATILE_AQUA_RING = 17
+VOLATILE_CURSE = 18
+VOLATILE_MEAN_LOOK = 19
+VOLATILE_NIGHTMARE = 20
+VOLATILE_LOCK_ON = 21
+VOLATILE_PARTIAL_TRAP = 22
+VOLATILE_SALT_CURE = 23
+VOLATILE_FORESIGHT = 24
+
+# Extended volatile bit masks (for F_EXTENDED_VOLATILE_x)
+EXT_VOL_FOCUS_ENERGY = 0x001
+EXT_VOL_TORMENT = 0x002
+EXT_VOL_ATTRACT = 0x004
+EXT_VOL_YAWN = 0x008
+EXT_VOL_EMBARGO = 0x010
+EXT_VOL_HEAL_BLOCK = 0x020
+EXT_VOL_IMPRISON = 0x040
+EXT_VOL_INGRAIN = 0x080
+EXT_VOL_AQUA_RING = 0x100
+EXT_VOL_CURSE = 0x200
+EXT_VOL_MEAN_LOOK = 0x400
+EXT_VOL_LOCK_ON = 0x800
+EXT_VOL_PARTIAL_TRAP = 0x1000
+EXT_VOL_SALT_CURE = 0x2000
+EXT_VOL_FORESIGHT = 0x4000
+EXT_VOL_LIBERO_USED = 0x8000  # Libero/Protean type-changed since last switch-in
+# Shared with Schooling's active-side Solo-form transition marker. The two
+# abilities are mutually exclusive, so the side-local extended-volatile slot
+# can safely reuse the same bit.
+EXT_VOL_SCHOOLING_SOLO = EXT_VOL_LIBERO_USED
+
+HEALING_WISH_PENDING = 2
+LUNAR_DANCE_PENDING = 3  # Heal + cure status + restore ALL PP on switch-in
+# Legacy side-volatile bit. Bit 10 in the side-volatile word now belongs to
+# the "confusion newly applied this turn" bookkeeping in bitpack.py, so live
+# semi-invulnerability now rides on the active side's
+# M_ACTIVE_MOVE_ACTIONS bit 14 instead.
+VOL_SEMI_INVUL = 0x400
+
+# Pokemon-level flag bits (offset +15 in the pokemon slot).
+# 0x01 fainted, 0x02 previous_move_failed, 0x04 has_tera, 0x08 tera_used,
+# 0x10 paradox-best-stat marker (Atk/Spe), 0x20 charge, 0x40 disguise,
+# 0x80 had_item, 0x100 once_per_battle,
+# 0x200 flash_fire.
+# 0x400 Glaive Rush (Baxcalibur signature): set on the user after it attacks;
+# while active (cleared at start of user's next move) moves targeting the
+# user always hit AND deal 2x damage (Showdown data/moves.ts:glaiverush).
+FLAG_GLAIVE_RUSH = 0x400
+# Truant: Slaking / Regigigas signature. onBeforeMove fires once every OTHER
+# turn, cancelling the move (like mustrecharge). The "loafing" bit toggles
+# after each attempt. Gets CLEARED on switch-out (Showdown: truant volatile
+# is removed when the mon leaves the field).
+FLAG_TRUANT_LOAFING = 0x800
+# Booster Energy-triggered Protosynthesis / Quark Drive boost is active for
+# the current switch-in. This is NOT the same as `had_item`: Knock Off or
+# any other lost item must not reactivate paradox boosts.
+FLAG_BOOSTER_ENERGY_ACTIVE = 0x1000
+# Showdown's `charge` volatile (from Charge / Electromorphosis / Wind Power)
+# is stored here as a per-Pokemon flag and cleared on switch-out / switch-in /
+# after the next Electric move attempt.
+FLAG_CHARGE = 0x20
+
+# =============================================================================
+# Effect type constants
+# =============================================================================
+
+EFFECT_TERRAIN = 6
+EFFECT_PROTECT = 7
+EFFECT_RECOVERY = 8
+EFFECT_SWITCH = 9
+EFFECT_RECOIL = 10
+EFFECT_DRAIN = 11
+EFFECT_MULTI_HIT = 12
+EFFECT_TRICK_ROOM = 14
+EFFECT_KNOCK_OFF = 15
+EFFECT_RAPID_SPIN = 16
+EFFECT_DEFOG = 17
+EFFECT_LEECH_SEED = 18
+EFFECT_SUBSTITUTE = 19
+EFFECT_DISABLE = 20
+EFFECT_HAZE = 21
+EFFECT_CLEAR_SMOG = 22
+EFFECT_PSYCH_UP = 23
+EFFECT_SCREEN_BREAK = 24
+
+# =============================================================================
+# Weather / Terrain
+# =============================================================================
+
+WEATHER_NONE = 0
+WEATHER_SUN = 1
+WEATHER_RAIN = 2
+WEATHER_SAND = 3
+WEATHER_SNOW = 4
+WEATHER_PRIMORDIAL_SEA = 5
+WEATHER_DESOLATE_LAND = 6
+WEATHER_DELTA_STREAM = 7
+
+TERRAIN_NONE = 0
+TERRAIN_ELECTRIC = 1
+TERRAIN_GRASSY = 2
+TERRAIN_PSYCHIC = 3
+TERRAIN_MISTY = 4
+
+# =============================================================================
+# Status / categories
+# =============================================================================
+
+STATUS_NONE = 0
+STATUS_BURN = 1
+STATUS_PARALYSIS = 2
+STATUS_SLEEP = 3
+STATUS_FREEZE = 4
+STATUS_POISON = 5
+STATUS_TOXIC = 6
+
+CAT_STATUS = 0
+CAT_PHYSICAL = 1
+CAT_SPECIAL = 2
+
+# Neutral packed boost values (each 4-bit slot = 6 = 0 boost)
+NEUTRAL_BOOSTS_13 = 0x6666
+NEUTRAL_BOOSTS_14 = 0x0666
+
+# =============================================================================
+# Types
+# =============================================================================
+
+TYPE_NORMAL = 0
+TYPE_FIRE = 1
+TYPE_WATER = 2
+TYPE_ELECTRIC = 3
+TYPE_GRASS = 4
+TYPE_ICE = 5
+TYPE_FIGHTING = 6
+TYPE_POISON = 7
+TYPE_GROUND = 8
+TYPE_FLYING = 9
+TYPE_PSYCHIC = 10
+TYPE_BUG = 11
+TYPE_ROCK = 12
+TYPE_GHOST = 13
+TYPE_DRAGON = 14
+TYPE_DARK = 15
+TYPE_STEEL = 16
+TYPE_FAIRY = 17
+TYPE_UNKNOWN = 18
+
+NUM_TYPES = 19
+
+TYPE_NAMES = [
+    "Normal", "Fire", "Water", "Electric", "Grass", "Ice",
+    "Fighting", "Poison", "Ground", "Flying", "Psychic", "Bug",
+    "Rock", "Ghost", "Dragon", "Dark", "Steel", "Fairy", "???",
+]
+
+WEATHER_NAMES = [
+    "noweather", "sunnyday", "raindance", "sandstorm", "snow",
+    "primordialsea", "desolateland", "deltastream",
+]
+
+TERRAIN_NAMES = [
+    "nofield", "electricterrain", "grassyterrain", "psychicterrain", "mistyterrain",
+]
+
+STATUS_NAMES = ["nostatus", "brn", "par", "slp", "frz", "psn", "tox"]
+
+GEN1_PHYSICAL_TYPES = np.array(
+    [TYPE_NORMAL, TYPE_FIGHTING, TYPE_FLYING, TYPE_GROUND,
+     TYPE_ROCK, TYPE_BUG, TYPE_GHOST, TYPE_POISON],
+    dtype=np.int8,
+)
+
+# =============================================================================
+# Ability IDs (canonical Showdown indices, used by damage/effects code)
+# =============================================================================
+
+ABILITY_LEVITATE = 26
+ABILITY_TRUANT = 54
+ABILITY_FLASH_FIRE = 18
+ABILITY_VOLT_ABSORB = 10
+ABILITY_WATER_ABSORB = 11
+ABILITY_HUGE_POWER = 37
+ABILITY_PURE_POWER = 74
+ABILITY_MULTISCALE = 136
+ABILITY_INTIMIDATE = 22
+ABILITY_SPEED_BOOST = 3
+ABILITY_MAGIC_GUARD = 98
+ABILITY_PRANKSTER = 158
+ABILITY_GALE_WINGS = 177
+ABILITY_TRIAGE = 205
+ABILITY_ROUGH_SKIN = 24
+ABILITY_IRON_BARBS = 160
+ABILITY_DRIZZLE = 2
+ABILITY_DROUGHT = 70
+ABILITY_SAND_STREAM = 45
+ABILITY_SNOW_WARNING = 117
+ABILITY_TECHNICIAN = 101
+ABILITY_SHEER_FORCE = 125
+ABILITY_ADAPTABILITY = 91
+ABILITY_MOLD_BREAKER = 104
+ABILITY_TERAVOLT = 164
+ABILITY_TURBOBLAZE = 163
+ABILITY_STURDY = 5
+ABILITY_REGENERATOR = 144
+ABILITY_NATURAL_CURE = 30
+ABILITY_GUTS = 62
+ABILITY_MARVEL_SCALE = 63
+ABILITY_TOXIC_BOOST = 137
+ABILITY_FLARE_BOOST = 138
+ABILITY_POISON_HEAL = 90
+ABILITY_FLAME_BODY = 49
+ABILITY_STATIC = 9
+ABILITY_POISON_POINT = 38
+ABILITY_EFFECT_SPORE = 27
+ABILITY_THICK_FAT = 47
+ABILITY_FILTER = 111
+ABILITY_SOLID_ROCK = 116
+ABILITY_PRISM_ARMOR = 232
+ABILITY_TINTED_LENS = 110
+ABILITY_SERENE_GRACE = 32
+ABILITY_SWIFT_SWIM = 33
+ABILITY_CHLOROPHYLL = 34
+ABILITY_SAND_RUSH = 146
+ABILITY_SLUSH_RUSH = 202
+ABILITY_CLEAR_BODY = 29
+ABILITY_WHITE_SMOKE = 73
+ABILITY_FULL_METAL_BODY = 230
+ABILITY_CONTRARY = 126
+ABILITY_SIMPLE = 86
+ABILITY_WATER_VEIL = 41
+ABILITY_THERMAL_EXCHANGE = 270
+ABILITY_NEUTRALIZING_GAS = 256
+ABILITY_SCHOOLING = 208
+ABILITY_SHIELDS_DOWN = 197
+ABILITY_GULP_MISSILE = 241
+ABILITY_HUNGER_SWITCH = 258
+ABILITY_WIMP_OUT = 193
+ABILITY_EMERGENCY_EXIT = 194
+ABILITY_MUMMY = 152
+ABILITY_LINGERING_AROMA = 268
+ABILITY_WANDERING_SPIRIT = 254
+ABILITY_LIMBER = 7
+ABILITY_INSOMNIA = 15
+ABILITY_VITAL_SPIRIT = 72
+ABILITY_OBLIVIOUS = 12
+ABILITY_OWN_TEMPO = 20
+ABILITY_INNER_FOCUS = 39
+ABILITY_IMMUNITY = 17
+ABILITY_MAGMA_ARMOR = 40
+ABILITY_UNAWARE = 109
+ABILITY_DEFIANT = 128
+ABILITY_COMPETITIVE = 172
+ABILITY_ELECTRIC_SURGE = 226
+ABILITY_GRASSY_SURGE = 229
+ABILITY_PSYCHIC_SURGE = 227
+ABILITY_MISTY_SURGE = 228
+ABILITY_SAP_SIPPER = 157
+ABILITY_STORM_DRAIN = 114
+ABILITY_LIGHTNING_ROD = 31
+ABILITY_MOTOR_DRIVE = 78
+ABILITY_DRY_SKIN = 87
+ABILITY_MOXIE = 153
+ABILITY_BEAST_BOOST = 224
+ABILITY_SOUL_HEART = 220
+ABILITY_CHILLING_NEIGH = 264
+ABILITY_GRIM_NEIGH = 265
+ABILITY_PROTEAN = 168
+ABILITY_LIBERO = 236
+ABILITY_SCRAPPY = 113
+ABILITY_HUSTLE = 55
+ABILITY_SAND_VEIL = 8
+ABILITY_SNOW_CLOAK = 81
+ABILITY_WONDER_GUARD = 25
+ABILITY_DISGUISE = 209
+ABILITY_ICE_FACE = 248
+ABILITY_BATTLE_BOND = 210
+ABILITY_STANCE_CHANGE = 176
+ABILITY_ANTICIPATION = 107
+ABILITY_FOREWARN = 108
+ABILITY_DOWNLOAD = 88
+ABILITY_ANALYTIC = 148
+ABILITY_IRON_FIST = 89
+ABILITY_RECKLESS = 120
+ABILITY_STRONG_JAW = 173
+ABILITY_MEGA_LAUNCHER = 178
+ABILITY_TOUGH_CLAWS = 181
+ABILITY_STEELWORKER = 200
+ABILITY_NEUROFORCE = 233
+ABILITY_SNIPER = 97
+ABILITY_QUICK_FEET = 95
+ABILITY_UNBURDEN = 84
+ABILITY_SKILL_LINK = 92
+ABILITY_PARENTAL_BOND = 185
+ABILITY_PRESSURE = 46
+ABILITY_TRACE = 36
+ABILITY_SOUNDPROOF = 43
+ABILITY_BULLETPROOF = 171
+ABILITY_SUPER_LUCK = 105
+ABILITY_COMPOUND_EYES = 14
+ABILITY_NO_GUARD = 99
+ABILITY_QUICK_DRAW = 259
+ABILITY_GORILLA_TACTICS = 255
+ABILITY_OVERGROW = 65
+ABILITY_BLAZE = 66
+ABILITY_TORRENT = 67
+ABILITY_SWARM = 68
+ABILITY_SOLAR_POWER = 94
+ABILITY_RAIN_DISH = 44
+ABILITY_ICE_BODY = 115
+ABILITY_HYDRATION = 93
+ABILITY_SHED_SKIN = 61
+ABILITY_OVERCOAT = 142
+ABILITY_MAGIC_BOUNCE = 156
+ABILITY_ICE_SCALES = 246
+ABILITY_FUR_COAT = 169
+ABILITY_FLUFFY = 218
+ABILITY_PUNK_ROCK = 244
+ABILITY_STAMINA = 192
+ABILITY_ROCK_HEAD = 69
+ABILITY_LONG_REACH = 203
+ABILITY_PRIMORDIAL_SEA = 189
+ABILITY_DESOLATE_LAND = 190
+ABILITY_DELTA_STREAM = 191
+ABILITY_ORICHALCUM_PULSE = 288
+ABILITY_HADRON_ENGINE = 289
+ABILITY_INTREPID_SWORD = 234
+ABILITY_DAUNTLESS_SHIELD = 235
+ABILITY_EARTH_EATER = 297
+ABILITY_WELL_BAKED_BODY = 273
+ABILITY_SEED_SOWER = 269
+ABILITY_GLUTTONY = 82
+ABILITY_CHEEK_POUCH = 167
+ABILITY_RIPEN = 247
+ABILITY_HARVEST = 139
+ABILITY_ZEN_MODE = 161
+ABILITY_WATER_BUBBLE = 199
+ABILITY_PROTOSYNTHESIS = 281
+ABILITY_QUARK_DRIVE = 282
+ABILITY_SHARPNESS = 292
+ABILITY_INFILTRATOR = 151
+ABILITY_WEAK_ARMOR = 133
+ABILITY_PURIFYING_SALT = 272
+ABILITY_AIR_LOCK = 76
+ABILITY_CLOUD_NINE = 13
+ABILITY_HYPER_CUTTER = 52
+ABILITY_IMPOSTER = 150
+ABILITY_MIRROR_ARMOR = 240
+ABILITY_ELECTROMORPHOSIS = 280
+ABILITY_WIND_RIDER = 274
+ABILITY_TOXIC_CHAIN = 305
+ABILITY_TOXIC_DEBRIS = 295
+ABILITY_ANGER_SHELL = 271
+ABILITY_OPPORTUNIST = 290
+ABILITY_COTTON_DOWN = 238
+ABILITY_SUCTION_CUPS = 21
+ABILITY_GUARD_DOG = 275
+ABILITY_SUPREME_OVERLORD = 293
+ABILITY_DRAGONS_MAW = 263
+ABILITY_TRANSISTOR = 262
+ABILITY_ROCKY_PAYLOAD = 276
+
+SPECIES_DARMANITAN = 555
+SPECIES_DARMANITAN_ZEN = 555
+
+# =============================================================================
+# Item IDs
+# =============================================================================
+
+ITEM_EJECT_BUTTON = 118
+ITEM_RED_CARD = 387
+ITEM_BOOSTER_ENERGY = 745
+ITEM_LIGHT_CLAY = 252
+ITEM_SAFETY_GOGGLES = 604
+ITEM_UTILITY_UMBRELLA = 718
+ITEM_DAMP_ROCK = 88
+ITEM_HEAT_ROCK = 193
+ITEM_ICY_ROCK = 221
+ITEM_SMOOTH_ROCK = 453
+ITEM_TERRAIN_EXTENDER = 662
+ITEM_CHOICE_BAND = 68
+ITEM_CHOICE_SPECS = 70
+ITEM_CHOICE_SCARF = 69
+ITEM_LIFE_ORB = 249
+ITEM_EXPERT_BELT = 132
+ITEM_LEFTOVERS = 242
+ITEM_BLACK_SLUDGE = 34
+ITEM_HEAVY_DUTY_BOOTS = 715
+ITEM_LOADED_DICE = 751
+ITEM_ROCKY_HELMET = 417
+ITEM_PROTECTIVE_PADS = 663
+ITEM_FOCUS_SASH = 151
+ITEM_ASSAULT_VEST = 581
+ITEM_EVIOLITE = 130
+ITEM_SITRUS_BERRY = 448
+ITEM_LUM_BERRY = 262
+ITEM_CHERI_BERRY = 63
+ITEM_RAWST_BERRY = 381
+ITEM_PECHA_BERRY = 333
+ITEM_CHESTO_BERRY = 65
+ITEM_ASPEAR_BERRY = 13
+ITEM_MIRACLE_BERRY = 157
+ITEM_PERSIM_BERRY = 334
+ITEM_LIECHI_BERRY = 248
+ITEM_PETAYA_BERRY = 335
+ITEM_SALAC_BERRY = 426
+ITEM_GANLON_BERRY = 158
+ITEM_APICOT_BERRY = 10
+ITEM_KEE_BERRY = 593
+ITEM_MARANGA_BERRY = 597
+ITEM_STARF_BERRY = 472
+ITEM_LANSAT_BERRY = 238
+ITEM_FIGY_BERRY = 140
+ITEM_WIKI_BERRY = 538
+ITEM_MAGO_BERRY = 274
+ITEM_AGUAV_BERRY = 5
+ITEM_IAPAPA_BERRY = 217
+ITEM_STICKY_BARB = 476
+ITEM_ORAN_BERRY = 319
+ITEM_AIR_BALLOON = 6
+ITEM_SHED_SHELL = 437
+ITEM_TOXIC_ORB = 515
+ITEM_FLAME_ORB = 145
+ITEM_WEAKNESS_POLICY = 609
+ITEM_WHITE_HERB = 535
+ITEM_CHARCOAL = 61
+ITEM_MYSTIC_WATER = 300
+ITEM_MAGNET = 273
+ITEM_MIRACLE_SEED = 282
+ITEM_ROSE_INCENSE = 419
+ITEM_NEVER_MELT_ICE = 305
+ITEM_BLACK_BELT = 32
+ITEM_POISON_BARB = 343
+ITEM_SOFT_SAND = 456
+ITEM_SHARP_BEAK = 436
+ITEM_TWISTED_SPOON = 520
+ITEM_SILVER_POWDER = 447
+ITEM_HARD_STONE = 187
+ITEM_SPELL_TAG = 461
+ITEM_DRAGON_FANG = 106
+ITEM_BLACK_GLASSES = 35
+ITEM_METAL_COAT = 286
+ITEM_FAIRY_FEATHER = 754
+ITEM_SILK_SCARF = 444
+ITEM_MENTAL_HERB = 285
+ITEM_MIRROR_HERB = 748
+ITEM_ADRENALINE_ORB = 660
+ITEM_CUSTAP_BERRY = 86
+ITEM_THROAT_SPRAY = 713
+ITEM_BLUNDER_POLICY = 716
+ITEM_WIDE_LENS = 537
+ITEM_ZOOM_LENS = 574
+ITEM_BRIGHT_POWDER = 51
+ITEM_LAX_INCENSE = 240
+ITEM_BINDING_BAND = 31
+ITEM_BIG_ROOT = 29
+
+# =============================================================================
+# Move flags (bit positions in move_flags table)
+# =============================================================================
+
+FLAG_CONTACT = 1
+FLAG_PROTECT = 2
+FLAG_MIRROR = 4
+FLAG_SOUND = 8
+FLAG_PUNCH = 16
+FLAG_BITE = 32
+FLAG_BULLET = 64
+FLAG_PULSE = 128
+FLAG_SLICING = 0x10000
+FLAG_POWDER = 0x20000
+
+# =============================================================================
+# Special move IDs
+# =============================================================================
+
+MOVE_STRUGGLE = 165
+MOVE_ENCORE = 227
+MOVE_MIMIC = 102
+MOVE_TRANSFORM = 144
+MOVE_SKETCH = 166
+MOVE_SEISMIC_TOSS = 69
+MOVE_NIGHT_SHADE = 101
+MOVE_SUPER_FANG = 162
+MOVE_RUINATION = 877
+MOVE_PSYWAVE = 149
+MOVE_FINAL_GAMBIT = 515
+MOVE_EXPLOSION = 153
+MOVE_SELF_DESTRUCT = 120
+MOVE_MEMENTO = 262
+MOVE_MISTY_EXPLOSION = 802
+MOVE_FACADE = 263
+MOVE_DREAM_EATER = 138
+MOVE_REST = 156
+MOVE_SLEEP_TALK = 214
+MOVE_SNORE = 173
+MOVE_HEAL_BELL = 215
+MOVE_AROMATHERAPY = 312
+MOVE_KINGS_SHIELD = 588
+MOVE_BANEFUL_BUNKER = 661
+MOVE_SILK_TRAP = 852
+MOVE_QUICK_GUARD = 501
+MOVE_FEINT = 364
+MOVE_SPIKY_SHIELD = 596
+MOVE_OBSTRUCT = 792
+MOVE_SUCKER_PUNCH = 389
+
+PROTECT_BASIC = 0
+PROTECT_KINGS_SHIELD = 1
+PROTECT_BANEFUL_BUNKER = 2
+PROTECT_SILK_TRAP = 3
+PROTECT_QUICK_GUARD = 4
+PROTECT_SPIKY_SHIELD = 5
+PROTECT_OBSTRUCT = 6
+PROTECT_BURNING_BULWARK = 7
+PROTECT_ENDURE = 8
+
+MOVE_BURNING_BULWARK = 908
+
+MOVE_REFLECT = 115
+MOVE_LIGHT_SCREEN = 113
+MOVE_AURORA_VEIL = 694
+MOVE_SAFEGUARD = 219
+MOVE_MIST = 54
+MOVE_LUCKY_CHANT = 381
+MOVE_TAILWIND = 366
+
+MOVE_ROAR = 46
+MOVE_WHIRLWIND = 18
+MOVE_DRAGON_TAIL = 525
+MOVE_CIRCLE_THROW = 509
+MOVE_FISSURE = 90
+MOVE_GUILLOTINE = 12
+MOVE_HORN_DRILL = 32
+MOVE_SHEER_COLD = 329
+
+# Lockedmove + mustrecharge move IDs (Showdown data/moves.ts)
+MOVE_OUTRAGE = 200
+MOVE_PETAL_DANCE = 80
+MOVE_THRASH = 37
+MOVE_RAGING_FURY = 833
+MOVE_HYPER_BEAM = 63
+MOVE_GIGA_IMPACT = 416
+MOVE_FRENZY_PLANT = 338
+MOVE_HYDRO_CANNON = 308
+MOVE_BLAST_BURN = 307
+MOVE_ROCK_WRECKER = 439
+MOVE_ETERNABEAM = 795
+MOVE_PRISMATIC_LASER = 711
+MOVE_ROAR_OF_TIME = 459
+MOVE_METEOR_ASSAULT = 794
+
+MOVE_PERISH_SONG = 195
+MOVE_DESTINY_BOND = 194
+MOVE_LOCK_ON = 199
+MOVE_MIND_READER = 170
+MOVE_CHARGE = 268
+MOVE_CURSE = 174
+MOVE_PAIN_SPLIT = 220
+MOVE_FORESIGHT = 193
+MOVE_ATTRACT = 213
+MOVE_TAUNT = 269
+
+MOVE_DIG = 91
+MOVE_FLY = 19
+MOVE_EARTHQUAKE = 89
+MOVE_SURF = 57
+MOVE_DIVE = 291
+MOVE_BOUNCE = 340
+MOVE_SHADOW_FORCE = 467
+MOVE_PHANTOM_FORCE = 566
+
+MOVE_COUNTER = 68
+MOVE_MIRROR_COAT = 243
+MOVE_METAL_BURST = 368
+MOVE_REVENGE = 279
+MOVE_AVALANCHE = 419
+MOVE_FOCUS_PUNCH = 264
+MOVE_TRICK = 271
+MOVE_SWITCHEROO = 415
+MOVE_ENDEAVOR = 283
+
+MOVE_GYRO_BALL = 360
+MOVE_BODY_PRESS = 776
+MOVE_FIRST_IMPRESSION = 660
+MOVE_FAKE_OUT = 252
+MOVE_FUTURE_SIGHT = 248
+MOVE_DOOM_DESIRE = 353
+MOVE_HEAVY_SLAM = 484
+MOVE_HEAT_CRASH = 535
+MOVE_LOW_KICK = 67
+MOVE_GRASS_KNOT = 447
+MOVE_ELECTROBALL = 486
+MOVE_WEATHER_BALL = 311
+MOVE_TERRAIN_PULSE = 805
+MOVE_WATER_SPOUT = 323
+MOVE_ERUPTION = 284
+MOVE_DRAGON_ENERGY = 820
+MOVE_FROST_BREATH = 524
+MOVE_STORM_THROW = 480
+MOVE_POPULATION_BOMB = 860
+MOVE_TRIPLE_AXEL = 813
+
+# =============================================================================
+# Action space + sizes
+# =============================================================================
+
+MAX_ACTIONS = 1500
+MAX_ABILITIES = 310
+NUM_BATTLE_ACTIONS = 10  # 4 moves + 6 switches
+NUM_VGC_ACTIONS = 22
+
+# Phase IDs
+PHASE_SPECIES_SELECT = 0
+PHASE_MOVE_SELECT = 1
+PHASE_ABILITY_SELECT = 2
+PHASE_ITEM_SELECT = 3
+PHASE_EV_SELECT = 4
+PHASE_TEAM_PREVIEW = 5
+PHASE_BATTLE = 6
+PHASE_FORCED_SWITCH = 7
+
+class Phase:
+    """Namespace alias for pokepy.engine.battle_gen9 to import (matches the
+    the Showdown reference IntEnum convention)."""
+    SPECIES_SELECT = PHASE_SPECIES_SELECT
+    MOVE_SELECT = PHASE_MOVE_SELECT
+    ABILITY_SELECT = PHASE_ABILITY_SELECT
+    ITEM_SELECT = PHASE_ITEM_SELECT
+    EV_SELECT = PHASE_EV_SELECT
+    TEAM_PREVIEW = PHASE_TEAM_PREVIEW
+    BATTLE = PHASE_BATTLE
+    FORCED_SWITCH = PHASE_FORCED_SWITCH
+
+MAX_SPECIES_GEN1 = 151
+MAX_SPECIES_GEN9 = 1025
+MAX_MOVES = 900
+MAX_ITEMS = 400
+
+def screen_clear_mask(mask: int, shift: int) -> int:
+    """Pre-compute ~(mask << shift) as a signed int16, matching the Showdown reference helper."""
+    val = ~((mask << shift) & 0xFFFF) & 0xFFFF
+    if val >= 0x8000:
+        val -= 0x10000
+    return val
