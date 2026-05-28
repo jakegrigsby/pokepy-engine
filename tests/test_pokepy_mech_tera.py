@@ -69,7 +69,6 @@ def test_tera_used_flag_initially_zero(fresh_battle):
 # Tera activation via action 9-12
 # ---------------------------------------------------------------------------
 
-@pytest.mark.xfail(strict=False, reason="tera activation in pokepy may need wiring")
 def test_tera_action_sets_used_flag(fresh_battle, step_turn):
     state, prng = fresh_battle(
         [MonSpec("garchomp", ["earthquake", "tackle", "tackle", "tackle"], tera_type=TYPE_FIRE)],

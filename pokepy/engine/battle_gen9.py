@@ -1405,6 +1405,8 @@ def step_battle_gen9(
     type_chart: np.ndarray,
     gen5_prng,
     resolve_mid_turn_switch0=None,
+    wants_tera0: bool = False,
+    wants_tera1: bool = False,
 ) -> Tuple[np.float32, np.float32, bool]:
     """Execute one Gen 9 battle turn. Mutates `state` in place.
 
@@ -1979,6 +1981,16 @@ def step_battle_gen9(
     # ------------------------------------------------------------------
     action = int(action0)
     opp_action = int(action1)
+
+    wants_tera0 = bool(wants_tera0)
+    wants_tera1 = bool(wants_tera1)
+    if action >= 9:
+        wants_tera0 = True
+        action = action - 9
+    if opp_action >= 9:
+        wants_tera1 = True
+        opp_action = opp_action - 9
+
     is_switch = action >= 4
     move_idx = 0 if is_switch else action
     switch_target = (action - 4) if is_switch else -1
@@ -2034,6 +2046,16 @@ def step_battle_gen9(
     can_switch1 = opp_is_switch and _is_valid_switch_target(
         battle, OFF_SIDE1, opp_switch_target, active1
     )
+
+    team_tera = getattr(state, "team_tera", None)
+    if wants_tera0 and not is_switch:
+        fx.activate_terastallization(
+            battle, 0, team_tera=team_tera, active_slot=active0
+        )
+    if wants_tera1 and not opp_is_switch:
+        fx.activate_terastallization(
+            battle, 1, team_tera=team_tera, active_slot=active1
+        )
 
     new_active0 = switch_target if can_switch0 else active0
     new_active1 = opp_switch_target if can_switch1 else active1

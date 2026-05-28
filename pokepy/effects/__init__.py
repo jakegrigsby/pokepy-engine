@@ -146,6 +146,7 @@ from pokepy.effects.misc import (
     apply_screen_from_move,
 )
 from pokepy.effects.auto_switch import auto_switch, count_alive
+from pokepy.effects.tera import activate_terastallization, side_can_tera
 
 __all__ = [
     "apply_status_from_move",
@@ -248,6 +249,8 @@ __all__ = [
     "apply_skill_swap_from_move",
     "auto_switch",
     "count_alive",
+    "activate_terastallization",
+    "side_can_tera",
 ]
 
 # -----------------------------------------------------------------------------

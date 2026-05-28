@@ -428,7 +428,7 @@ class BattleEnv:
         illegal13[:NUM_BATTLE_ACTIONS] = ~mask  # legal -> not illegal
         return build_kakuna_obs(us, illegal_actions=illegal13)
 
-    def step(self, action0: int, action1: int) -> Tuple[Dict[str, np.ndarray], float, float, bool]:
+    def step(self, action0: int, action1: int, *, tera0: bool = False, tera1: bool = False) -> Tuple[Dict[str, np.ndarray], float, float, bool]:
         """Step the env. If `state.phase` is FORCED_SWITCH, action0 must be a
         switch action (4..9); the engine handles it via `step_forced_switch`
         and stays on the same turn (no opponent action consumed).
@@ -444,6 +444,7 @@ class BattleEnv:
             r0, r1, done = step_battle_gen9(
                 self.state, action0, action1,
                 self.game_data, self.move_effects, self.type_chart, self.prng,
+                wants_tera0=tera0, wants_tera1=tera1,
             )
         obs = self.observe(side=0)
         return obs, float(r0), float(r1), bool(done)
