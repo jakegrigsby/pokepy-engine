@@ -322,6 +322,10 @@ def init_battle_state(
             species[i] = sp
             moves[i] = team["moves"][i]
             ability_id = 0 if not profile.has_abilities else team["abilities"][i]
+            if profile.has_abilities and int(ability_id) == 0:
+                default_ability = int(np.asarray(game_data.species_abilities)[int(sp), 0])
+                if default_ability >= 0:
+                    ability_id = default_ability
             item_id = 0 if not profile.has_items else team["items"][i]
             items[i] = item_id
             abilities[i] = ability_id

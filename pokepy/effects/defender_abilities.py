@@ -346,6 +346,7 @@ def apply_cursed_body_on_damaging_hit(
     gen5_prng: Gen5PRNG,
     *,
     prerolled_roll: int | None = None,
+    gen: int = 9,
 ) -> bool:
     """Apply Cursed Body at Showdown's `onDamagingHit` timing.
 
@@ -384,7 +385,13 @@ def apply_cursed_body_on_damaging_hit(
     )
     if roll_cb < 3:
         battle[OFF_FIELD + cb_side_base_dis] = np.int16(move_idx)
-        battle[OFF_FIELD + cb_side_base_dt] = np.int16(4)
+        if gen <= 3:
+            disable_turns = int(gen5_prng.random(2, 6))
+        elif gen == 4:
+            disable_turns = int(gen5_prng.random(4, 8))
+        else:
+            disable_turns = 4
+        battle[OFF_FIELD + cb_side_base_dt] = np.int16(disable_turns)
     return True
 
 
@@ -410,6 +417,7 @@ def apply_defender_abilities(
     skip_immediate_stateful_move1: bool = False,
     skip_cursed_body0: bool = False,
     skip_cursed_body1: bool = False,
+    gen: int = 9,
 ) -> bool:
     """Apply all defender ability effects for one turn. Mutates `battle`.
 
@@ -617,6 +625,7 @@ def apply_defender_abilities(
                 did_hit,
                 dmg,
                 gen5_prng,
+                gen=gen,
             )
 
         skip_toxic_chain = (atk_side == 0 and skip_toxic_chain0) or (

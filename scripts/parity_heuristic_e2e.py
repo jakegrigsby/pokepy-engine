@@ -381,6 +381,7 @@ def run_live_diff(
     from pokepy.data.type_charts import load_type_chart_for_gen
 
     chart = load_type_chart_for_gen(gen)
+    choice_log: List[Tuple[str, str]] = []
     py_rows, p0_actions, p1_actions = run_pokepy_battle(
         team0,
         team1,
@@ -391,6 +392,7 @@ def run_live_diff(
         seed,
         n_turns,
         gen=gen,
+        choice_log=choice_log,
     )
     seed_tuple = (seed & 0xFFFF, (seed >> 16) & 0xFFFF, 0, 0)
     show_rows, _raw, meta = run_showdown(
@@ -402,11 +404,63 @@ def run_live_diff(
         n_turns,
         battle_format=battle_format or profile.battle_format,
         timeout_s=timeout_s,
+        choice_log=choice_log,
     )
     mismatch = None
     if meta.get("returncode") == 0 and show_rows:
         mismatch = compare_battle_rows(py_rows, show_rows)
     return py_rows, show_rows, mismatch, meta
+
+
+def _resolve_pending_forced_switches(
+    state,
+    gen: int,
+    game_data,
+    move_effects,
+    type_chart: np.ndarray,
+    prng,
+    p0_actions: List[str],
+    p1_actions: List[str],
+    choice_log: Optional[List[Tuple[str, str]]],
+) -> None:
+    """Resolve post-faint forced switches after a normal turn step."""
+    while int(state.phase) == PHASE_FORCED_SWITCH and not bool(state.done):
+        forced_side = int(state.forced_switch_side)
+        if forced_side in (1, 2):
+            fa1 = simple_heuristic_forced_switch(state, 1, game_data)
+            action1 = action_to_showdown_str(fa1, forced_suffix="forced")
+            p1_actions.append(action1)
+            if choice_log is not None:
+                choice_log.append(("p2", action1))
+            step_forced_switch_for_gen(
+                gen,
+                state,
+                fa1,
+                1,
+                game_data,
+                move_effects,
+                type_chart,
+                prng,
+            )
+        if int(state.phase) != PHASE_FORCED_SWITCH or bool(state.done):
+            break
+        forced_side = int(state.forced_switch_side)
+        if forced_side in (0, 2):
+            fa0 = simple_heuristic_forced_switch(state, 0, game_data)
+            action0 = action_to_showdown_str(fa0, forced_suffix="forced")
+            p0_actions.append(action0)
+            if choice_log is not None:
+                choice_log.append(("p1", action0))
+            step_forced_switch_for_gen(
+                gen,
+                state,
+                fa0,
+                0,
+                game_data,
+                move_effects,
+                type_chart,
+                prng,
+            )
 
 
 def run_pokepy_battle(
@@ -419,30 +473,30 @@ def run_pokepy_battle(
     seed: int,
     n_turns: int,
     gen: int = 9,
+    *,
+    choice_log: Optional[List[Tuple[str, str]]] = None,
 ) -> Tuple[List[Dict[str, Any]], List[str], List[str]]:
-    profile = profile_for_format(f"gen{gen}ou")
     state = init_battle_state(team0, team1, game_data, seed, gen=gen)
     prng = Gen5PRNG((seed & 0xFFFF, (seed >> 16) & 0xFFFF, 0, 0))
     rows: List[Dict[str, Any]] = []
     p0_actions: List[str] = []
     p1_actions: List[str] = []
 
-    for _ in range(int(n_turns)):
+    while len(rows) < int(n_turns):
         if bool(state.done):
             break
 
         if int(state.phase) == PHASE_FORCED_SWITCH:
-            fa0 = simple_heuristic_forced_switch(state, 0, game_data)
-            p0_actions.append(action_to_showdown_str(fa0, forced_suffix="forced"))
-            step_forced_switch_for_gen(
-                gen,
+            _resolve_pending_forced_switches(
                 state,
-                fa0,
-                0,
+                gen,
                 game_data,
                 move_effects,
                 type_chart,
                 prng,
+                p0_actions,
+                p1_actions,
+                choice_log,
             )
             continue
 
@@ -450,8 +504,13 @@ def run_pokepy_battle(
         mask1 = get_battle_action_mask(state, 1, game_data)
         a0 = simple_heuristic_action(state, 0, game_data, mask0)
         a1 = simple_heuristic_action(state, 1, game_data, mask1)
-        p0_actions.append(action_to_showdown_str(a0))
-        p1_actions.append(action_to_showdown_str(a1))
+        action0 = action_to_showdown_str(a0)
+        action1 = action_to_showdown_str(a1)
+        p0_actions.append(action0)
+        p1_actions.append(action1)
+        if choice_log is not None:
+            choice_log.append(("p1", action0))
+            choice_log.append(("p2", action1))
 
         step_battle(
             gen,
@@ -462,6 +521,19 @@ def run_pokepy_battle(
             move_effects,
             type_chart,
             prng,
+            defer_p1_forced_switch=True,
+        )
+
+        _resolve_pending_forced_switches(
+            state,
+            gen,
+            game_data,
+            move_effects,
+            type_chart,
+            prng,
+            p0_actions,
+            p1_actions,
+            choice_log,
         )
 
         turn = int(state.turn)
@@ -479,8 +551,8 @@ def run_pokepy_battle(
                 "p1_hp": s1["hp"],
                 "p1_max_hp": s1["max_hp"],
                 "p1_status": s1["status"],
-                "p0_action": p0_actions[-1] if p0_actions else "",
-                "p1_action": p1_actions[-1] if p1_actions else "",
+                "p0_action": action0,
+                "p1_action": action1,
             }
         )
 
@@ -497,6 +569,7 @@ def run_showdown(
     *,
     battle_format: str = "gen9ou",
     timeout_s: int = 120,
+    choice_log: Optional[List[Tuple[str, str]]] = None,
 ) -> Tuple[List[Dict[str, Any]], Optional[str], Dict[str, Any]]:
     if not SHOWDOWN_BIN.exists():
         meta = {
@@ -511,10 +584,14 @@ def run_showdown(
         f'>player p1 {{"name":"P1","team":"{packed0}"}}',
         f'>player p2 {{"name":"P2","team":"{packed1}"}}',
     ]
-    n = min(len(p0_actions), len(p1_actions), int(n_turns))
-    for i in range(n):
-        lines.append(f">p1 {p0_actions[i]}")
-        lines.append(f">p2 {p1_actions[i]}")
+    if choice_log:
+        for player, action in choice_log:
+            lines.append(f">{player} {action}")
+    else:
+        n = min(len(p0_actions), len(p1_actions), int(n_turns))
+        for i in range(n):
+            lines.append(f">p1 {p0_actions[i]}")
+            lines.append(f">p2 {p1_actions[i]}")
 
     try:
         proc = subprocess.run(

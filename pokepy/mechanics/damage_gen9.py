@@ -1202,6 +1202,10 @@ def calc_damage_gen9(
     accuracy = int(game_data.move_accuracy[move_id])
     if profile.phys_spec_mode == "type":
         is_physical = bool(np.isin(move_type, GEN1_PHYSICAL_TYPES))
+        # Showdown's Struggle is category Physical even in the gen 3/4 type
+        # split; only its effectiveness is typeless (???).
+        if is_struggle:
+            is_physical = True
     else:
         is_physical = move_cat == CAT_PHYSICAL
 

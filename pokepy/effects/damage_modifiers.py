@@ -34,6 +34,7 @@ def apply_recoil_drain_from_move(
     target_offset: int = None,
     phase: str = "both",
     move_attempted: bool = False,
+    gen: int = 9,
 ) -> None:
     """Port of _apply_recoil_drain_from_move (line ~10070).
 
@@ -91,7 +92,14 @@ def apply_recoil_drain_from_move(
     max_hp = int(battle[uoff + 2])
 
     is_struggle = move_id == MOVE_STRUGGLE
-    recoil_base = float(max_hp) if is_struggle else float(damage_dealt)
+    # Gen 3 Struggle recoil is damageDealt * 1/4 (data/mods/gen3/moves.ts).
+    # Modern gens route through the strugglerecoil condition (maxHP / 4).
+    if is_struggle and gen <= 3:
+        recoil_base = float(damage_dealt)
+    elif is_struggle:
+        recoil_base = float(max_hp)
+    else:
+        recoil_base = float(damage_dealt)
     # Showdown sim/battle-actions.ts:1396 — Math.round(damage * recoil[0] / recoil[1])
     # then clampIntRange(min=1). Pokepy used to truncate (int()) which can be
     # off by 1 vs Showdown for fractional cases. JS's Math.round rounds half

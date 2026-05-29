@@ -28,6 +28,7 @@ def step_battle_gen1(
     wants_tera0: bool = False,
     wants_tera1: bool = False,
     profile=GEN1_PROFILE,
+    **kwargs,
 ) -> Tuple[np.float32, np.float32, bool]:
     return step_battle_gen9(
         state,
@@ -41,4 +42,5 @@ def step_battle_gen1(
         wants_tera0=False,
         wants_tera1=False,
         profile=profile or GEN1_PROFILE,
+        **kwargs,
     )

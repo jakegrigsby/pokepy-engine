@@ -1026,6 +1026,11 @@ def _count_residual_speedsort_frames(
     speed_sort_consume so tied groups are always consecutive.
     """
     from functools import cmp_to_key
+    from pokepy.core.bitpack import (
+        get_encore_turns as _get_encore_turns_r,
+        get_heal_block_turns as _get_heal_block_turns_r,
+        get_taunt_turns as _get_taunt_turns_r,
+    )
     from pokepy.core.constants import (
         ITEM_LEFTOVERS as _ITEM_LEFT_R,
         ITEM_BLACK_SLUDGE as _ITEM_BS_R,
@@ -1042,6 +1047,14 @@ def _count_residual_speedsort_frames(
         OFF_FIELD as _OFF_FIELD_R,
         OFF_SIDE1 as _OFF_SIDE1_R,
         F_TERRAIN as _F_TERRAIN_R,
+        F_VOLATILE_0 as _F_VOL0_R,
+        F_VOLATILE_1 as _F_VOL1_R,
+        F_DISABLE_0 as _F_DIS0_R,
+        F_DISABLE_1 as _F_DIS1_R,
+        F_DISABLE_TURNS_0 as _F_DIST0_R,
+        F_DISABLE_TURNS_1 as _F_DIST1_R,
+        F_YAWN_TURNS_0 as _F_YAWN0_R,
+        F_YAWN_TURNS_1 as _F_YAWN1_R,
         M_CHARGING_0 as _M_CHG0_R,
         M_CHARGING_1 as _M_CHG1_R,
         MOVE_BOUNCE as _MOVE_BOUNCE_R,
@@ -1137,6 +1150,34 @@ def _count_residual_speedsort_frames(
         ):
             handlers.append((0, 0, spd, 0, 0))
             handlers.append((0, 0, spd, 0, 0))
+        side_idx = 0 if poff < _OFF_SIDE1_R else 1
+        vol = int(
+            battle[
+                _OFF_FIELD_R
+                + (_F_VOL0_R if side_idx == 0 else _F_VOL1_R)
+            ]
+        )
+        # Duration volatiles collected via fieldEvent('Residual') getKey='duration'.
+        if _get_taunt_turns_r(vol) > 0:
+            handlers.append((15, 0, spd, 0, 0))
+        if _get_encore_turns_r(vol) > 0:
+            handlers.append((16, 0, spd, 0, 0))
+        dis_off = _OFF_FIELD_R + (_F_DIS0_R if side_idx == 0 else _F_DIS1_R)
+        dis_turns_off = _OFF_FIELD_R + (
+            _F_DIST0_R if side_idx == 0 else _F_DIST1_R
+        )
+        if int(battle[dis_off]) >= 0 and int(battle[dis_turns_off]) > 0:
+            handlers.append((17, 0, spd, 0, 0))
+        if _get_heal_block_turns_r(vol) > 0:
+            handlers.append((20, 0, spd, 0, 0))
+        yawn_turns = int(
+            battle[
+                _OFF_FIELD_R
+                + (_F_YAWN0_R if side_idx == 0 else _F_YAWN1_R)
+            ]
+        )
+        if yawn_turns > 0:
+            handlers.append((23, 0, spd, 0, 0))
     if len(handlers) < 2:
         return
 
@@ -1669,6 +1710,10 @@ def step_battle_gen9_iter(
     _fx_apply_contact_damage = fx.apply_contact_damage
     _fx_apply_contact_status_ability = fx.apply_contact_status_ability
     _fx_apply_life_orb_recoil = fx.apply_life_orb_recoil
+
+    def _apply_recoil_drain_from_move_tracked(*args, **kwargs):
+        kwargs.setdefault("gen", profile.gen)
+        return fx.apply_recoil_drain_from_move(*args, **kwargs)
 
     def _apply_life_orb_recoil_tracked(*args, **kwargs) -> None:
         # (battle, user_off, dmg, hit, move_id). Life Orb recoil reveals the
@@ -4786,6 +4831,7 @@ def step_battle_gen9_iter(
                 True,
                 int(damage0),
                 gen5_prng,
+                gen=profile.gen,
             )
             return
 
@@ -4804,7 +4850,18 @@ def step_battle_gen9_iter(
             True,
             int(damage1),
             gen5_prng,
+            gen=profile.gen,
         )
+
+    def _schedule_cursed_body_after_calc(inflicter_side: int) -> None:
+        """Gen 5+ runs DamagingHit before move secondaries."""
+        if profile.gen >= 5:
+            _early_apply_cursed_body(inflicter_side)
+
+    def _schedule_cursed_body_after_preroll(inflicter_side: int) -> None:
+        """Gen 4 and below run DamagingHit after secondaryRoll."""
+        if profile.gen <= 4:
+            _early_apply_cursed_body(inflicter_side)
 
     def _early_apply_throat_chop(inflicter_side: int) -> None:
         """Apply a freshly-landed Throat Chop before the slower target moves.
@@ -5321,7 +5378,7 @@ def step_battle_gen9_iter(
         """
         _sim = battle.copy()
         _sim[int(_user_off) + 1] = np.int16(int(_user_hp_before_contact))
-        fx.apply_recoil_drain_from_move(
+        _apply_recoil_drain_from_move_tracked(
             _sim,
             _move_id,
             _user_off,
@@ -5572,7 +5629,7 @@ def step_battle_gen9_iter(
             _restore_off = int(restore_target_item_off)
             if int(_sim[_restore_off + 6]) == 0:
                 _sim[_restore_off + 6] = np.int16(int(restore_target_item))
-        fx.apply_recoil_drain_from_move(
+        _apply_recoil_drain_from_move_tracked(
             _sim,
             _move_id,
             _user_off,
@@ -5593,7 +5650,7 @@ def step_battle_gen9_iter(
             move_effects,
             num_hits=int(_num_hits),
         )
-        fx.apply_recoil_drain_from_move(
+        _apply_recoil_drain_from_move_tracked(
             _sim,
             _move_id,
             _user_off,
@@ -5853,6 +5910,8 @@ def step_battle_gen9_iter(
                 )
                 else _calc_p0()
             )
+            if int(damage0) > 0:
+                _schedule_cursed_body_after_calc(0)
             if (
                 _self_hit0
                 or _p0_immobile_pre
@@ -5862,7 +5921,8 @@ def step_battle_gen9_iter(
                 or is_charge_turn0
             ):
                 # Engine: self-hit already applied damage. Mark move as failed.
-                pass
+                if int(damage0) > 0:
+                    _schedule_cursed_body_after_preroll(0)
             else:
                 # Lockedmove self-effect PRNG (Showdown selfDrops, before
                 # secondaries). Must fire before _preroll0 and before the other
@@ -5877,6 +5937,7 @@ def step_battle_gen9_iter(
                     p0_off,
                 )
                 prerolled_move0 = _preroll0() if not is_switch else None
+                _schedule_cursed_body_after_preroll(0)
                 # Preroll contact status ability (Flame Body / Static / Poison
                 # Point / Poison Touch) for the first mover. In Showdown,
                 # DamagingHit fires after secondaries but BEFORE the second
@@ -6259,7 +6320,6 @@ def step_battle_gen9_iter(
             # cancels side1's move (Showdown ordering).
             _early_apply_inflicted_status(0)
             _early_apply_toxic_chain(0)
-            _early_apply_cursed_body(0)
             _contact_status_early_applied0 = _apply_resolved_contact_status(0)
             _early_apply_throat_chop(0)
             # Gen 8+ Showdown refreshes queued move speeds after each
@@ -6956,6 +7016,7 @@ def step_battle_gen9_iter(
                         if not opp_is_switch
                         else None
                     )
+                    _schedule_cursed_body_after_preroll(1)
             else:
                 battle[p1_off + 1] = _saved_hp1
                 damage1 = 0
@@ -7084,6 +7145,8 @@ def step_battle_gen9_iter(
                 )
                 else _calc_p1()
             )
+            if int(damage1) > 0:
+                _schedule_cursed_body_after_calc(1)
             if not (
                 move1_no_target
                 or _self_hit1
@@ -7103,6 +7166,7 @@ def step_battle_gen9_iter(
                     p1_off,
                 )
                 prerolled_move1 = _preroll1() if not opp_is_switch else None
+                _schedule_cursed_body_after_preroll(1)
                 # Preroll contact status ability for the first mover (side1).
                 # Side1 pivot isn't implemented in pokepy, so no pivot skip needed.
                 if _meta1.get("contact_status_consumed"):
@@ -7124,6 +7188,8 @@ def step_battle_gen9_iter(
                     not _self_hit1 and damage1 > 0,
                     gen5_prng,
                 )
+            elif int(damage1) > 0:
+                _schedule_cursed_body_after_preroll(1)
         else:
             damage1 = 0
         if move0_targets_foe_mon and not is_delayed0 and int(battle[p1_off + 1]) <= 0:
@@ -7433,7 +7499,6 @@ def step_battle_gen9_iter(
             _move1_preapplied_immediate_defender_state = True
             _early_apply_inflicted_status(1)
             _early_apply_toxic_chain(1)
-            _early_apply_cursed_body(1)
             _contact_status_early_applied1 = _apply_resolved_contact_status(1)
             _early_apply_throat_chop(1)
             # Mirror Showdown's gen8+ post-action queue speed refresh before
@@ -8045,6 +8110,8 @@ def step_battle_gen9_iter(
                         user_hurt_by_target_this_turn=(_mirrored_damage1_on_p0 > 0)
                     )
                 )
+                if int(damage0) > 0:
+                    _schedule_cursed_body_after_calc(0)
                 battle[p1_off + 1] = np.int16(_saved_target_hp1)
                 _target1_has_sub_pre = int(battle[OFF_FIELD + F_SUBSTITUTE_1]) > 0
                 _knock_off_source_alive0 = (
@@ -8102,7 +8169,10 @@ def step_battle_gen9_iter(
                         if not is_switch
                         else None
                     )
+                    _schedule_cursed_body_after_preroll(0)
             else:
+                if int(damage0) > 0:
+                    _schedule_cursed_body_after_preroll(0)
                 battle[p0_off + 1] = _saved_hp0
                 damage0 = 0
         elif _first_attacker_flinches_target:
@@ -9349,7 +9419,7 @@ def step_battle_gen9_iter(
             _restore_off = int(restore_target_item_off)
             if int(_sim[_restore_off + 6]) == 0:
                 _sim[_restore_off + 6] = np.int16(int(restore_target_item))
-        fx.apply_recoil_drain_from_move(
+        _apply_recoil_drain_from_move_tracked(
             _sim,
             _move_id,
             _user_off,
@@ -9370,7 +9440,7 @@ def step_battle_gen9_iter(
             move_effects,
             num_hits=int(_num_hits),
         )
-        fx.apply_recoil_drain_from_move(
+        _apply_recoil_drain_from_move_tracked(
             _sim,
             _move_id,
             _user_off,
@@ -9435,7 +9505,7 @@ def step_battle_gen9_iter(
         """
         _sim = battle.copy()
         _sim[int(_user_off) + 1] = np.int16(int(_user_hp_before_contact))
-        fx.apply_recoil_drain_from_move(
+        _apply_recoil_drain_from_move_tracked(
             _sim,
             _move_id,
             _user_off,
@@ -11257,7 +11327,7 @@ def step_battle_gen9_iter(
     if _first_is_drain and side0_first:
         # Side 0 used a drain move and moved first.
         battle[user0_off + 1] = np.int16(hp0_pre)
-        fx.apply_recoil_drain_from_move(
+        _apply_recoil_drain_from_move_tracked(
             battle,
             move_id0,
             user0_off,
@@ -11336,7 +11406,7 @@ def step_battle_gen9_iter(
             max(0, int(_hp0_postmove_baseline) - _actual_hp_removed_to_p0)
         )
         # Side 1 drain (second mover): normal, post-damage HP.
-        fx.apply_recoil_drain_from_move(
+        _apply_recoil_drain_from_move_tracked(
             battle,
             move_id1,
             user1_off,
@@ -11350,7 +11420,7 @@ def step_battle_gen9_iter(
     elif _first_is_drain and not side0_first:
         # Side 1 used a drain move and moved first.
         battle[user1_off + 1] = np.int16(hp1_pre)
-        fx.apply_recoil_drain_from_move(
+        _apply_recoil_drain_from_move_tracked(
             battle,
             move_id1,
             user1_off,
@@ -11425,7 +11495,7 @@ def step_battle_gen9_iter(
             max(0, int(_hp1_postmove_baseline) - _actual_hp_removed_to_p1)
         )
         # Side 0 drain (second mover): normal.
-        fx.apply_recoil_drain_from_move(
+        _apply_recoil_drain_from_move_tracked(
             battle,
             move_id0,
             user0_off,
@@ -11438,7 +11508,7 @@ def step_battle_gen9_iter(
         )
     else:
         # First mover has no drain — apply both normally.
-        fx.apply_recoil_drain_from_move(
+        _apply_recoil_drain_from_move_tracked(
             battle,
             move_id0,
             user0_off,
@@ -11449,7 +11519,7 @@ def step_battle_gen9_iter(
             target_offset=target0_off,
             phase="drain",
         )
-        fx.apply_recoil_drain_from_move(
+        _apply_recoil_drain_from_move_tracked(
             battle,
             move_id1,
             user1_off,
@@ -11653,6 +11723,7 @@ def step_battle_gen9_iter(
         skip_immediate_stateful_move1=_move1_preapplied_immediate_defender_state,
         skip_cursed_body0=_cursed_body_early_applied0,
         skip_cursed_body1=_cursed_body_early_applied1,
+        gen=profile.gen,
     )
     _sync_showdown_order_on_switch(
         side_order1,
@@ -11877,7 +11948,7 @@ def step_battle_gen9_iter(
     # Head/Magic Guard blocking matches Showdown. Substitute caps drain/recoil
     # to the sub's HP (sim/data/moves.ts:substitute onTryPrimaryHit).
     if not _skip_recoil_hp_effects0:
-        fx.apply_recoil_drain_from_move(
+        _apply_recoil_drain_from_move_tracked(
             battle,
             move_id0,
             user0_off,
@@ -11899,7 +11970,7 @@ def step_battle_gen9_iter(
             ),
         )
     if not _skip_recoil_hp_effects1:
-        fx.apply_recoil_drain_from_move(
+        _apply_recoil_drain_from_move_tracked(
             battle,
             move_id1,
             user1_off,
@@ -14323,6 +14394,7 @@ def step_battle_gen9(
     wants_tera0: bool = False,
     wants_tera1: bool = False,
     profile=None,
+    defer_p1_forced_switch: bool = False,
 ) -> Tuple[np.float32, np.float32, bool]:
     """Synchronous wrapper around :func:`step_battle_gen9_iter`."""
     gen = step_battle_gen9_iter(
@@ -14353,7 +14425,11 @@ def step_battle_gen9(
     except StopIteration as stop:
         result = stop.value
         forced_side = int(getattr(state, "forced_switch_side", -1))
-        if int(state.phase) == Phase.FORCED_SWITCH and forced_side in (1, 2):
+        if (
+            not defer_p1_forced_switch
+            and int(state.phase) == Phase.FORCED_SWITCH
+            and forced_side in (1, 2)
+        ):
             active0 = int(state.battle_state[OFF_META + M_ACTIVE0])
             active1 = int(state.battle_state[OFF_META + M_ACTIVE1])
             _inline_post_faint_switch_side1(

@@ -54,6 +54,63 @@ def _single_mon_team(
     )
 
 
+def _dual_mon_team(
+    gen: int,
+    *,
+    lead_moves: list | None = None,
+    bench_moves: list | None = None,
+) -> dict:
+    """Two-Pokémon mirror: Alakazam lead + Snorlax bench (gen-legal moves)."""
+    if lead_moves is None:
+        lead_moves = [94, 60, 113, 57]  # Psychic, Psybeam, LS, Surf
+    if bench_moves is None:
+        if gen == 1:
+            bench_moves = [34, 38, 39, 156]  # Body Slam, Double-Edge, Hyper Beam, Rest
+        else:
+            bench_moves = [34, 174, 156, 164]  # Body Slam, Curse, Rest, Selfdestruct
+    return dict(
+        species=[65, 143],
+        moves=[lead_moves, bench_moves],
+        abilities=[0, 0],
+        items=[0, 0],
+        tera_types=[0, 0],
+        levels=[100, 100],
+        evs=_ZERO_EV * 2,
+        ivs=_MAX_IV * 2,
+        natures=["Serious", "Serious"],
+    )
+
+
+def _multi_mon_team(
+    gen: int,
+    *,
+    lead_moves: list | None = None,
+    mid_moves: list | None = None,
+    back_moves: list | None = None,
+) -> dict:
+    """Three-Pokémon mirror: Alakazam / Snorlax / Starmie (gen-legal moves)."""
+    if lead_moves is None:
+        lead_moves = [94, 60, 113, 57]
+    if mid_moves is None:
+        if gen == 1:
+            mid_moves = [34, 38, 39, 156]
+        else:
+            mid_moves = [34, 174, 156, 164]
+    if back_moves is None:
+        back_moves = [56, 85, 94, 58]  # Surf, Thunderbolt, Psychic, Ice Beam
+    return dict(
+        species=[65, 143, 121],
+        moves=[lead_moves, mid_moves, back_moves],
+        abilities=[0, 0, 0],
+        items=[0, 0, 0],
+        tera_types=[0, 0, 0],
+        levels=[100, 100, 100],
+        evs=_ZERO_EV * 3,
+        ivs=_MAX_IV * 3,
+        natures=["Serious", "Serious", "Timid"],
+    )
+
+
 GEN4_ALAKAZAM_TEAM = _single_mon_team(65, [94, 247, 60, 113])  # Psychic, SB, Psybeam, LS
 GEN4_STARMIE_TEAM = _single_mon_team(121, [56, 85, 94, 58], nature="Timid")  # Surf, Tbolt, Psychic, Ice Beam
 GEN4_GENGAR_TEAM = _single_mon_team(94, [247, 126, 194, 85], nature="Timid")  # SB, Dream Eater, Shadow Punch, Tbolt
@@ -61,6 +118,7 @@ GEN4_GENGAR_TEAM = _single_mon_team(94, [247, 126, 194, 85], nature="Timid")  # 
 # Gen3 Psychic-only mirror (Shadow Ball is gen4+ in packed export).
 GEN3_ALAKAZAM_TEAM = _single_mon_team(65, [94, 60, 113, 57])  # Psychic, Psybeam, LS, Surf
 GEN3_STARMIE_TEAM = _single_mon_team(121, [56, 85, 94, 58], nature="Timid")  # Surf, Tbolt, Psychic, Ice Beam
+GEN3_GENGAR_TEAM = _single_mon_team(94, [94, 94, 94, 94], nature="Timid")  # Psychic mirror
 
 # Gen2 Psychic-only mirror (same move set as gen3).
 GEN2_ALAKAZAM_TEAM = _single_mon_team(65, [94, 60, 113, 57])  # Psychic, Psybeam, LS, Surf
@@ -234,6 +292,23 @@ def test_gen3_live_diff_alakazam_mirror_full_battle(seed: int):
     assert mismatch is None, mismatch
 
 
+@pytest.mark.parametrize("seed", [999, 12345, 424242, 500])
+def test_gen3_live_diff_gengar_mirror_full_battle(seed: int):
+    """Gen3 Gengar SE Psychic mirror should match Showdown through battle end."""
+    py_rows, show_rows, mismatch, meta = run_live_diff(
+        GEN3_GENGAR_TEAM,
+        GEN3_GENGAR_TEAM,
+        seed=seed,
+        n_turns=20,
+        gen=3,
+    )
+    assert meta["returncode"] == 0, meta
+    assert not meta["timeout"]
+    assert show_rows
+    assert py_rows
+    assert mismatch is None, mismatch
+
+
 @pytest.mark.parametrize(
     ("team", "seed"),
     [
@@ -333,6 +408,64 @@ def test_gen1_live_diff_special_mirror_full_battle(team, seed: int):
         seed=seed,
         n_turns=20,
         gen=1,
+    )
+    assert meta["returncode"] == 0, meta
+    assert not meta["timeout"]
+    assert show_rows
+    assert py_rows
+    assert mismatch is None, mismatch
+
+
+@pytest.mark.parametrize("gen", [1, 2, 3, 4])
+@pytest.mark.parametrize("seed", [999, 12345, 424242, 500])
+def test_live_diff_multi_mon_faint_switch_turn3(gen: int, seed: int):
+    """Tier A: faint-driven bench switch-in must match Showdown through turn 3."""
+    team = _multi_mon_team(gen)
+    py_rows, show_rows, mismatch, meta = run_live_diff(
+        team,
+        team,
+        seed=seed,
+        n_turns=3,
+        gen=gen,
+    )
+    assert meta["returncode"] == 0, meta
+    assert not meta["timeout"]
+    assert show_rows
+    assert py_rows
+    assert mismatch is None, mismatch
+    turn3 = next(row for row in py_rows if row["turn"] == 3)
+    lead_max = py_rows[0]["p0_max_hp"]
+    assert max(turn3["p0_max_hp"], turn3["p1_max_hp"]) >= lead_max
+
+
+@pytest.mark.parametrize("seed", [999, 12345, 424242, 500])
+def test_gen3_live_diff_multi_mon_switch_mirror_turn5(seed: int):
+    """Tier A: gen3 triple-mirror covers lead faint + Snorlax switch-in through turn 5."""
+    team = _multi_mon_team(3)
+    py_rows, show_rows, mismatch, meta = run_live_diff(
+        team,
+        team,
+        seed=seed,
+        n_turns=5,
+        gen=3,
+    )
+    assert meta["returncode"] == 0, meta
+    assert not meta["timeout"]
+    assert show_rows
+    assert py_rows
+    assert mismatch is None, mismatch
+
+
+@pytest.mark.parametrize("seed", [999, 424242])
+def test_gen3_live_diff_dual_mon_switch_mirror_full_battle(seed: int):
+    """Tier A: gen3 dual-mirror stays aligned through battle end on green seeds."""
+    team = _dual_mon_team(3)
+    py_rows, show_rows, mismatch, meta = run_live_diff(
+        team,
+        team,
+        seed=seed,
+        n_turns=20,
+        gen=3,
     )
     assert meta["returncode"] == 0, meta
     assert not meta["timeout"]
