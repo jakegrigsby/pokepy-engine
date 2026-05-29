@@ -1,6 +1,6 @@
 # pokepy-engine
 
-This is a fork of a project begun by `sethkarten/pokepy-engine`, which has been extended and tested by the `metamon` team. It is an experimental project that aims to serve an important niche for Pokémon RL projects like `metamon`, but probably should not be used for any other purpose.
+This is a fork of a project begun by `sethkarten/pokepy-engine`, which has been extended and tested by the `metamon` team. It is an experimental project that aims to serve an important niche for Pokémon RL efforts like `metamon`, but probably should not be used for any other purpose.
 
 <div align="center">
     <img src="pokepy/psyduck_is_pleased.png" alt="Psyduck is Pleased" width="200">
