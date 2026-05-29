@@ -81,7 +81,9 @@ def activate_terastallization(
         return False
 
     new_types = (tera_type & 0xFF) | ((tera_type & 0xFF) << 8)
-    battle[poff + 4] = np.int16(new_types if new_types < 0x8000 else new_types - 0x10000)
+    battle[poff + 4] = np.int16(
+        new_types if new_types < 0x8000 else new_types - 0x10000
+    )
 
     battle[poff + 15] = flags | 0x8
     return True

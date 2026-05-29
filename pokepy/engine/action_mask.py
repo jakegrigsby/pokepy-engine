@@ -12,22 +12,48 @@ import numpy as np
 
 from pokepy.core.state import MultiFormatState
 from pokepy.core.constants import (
-    OFF_SIDE0, OFF_SIDE1, OFF_FIELD, OFF_META, OFF_MOVES, POKEMON_SIZE,
-    M_ACTIVE0, M_ACTIVE1,
-    M_CHARGING_0, M_CHARGING_1,
-    M_LOCKED_MOVE_0, M_LOCKED_MOVE_1,
-    M_LOCKED_TURNS_0, M_LOCKED_TURNS_1,
-    M_RECHARGE_0, M_RECHARGE_1,
-    F_CHOICE_LOCK_0, F_CHOICE_LOCK_1, F_VOLATILE_0, F_VOLATILE_1,
-    F_LAST_MOVE_0, F_LAST_MOVE_1, F_DISABLE_0, F_DISABLE_1,
-    F_DISABLE_TURNS_0, F_DISABLE_TURNS_1,
-    F_EXTENDED_VOLATILE_0, F_EXTENDED_VOLATILE_1,
-    EXT_VOL_TORMENT, EXT_VOL_MEAN_LOOK, EXT_VOL_PARTIAL_TRAP,
-    CAT_STATUS, TYPE_FLYING, TYPE_GHOST, TYPE_STEEL,
+    OFF_SIDE0,
+    OFF_SIDE1,
+    OFF_FIELD,
+    OFF_META,
+    OFF_MOVES,
+    POKEMON_SIZE,
+    M_ACTIVE0,
+    M_ACTIVE1,
+    M_CHARGING_0,
+    M_CHARGING_1,
+    M_LOCKED_MOVE_0,
+    M_LOCKED_MOVE_1,
+    M_LOCKED_TURNS_0,
+    M_LOCKED_TURNS_1,
+    M_RECHARGE_0,
+    M_RECHARGE_1,
+    F_CHOICE_LOCK_0,
+    F_CHOICE_LOCK_1,
+    F_VOLATILE_0,
+    F_VOLATILE_1,
+    F_LAST_MOVE_0,
+    F_LAST_MOVE_1,
+    F_DISABLE_0,
+    F_DISABLE_1,
+    F_DISABLE_TURNS_0,
+    F_DISABLE_TURNS_1,
+    F_EXTENDED_VOLATILE_0,
+    F_EXTENDED_VOLATILE_1,
+    EXT_VOL_TORMENT,
+    EXT_VOL_MEAN_LOOK,
+    EXT_VOL_PARTIAL_TRAP,
+    CAT_STATUS,
+    TYPE_FLYING,
+    TYPE_GHOST,
+    TYPE_STEEL,
     FLAG_SOUND,
-    ITEM_ASSAULT_VEST, ITEM_SHED_SHELL,
+    ITEM_ASSAULT_VEST,
+    ITEM_SHED_SHELL,
     ABILITY_LEVITATE,
-    NUM_BATTLE_ACTIONS, PHASE_BATTLE, PHASE_FORCED_SWITCH,
+    NUM_BATTLE_ACTIONS,
+    PHASE_BATTLE,
+    PHASE_FORCED_SWITCH,
 )
 from pokepy.core.bitpack import get_taunt_turns, get_encore_turns, get_throat_chop_turns
 from pokepy.effects.grounding import is_grounded
@@ -36,6 +62,7 @@ from pokepy.effects.grounding import is_grounded
 ABILITY_SHADOW_TAG = 23
 ABILITY_ARENA_TRAP = 71
 ABILITY_MAGNET_PULL = 42
+
 
 def get_battle_move_mask(
     state: MultiFormatState, side: int, game_data
@@ -59,8 +86,12 @@ def get_battle_move_mask(
     f_vol = OFF_FIELD + (F_VOLATILE_0 if side == 0 else F_VOLATILE_1)
     f_last = OFF_FIELD + (F_LAST_MOVE_0 if side == 0 else F_LAST_MOVE_1)
     f_disable = OFF_FIELD + (F_DISABLE_0 if side == 0 else F_DISABLE_1)
-    f_disable_turns = OFF_FIELD + (F_DISABLE_TURNS_0 if side == 0 else F_DISABLE_TURNS_1)
-    f_extvol = OFF_FIELD + (F_EXTENDED_VOLATILE_0 if side == 0 else F_EXTENDED_VOLATILE_1)
+    f_disable_turns = OFF_FIELD + (
+        F_DISABLE_TURNS_0 if side == 0 else F_DISABLE_TURNS_1
+    )
+    f_extvol = OFF_FIELD + (
+        F_EXTENDED_VOLATILE_0 if side == 0 else F_EXTENDED_VOLATILE_1
+    )
 
     # PP-based mask (Struggle if all out)
     active_pp = pp_arr[active]
@@ -94,7 +125,9 @@ def get_battle_move_mask(
     encore_mask = np.zeros(4, dtype=bool)
     if 0 <= last_move < 4:
         encore_mask[last_move] = True
-    encore_applicable = encore_turns > 0 and 0 <= last_move < 4 and int(active_pp[last_move]) > 0
+    encore_applicable = (
+        encore_turns > 0 and 0 <= last_move < 4 and int(active_pp[last_move]) > 0
+    )
 
     # Throat Chop: disable sound moves for the next turn after the hit lands.
     throat_chop_turns = get_throat_chop_turns(volatile)
@@ -102,7 +135,10 @@ def get_battle_move_mask(
     if throat_chop_turns > 0:
         for i in range(4):
             mid = int(moves_arr[active, i])
-            if mid >= 0 and (int(np.asarray(game_data.move_flags)[mid]) & FLAG_SOUND) != 0:
+            if (
+                mid >= 0
+                and (int(np.asarray(game_data.move_flags)[mid]) & FLAG_SOUND) != 0
+            ):
                 throat_chop_mask[i] = False
 
     # Choice lock — cleared if the holder no longer has a Choice item
@@ -111,13 +147,21 @@ def get_battle_move_mask(
     # removes the lock at move-time. Pokepy lazily clears the lock here in
     # the action mask: if the active mon's current item isn't a Choice item,
     # treat as not locked.
-    from pokepy.core.constants import ITEM_CHOICE_BAND, ITEM_CHOICE_SPECS, ITEM_CHOICE_SCARF
+    from pokepy.core.constants import (
+        ITEM_CHOICE_BAND,
+        ITEM_CHOICE_SPECS,
+        ITEM_CHOICE_SCARF,
+    )
+
     cur_item = int(battle[side_base + active * POKEMON_SIZE + 6])
-    is_holding_choice = cur_item in (ITEM_CHOICE_BAND, ITEM_CHOICE_SPECS, ITEM_CHOICE_SCARF)
+    is_holding_choice = cur_item in (
+        ITEM_CHOICE_BAND,
+        ITEM_CHOICE_SPECS,
+        ITEM_CHOICE_SCARF,
+    )
     choice_lock = int(battle[f_choice])
     if not is_holding_choice:
-        choice_lock = -1  # Item lost via Trick / Knock Off / etc.
-        battle[f_choice] = -1
+        choice_lock = -1  # Item lost via Trick / Knock Off / etc.; read-only here.
     is_choice_locked = choice_lock >= 0
     choice_mask = np.zeros(4, dtype=bool)
     if 0 <= choice_lock < 4:
@@ -162,15 +206,19 @@ def get_battle_move_mask(
     # Choice lock at move-time (conditions.ts:choicelock onBeforeMove
     # `if (encored && encored !== this.effectState.move)` clears it).
     # Mirror that here so the action mask doesn't collapse to 0.
-    move_mask = pp_mask & taunt_mask & vest_mask & disable_mask & cantusetwice_mask & throat_chop_mask
+    move_mask = (
+        pp_mask
+        & taunt_mask
+        & vest_mask
+        & disable_mask
+        & cantusetwice_mask
+        & throat_chop_mask
+    )
     if is_choice_locked and encore_applicable and 0 <= choice_lock < 4:
         if not bool(encore_mask[choice_lock]):
-            # Encore forces a non-locked move — drop the Choice lock.
-            # Showdown: conditions.ts:choicelock onBeforeMove returns when
-            # encored !== effectState.move, which removeVolatile via the
-            # choicelock onBeforeMove + encore onOverrideAction interaction.
+            # Encore forces a non-locked move — drop the Choice lock (read-only).
             is_choice_locked = False
-            battle[f_choice] = -1
+            choice_lock = -1
     if is_choice_locked:
         move_mask = move_mask & choice_mask
     if encore_applicable:
@@ -188,6 +236,7 @@ def get_battle_move_mask(
 
     return move_mask, forced_struggle
 
+
 def get_battle_action_mask(state: MultiFormatState, side: int, game_data) -> np.ndarray:
     """Compute the legal-action mask for one side during the BATTLE phase.
 
@@ -199,7 +248,9 @@ def get_battle_action_mask(state: MultiFormatState, side: int, game_data) -> np.
     active = int(battle[OFF_META + (M_ACTIVE0 if side == 0 else M_ACTIVE1)])
 
     moves_arr = state.team_moves if side == 0 else state.opp_moves
-    f_extvol = OFF_FIELD + (F_EXTENDED_VOLATILE_0 if side == 0 else F_EXTENDED_VOLATILE_1)
+    f_extvol = OFF_FIELD + (
+        F_EXTENDED_VOLATILE_0 if side == 0 else F_EXTENDED_VOLATILE_1
+    )
 
     move_mask, _ = get_battle_move_mask(state, side, game_data)
 
@@ -277,7 +328,9 @@ def get_battle_action_mask(state: MultiFormatState, side: int, game_data) -> np.
 
     is_ghost = own_type1 == TYPE_GHOST or own_type2 == TYPE_GHOST
     is_steel = own_type1 == TYPE_STEEL or own_type2 == TYPE_STEEL
-    shadow_trapped = opp_ability == ABILITY_SHADOW_TAG and own_ability != ABILITY_SHADOW_TAG
+    shadow_trapped = (
+        opp_ability == ABILITY_SHADOW_TAG and own_ability != ABILITY_SHADOW_TAG
+    )
     arena_trapped = opp_ability == ABILITY_ARENA_TRAP and is_grounded(
         battle, side_base + active * POKEMON_SIZE
     )
@@ -293,7 +346,13 @@ def get_battle_action_mask(state: MultiFormatState, side: int, game_data) -> np.
     partial_trapped = (ext_vol_t & EXT_VOL_PARTIAL_TRAP) != 0
     has_shed = own_item == ITEM_SHED_SHELL
     is_trapped = (
-        (shadow_trapped or arena_trapped or magnet_trapped or mean_look_trapped or partial_trapped)
+        (
+            shadow_trapped
+            or arena_trapped
+            or magnet_trapped
+            or mean_look_trapped
+            or partial_trapped
+        )
         and not has_shed
         and not is_ghost
     )
@@ -303,6 +362,7 @@ def get_battle_action_mask(state: MultiFormatState, side: int, game_data) -> np.
         switch_mask = np.zeros(6, dtype=bool)
 
     return np.concatenate([move_mask, switch_mask])
+
 
 def get_action_mask(state: MultiFormatState, side: int, game_data) -> np.ndarray:
     """Phase-dispatched action mask. Currently supports BATTLE and FORCED_SWITCH only."""
@@ -319,6 +379,7 @@ def get_action_mask(state: MultiFormatState, side: int, game_data) -> np.ndarray
         return _forced_switch_mask(state, side)
     # Other phases (teambuilder) — not implemented in pokepy v0
     return np.zeros(NUM_BATTLE_ACTIONS, dtype=bool)
+
 
 def _forced_switch_mask(state: MultiFormatState, side: int) -> np.ndarray:
     """Switch-only mask for FORCED_SWITCH phase. Trapping is ignored

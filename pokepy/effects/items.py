@@ -1,6 +1,5 @@
-"""Item effects (berries, leftovers, life orb, ...).
+"""Item effects (berries, leftovers, life orb, ...)."""
 
-"""
 from __future__ import annotations
 
 from pokepy.effects._common import np, MultiFormatState, Gen5PRNG
@@ -78,12 +77,16 @@ ABILITY_AS_ONE_SPECTRIER = 267
 MOVE_TRI_ATTACK = 161
 ITEM_GOLD_BERRY = ITEM_GOLD_BERRY_INTERNAL
 
+
 def _has_heal_block(battle: np.ndarray, poff: int) -> bool:
     """Return True iff the holder is under Heal Block."""
     p = int(poff)
-    ext_off = OFF_FIELD + (F_EXTENDED_VOLATILE_0 if p < OFF_SIDE1 else F_EXTENDED_VOLATILE_1)
+    ext_off = OFF_FIELD + (
+        F_EXTENDED_VOLATILE_0 if p < OFF_SIDE1 else F_EXTENDED_VOLATILE_1
+    )
     ext = int(battle[ext_off]) & 0xFFFF
     return (ext & EXT_VOL_HEAL_BLOCK) != 0
+
 
 def _opponent_has_unnerve(battle: np.ndarray, poff: int) -> bool:
     """Return True iff the OPPONENT's active mon has Unnerve / As One.
@@ -104,8 +107,11 @@ def _opponent_has_unnerve(battle: np.ndarray, poff: int) -> bool:
         return False
     opp_ability = int(battle[opp_off + 5])
     return opp_ability in (
-        ABILITY_UNNERVE, ABILITY_AS_ONE_GLASTRIER, ABILITY_AS_ONE_SPECTRIER,
+        ABILITY_UNNERVE,
+        ABILITY_AS_ONE_GLASTRIER,
+        ABILITY_AS_ONE_SPECTRIER,
     )
+
 
 def _apply_cheek_pouch_heal(battle: np.ndarray, poff: int) -> None:
     """Showdown abilities.ts cheekpouch onEatItem: heal 1/3 max HP when the
@@ -127,6 +133,7 @@ def _apply_cheek_pouch_heal(battle: np.ndarray, poff: int) -> None:
     max_hp = int(battle[p + 2])
     heal = max(int(max_hp / 3), 1)
     battle[p + 1] = min(max_hp, hp + heal)
+
 
 def apply_sticky_barb_residual(
     battle: np.ndarray, pokemon_offset: int, game_data
@@ -152,6 +159,7 @@ def apply_sticky_barb_residual(
     dmg = max(int(max_hp / 8), 1)
     battle[poff + 1] = max(0, hp - dmg)
 
+
 def apply_leftovers_healing(battle: np.ndarray, pokemon_offset: int, game_data) -> None:
     """Port of _apply_leftovers_healing (line ~9070).
 
@@ -168,12 +176,17 @@ def apply_leftovers_healing(battle: np.ndarray, pokemon_offset: int, game_data) 
     heal_amount = max(int(max_hp / 16), 1)
     new_hp = min(max_hp, current_hp + heal_amount)
 
-    should_heal = has_leftovers and (current_hp > 0) and (not _has_heal_block(battle, poff))
+    should_heal = (
+        has_leftovers and (current_hp > 0) and (not _has_heal_block(battle, poff))
+    )
     final_hp = new_hp if should_heal else current_hp
 
     battle[poff + 1] = final_hp
 
-def apply_black_sludge_effect(battle: np.ndarray, pokemon_offset: int, game_data) -> None:
+
+def apply_black_sludge_effect(
+    battle: np.ndarray, pokemon_offset: int, game_data
+) -> None:
     """Port of _apply_black_sludge_effect (line ~9100).
 
     Heals Poison-type holder 1/16 max HP, damages non-Poison holders 1/8 max HP.
@@ -196,12 +209,17 @@ def apply_black_sludge_effect(battle: np.ndarray, pokemon_offset: int, game_data
     damaged_hp = max(0, current_hp - damage_amount)
 
     heal_blocked = _has_heal_block(battle, poff)
-    effect_hp = current_hp if (is_poison_type and heal_blocked) else (healed_hp if is_poison_type else damaged_hp)
+    effect_hp = (
+        current_hp
+        if (is_poison_type and heal_blocked)
+        else (healed_hp if is_poison_type else damaged_hp)
+    )
 
     should_apply = has_black_sludge and (current_hp > 0)
     final_hp = effect_hp if should_apply else current_hp
 
     battle[poff + 1] = final_hp
+
 
 def apply_sitrus_berry(battle: np.ndarray, pokemon_offset: int, game_data) -> None:
     """Port of _apply_sitrus_berry (line ~9144).
@@ -237,6 +255,7 @@ def apply_sitrus_berry(battle: np.ndarray, pokemon_offset: int, game_data) -> No
     if should_heal:
         _apply_cheek_pouch_heal(battle, poff)
 
+
 def apply_gold_berry(battle: np.ndarray, pokemon_offset: int, game_data) -> None:
     """Showdown items.ts goldberry: heal 30 HP at <= 1/2 max HP."""
     poff = int(pokemon_offset)
@@ -254,6 +273,7 @@ def apply_gold_berry(battle: np.ndarray, pokemon_offset: int, game_data) -> None
     battle[poff + 1] = min(max_hp, current_hp + 30)
     battle[poff + 6] = 0
     _apply_cheek_pouch_heal(battle, poff)
+
 
 def apply_lum_berry(battle: np.ndarray, pokemon_offset: int, game_data) -> None:
     """Apply all-status berries such as Lum Berry and Miracle Berry.
@@ -281,6 +301,7 @@ def apply_lum_berry(battle: np.ndarray, pokemon_offset: int, game_data) -> None:
 
     # Confusion lives on the side's volatile field — check both slots.
     from pokepy.core.bitpack import get_confusion_turns as _get_conf_turns
+
     p_is_side0 = poff < OFF_SIDE1
     vol_off = OFF_FIELD + (F_VOLATILE_0 if p_is_side0 else F_VOLATILE_1)
     vol_val = int(battle[vol_off])
@@ -299,7 +320,10 @@ def apply_lum_berry(battle: np.ndarray, pokemon_offset: int, game_data) -> None:
     battle[poff + 6] = 0
     _apply_cheek_pouch_heal(battle, poff)
 
-def apply_status_curing_berries(battle: np.ndarray, pokemon_offset: int, game_data) -> None:
+
+def apply_status_curing_berries(
+    battle: np.ndarray, pokemon_offset: int, game_data
+) -> None:
     """Port of _apply_status_curing_berries (line ~9223).
 
     Cheri/Rawst/Pecha/Chesto/Aspear cure Para/Burn/Poison/Sleep/Freeze.
@@ -350,6 +374,7 @@ def apply_status_curing_berries(battle: np.ndarray, pokemon_offset: int, game_da
     if any_triggers:
         _apply_cheek_pouch_heal(battle, poff)
 
+
 def apply_persim_berry(battle: np.ndarray, pokemon_offset: int, game_data) -> None:
     """Port of _apply_persim_berry (line ~9273).
 
@@ -387,6 +412,7 @@ def apply_persim_berry(battle: np.ndarray, pokemon_offset: int, game_data) -> No
 
     if persim_triggers:
         _apply_cheek_pouch_heal(battle, poff)
+
 
 def apply_defender_stat_berries_on_damaging_hit(
     battle: np.ndarray,
@@ -429,7 +455,10 @@ def apply_defender_stat_berries_on_damaging_hit(
     battle[poff + 6] = 0
     _apply_cheek_pouch_heal(battle, poff)
 
-def apply_stat_boosting_berries(battle: np.ndarray, pokemon_offset: int, game_data) -> None:
+
+def apply_stat_boosting_berries(
+    battle: np.ndarray, pokemon_offset: int, game_data
+) -> None:
     """Port of _apply_stat_boosting_berries (line ~9315).
 
     Pinch berries (HP <= 1/4 max, or 1/2 with Gluttony):
@@ -495,19 +524,23 @@ def apply_stat_boosting_berries(battle: np.ndarray, pokemon_offset: int, game_da
     if starf_triggers:
         pick = (int(hp) + int(max_hp) + int(poff)) % 5
         if pick == 0:
-            boosts1 = apply_boost_to_packed(boosts1, 0, 2)   # Atk
+            boosts1 = apply_boost_to_packed(boosts1, 0, 2)  # Atk
         elif pick == 1:
-            boosts1 = apply_boost_to_packed(boosts1, 4, 2)   # Def
+            boosts1 = apply_boost_to_packed(boosts1, 4, 2)  # Def
         elif pick == 2:
-            boosts1 = apply_boost_to_packed(boosts1, 8, 2)   # SpA
+            boosts1 = apply_boost_to_packed(boosts1, 8, 2)  # SpA
         elif pick == 3:
             boosts1 = apply_boost_to_packed(boosts1, 12, 2)  # SpD
         else:
-            boosts2 = apply_boost_to_packed(boosts2, 0, 2)   # Spe
+            boosts2 = apply_boost_to_packed(boosts2, 0, 2)  # Spe
 
     any_triggers = (
-        liechi_triggers or ganlon_triggers or petaya_triggers
-        or apicot_triggers or salac_triggers or starf_triggers
+        liechi_triggers
+        or ganlon_triggers
+        or petaya_triggers
+        or apicot_triggers
+        or salac_triggers
+        or starf_triggers
     )
     new_item = 0 if any_triggers else item
 
@@ -518,7 +551,10 @@ def apply_stat_boosting_berries(battle: np.ndarray, pokemon_offset: int, game_da
     if any_triggers:
         _apply_cheek_pouch_heal(battle, poff)
 
-def apply_pinch_healing_berries(battle: np.ndarray, pokemon_offset: int, game_data) -> None:
+
+def apply_pinch_healing_berries(
+    battle: np.ndarray, pokemon_offset: int, game_data
+) -> None:
     """Port of _apply_pinch_healing_berries (line ~9376).
 
     Figy/Wiki/Mago/Aguav/Iapapa berries heal 33% max HP at <=25% HP
@@ -570,6 +606,7 @@ def apply_pinch_healing_berries(battle: np.ndarray, pokemon_offset: int, game_da
         battle[poff + 1] = oran_hp
         battle[poff + 6] = 0
         _apply_cheek_pouch_heal(battle, poff)
+
 
 def apply_life_orb_recoil(
     battle: np.ndarray,

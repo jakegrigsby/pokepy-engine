@@ -65,6 +65,7 @@ from pokepy.effects.misc import (
     apply_screen_from_move,
 )
 
+
 def _hand_state(target_type1: int = TYPE_NORMAL):
     """Build a minimal battle buffer with one normal-type Pokemon per side."""
     gd = load_game_data()
@@ -102,6 +103,7 @@ def _hand_state(target_type1: int = TYPE_NORMAL):
             bs[poff + 15] = 0
     return state, gd, me
 
+
 def test_apply_hazard_from_move_stealth_rock():
     state, gd, me = _hand_state()
     bs = state.battle_state
@@ -119,6 +121,7 @@ def test_apply_hazard_from_move_stealth_rock():
     assert get_stealth_rock(int(bs[OFF_FIELD + F_HAZARDS_1])) == 1
     # Side 0 unaffected
     assert get_stealth_rock(int(bs[OFF_FIELD + F_HAZARDS_0])) == 0
+
 
 def test_apply_hazard_damage_on_switch_fire_takes_quarter():
     state, gd, me = _hand_state(target_type1=TYPE_FIRE)
@@ -140,6 +143,7 @@ def test_apply_hazard_damage_on_switch_fire_takes_quarter():
     # raw damage = max_hp * 2.0 / 8 = 25 -> HP drops by 25.
     assert pre_hp - post_hp == 25
 
+
 def test_apply_protect_from_move_returns_true_and_sets_active():
     state, gd, me = _hand_state()
     bs = state.battle_state
@@ -155,10 +159,12 @@ def test_apply_protect_from_move_returns_true_and_sets_active():
     assert success is True
     assert get_protect_active(int(bs[OFF_FIELD + F_PROTECT_0])) == 1
 
+
 def test_check_protected_false_for_unprotected_side():
     state, _, _ = _hand_state()
     bs = state.battle_state
     assert check_protected(bs, target_side=1) is False
+
 
 def test_apply_flinch_from_move_fake_out_sets_flinch_bit():
     state, gd, me = _hand_state()
@@ -177,6 +183,7 @@ def test_apply_flinch_from_move_fake_out_sets_flinch_bit():
     # Fake Out has 100% flinch chance, so the bit must be set.
     assert get_flinched(int(bs[OFF_FIELD + F_VOLATILE_1])) is True
 
+
 def test_auto_switch_returns_next_alive_slot():
     state, _, _ = _hand_state()
     bs = state.battle_state
@@ -187,6 +194,7 @@ def test_auto_switch_returns_next_alive_slot():
     new_active = auto_switch(bs, OFF_SIDE0, current_active=0, needs_switch=True)
     assert new_active == 1
     assert count_alive(bs, OFF_SIDE0) == 5
+
 
 def test_apply_knock_off_clears_defender_item():
     state, gd, me = _hand_state()
@@ -205,6 +213,7 @@ def test_apply_knock_off_clears_defender_item():
         move_effects=me,
     )
     assert int(bs[target_off + 6]) == 0
+
 
 def test_apply_screen_from_move_reflect_sets_counter():
     state, gd, me = _hand_state()

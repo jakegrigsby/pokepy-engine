@@ -21,6 +21,7 @@ from parity_heuristic_e2e import (
     team_to_showdown_packed,
 )
 
+
 def test_luster_purge_has_showdown_secondary():
     mappings = load_id_mappings()
     me = load_move_effect_data()
@@ -29,6 +30,7 @@ def test_luster_purge_has_showdown_secondary():
     assert int(me.stat_target[move_id]) == 1
     assert int(me.stat_chance[move_id]) == 50
     assert [int(x) for x in me.stat_changes[move_id]] == [0, 0, 0, -1, 0, 0, 0]
+
 
 def test_freezing_glare_has_showdown_secondary():
     from pokepy.core.constants import STATUS_FREEZE
@@ -40,6 +42,7 @@ def test_freezing_glare_has_showdown_secondary():
     assert int(me.effect_type[move_id]) != 0
     assert int(me.status[move_id]) == STATUS_FREEZE
     assert int(me.status_chance[move_id]) == 10
+
 
 def test_battle5_switch_turn_regression_rows_match():
     gd = load_game_data()
@@ -64,6 +67,7 @@ def test_battle5_switch_turn_regression_rows_match():
     assert normal_rows[17]["p0_hp"] == 184
     assert normal_rows[17]["p1_hp"] == 394
 
+
 def test_battle6_defog_hidden_prng_regression_rows_match():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -85,6 +89,7 @@ def test_battle6_defog_hidden_prng_regression_rows_match():
     assert normal_rows[12]["p0_hp"] == 330
     assert normal_rows[12]["p0_status"] == 4
     assert normal_rows[12]["p1_hp"] == 350
+
 
 def test_battle77_freezing_glare_secondary_roll_regression():
     gd = load_game_data()
@@ -112,6 +117,7 @@ def test_battle77_freezing_glare_secondary_roll_regression():
     assert normal_rows[17]["p1_hp"] == 0
     assert normal_rows[13]["p0_status"] == 0
 
+
 def test_battle81_neutralizing_gas_suppresses_contrary_self_drop_regression():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -136,6 +142,7 @@ def test_battle81_neutralizing_gas_suppresses_contrary_self_drop_regression():
     assert normal_rows[23]["p1_hp"] == 102
     assert normal_rows[24]["p0_hp"] == 260
     assert normal_rows[24]["p1_hp"] == 323
+
 
 def test_battle83_multihit_ko_stops_extra_damage_rolls_regression():
     gd = load_game_data()
@@ -167,6 +174,7 @@ def test_battle83_multihit_ko_stops_extra_damage_rolls_regression():
     assert normal_rows[17]["p0_hp"] == 95
     assert normal_rows[17]["p1_hp"] == 0
 
+
 def test_battle90_switch_in_resets_non_tera_species_types_regression():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -192,6 +200,7 @@ def test_battle90_switch_in_resets_non_tera_species_types_regression():
     assert normal_rows[15]["p0_hp"] == 63
     assert normal_rows[16]["p0_hp"] == 292
     assert normal_rows[16]["p1_hp"] == 318
+
 
 def test_battle92_harvest_replays_berry_update_hooks_regression():
     gd = load_game_data()
@@ -219,6 +228,7 @@ def test_battle92_harvest_replays_berry_update_hooks_regression():
     assert normal_rows[21]["p1_hp"] == 512
     assert normal_rows[22]["p0_hp"] == 301
     assert normal_rows[22]["p1_hp"] == 200
+
 
 def test_battle98_hazard_ko_after_pivot_cancels_slower_move_prng_regression():
     gd = load_game_data()
@@ -254,6 +264,7 @@ def test_battle98_hazard_ko_after_pivot_cancels_slower_move_prng_regression():
     assert normal_rows[46]["p1_hp"] == 70
     assert normal_rows[46]["p1_status"] == 1
 
+
 def test_battle88_pivot_user_life_orb_hp_persists_through_bench_reentry_regression():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -281,6 +292,7 @@ def test_battle88_pivot_user_life_orb_hp_persists_through_bench_reentry_regressi
     assert normal_rows[22]["p0_hp"] == 185
     assert normal_rows[22]["p0_max_hp"] == 317
     assert normal_rows[23]["p0_hp"] == 196
+
 
 def test_battle137_poison_puppeteer_and_self_ko_notarget_regression():
     gd = load_game_data()
@@ -316,6 +328,7 @@ def test_battle137_poison_puppeteer_and_self_ko_notarget_regression():
     assert normal_rows[50]["p0_hp"] == 0
     assert normal_rows[50]["p1_hp"] == 185
 
+
 def test_battle152_alluring_voice_callback_secondary_roll_regression():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -340,6 +353,7 @@ def test_battle152_alluring_voice_callback_secondary_roll_regression():
     assert normal_rows[44]["p0_hp"] == 290
     assert normal_rows[44]["p1_hp"] == 0
 
+
 def test_battle154_avalanche_only_doubles_when_hit_by_target_regression():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -363,6 +377,7 @@ def test_battle154_avalanche_only_doubles_when_hit_by_target_regression():
     assert normal_rows[12]["p1_hp"] == 421
     assert normal_rows[25]["p0_hp"] == 0
     assert normal_rows[25]["p1_hp"] == 78
+
 
 def test_battle205_team_preview_speed_tie_prng_regression():
     gd = load_game_data()
@@ -391,6 +406,7 @@ def test_battle205_team_preview_speed_tie_prng_regression():
     assert normal_rows[18]["p1_hp"] == 156
     assert normal_rows[20]["p0_hp"] == 156
     assert normal_rows[20]["p1_hp"] == 122
+
 
 def test_battle101_ceaseless_edge_empty_secondary_roll_regression():
     gd = load_game_data()
@@ -421,6 +437,7 @@ def test_battle101_ceaseless_edge_empty_secondary_roll_regression():
     assert normal_rows[14]["p1_hp"] == 74
     assert normal_rows[19]["p0_hp"] == 83
     assert normal_rows[19]["p1_hp"] == 0
+
 
 def test_battle111_neutralizing_gas_damage_and_same_turn_confusion_regression():
     gd = load_game_data()
@@ -458,6 +475,7 @@ def test_battle111_neutralizing_gas_damage_and_same_turn_confusion_regression():
     assert normal_rows[55]["p0_hp"] == 146
     assert normal_rows[55]["p1_hp"] == 0
 
+
 def test_battle128_same_terrain_switch_does_not_refresh_turns_regression():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -487,6 +505,7 @@ def test_battle128_same_terrain_switch_does_not_refresh_turns_regression():
     assert normal_rows[20]["p1_hp"] == 55
     assert normal_rows[23]["p0_hp"] == 20
     assert normal_rows[23]["p1_hp"] == 0
+
 
 def test_battle118_cached_action_speed_update_frames_regression():
     gd = load_game_data()
@@ -523,6 +542,7 @@ def test_battle118_cached_action_speed_update_frames_regression():
     assert normal_rows[34]["p0_hp"] == 0
     assert normal_rows[34]["p1_hp"] == 142
 
+
 def test_battle2_cached_action_speed_refresh_regression():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -554,6 +574,7 @@ def test_battle2_cached_action_speed_refresh_regression():
     assert normal_rows[22]["p1_hp"] == 243
     assert normal_rows[23]["p0_hp"] == 382
     assert normal_rows[23]["p1_hp"] == 47
+
 
 def test_battle34_immediate_defender_ability_state_regression():
     gd = load_game_data()
@@ -587,6 +608,7 @@ def test_battle34_immediate_defender_ability_state_regression():
     assert normal_rows[31]["p0_hp"] == 76
     assert normal_rows[31]["p1_hp"] == 0
 
+
 def test_battle156_switch_in_restores_native_type_for_libero_regression():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -618,6 +640,7 @@ def test_battle156_switch_in_restores_native_type_for_libero_regression():
     assert normal_rows[39]["p1_hp"] == 178
     assert normal_rows[40]["p0_hp"] == 272
     assert normal_rows[40]["p1_hp"] == 0
+
 
 def test_battle637_defog_hazard_order_and_pressure_notarget_pp_regression():
     gd = load_game_data()
@@ -657,6 +680,7 @@ def test_battle637_defog_hazard_order_and_pressure_notarget_pp_regression():
     assert normal_rows[69]["p1_hp"] == 47
     assert normal_rows[69]["p1_action"] == "move 1"
 
+
 def test_battle121_first_mover_after_move_secondary_hp_order_regression():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -692,6 +716,7 @@ def test_battle121_first_mover_after_move_secondary_hp_order_regression():
     assert normal_rows[50]["p1_hp"] == 141
     assert normal_rows[55]["p0_hp"] == 0
     assert normal_rows[55]["p1_hp"] == 294
+
 
 def test_battle47_life_orb_after_drain_and_static_regression():
     gd = load_game_data()
@@ -737,6 +762,7 @@ def test_battle47_life_orb_after_drain_and_static_regression():
     assert normal_rows[21]["p1_hp"] == 193
     assert normal_rows[21]["p1_status"] == 2
 
+
 def test_choice_lock_out_of_pp_uses_locked_slot_for_struggle():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -758,6 +784,7 @@ def test_choice_lock_out_of_pp_uses_locked_slot_for_struggle():
     assert normal_rows[61]["p1_hp"] == 318
     assert normal_rows[62]["p0_hp"] == 321
     assert normal_rows[62]["p1_hp"] == 295
+
 
 def test_battle7_hazard_ko_notarget_regression_rows_match():
     gd = load_game_data()
@@ -784,6 +811,7 @@ def test_battle7_hazard_ko_notarget_regression_rows_match():
     assert normal_rows[17]["p0_hp"] == 0
     assert normal_rows[17]["p1_hp"] == 300
 
+
 def test_battle9_terminal_hazard_switch_chain_regression_rows_match():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -807,6 +835,7 @@ def test_battle9_terminal_hazard_switch_chain_regression_rows_match():
     assert normal_rows[45]["p1_hp"] == 2
     assert normal_rows[48]["p0_hp"] == 127
     assert normal_rows[48]["p1_hp"] == 0
+
 
 def test_battle10_confusion_onbeforemove_regression_rows_match():
     gd = load_game_data()
@@ -836,6 +865,7 @@ def test_battle10_confusion_onbeforemove_regression_rows_match():
     assert normal_rows[11]["p0_hp"] == 293
     assert normal_rows[11]["p1_hp"] == 0
 
+
 def test_battle12_protosynthesis_speed_order_regression_rows_match():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -863,6 +893,7 @@ def test_battle12_protosynthesis_speed_order_regression_rows_match():
     assert normal_rows[44]["p0_hp"] == 221
     assert normal_rows[44]["p1_hp"] == 258
 
+
 def test_battle14_hyperspace_fury_and_recoil_regression_rows_match():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -889,6 +920,7 @@ def test_battle14_hyperspace_fury_and_recoil_regression_rows_match():
     assert normal_rows[11]["p1_hp"] == 434
     assert normal_rows[12]["p0_hp"] == 89
     assert normal_rows[12]["p1_hp"] == 216
+
 
 def test_battle16_prng_and_beat_up_regression_rows_match():
     gd = load_game_data()
@@ -921,6 +953,7 @@ def test_battle16_prng_and_beat_up_regression_rows_match():
     assert normal_rows[52]["p0_hp"] == 142
     assert normal_rows[52]["p1_hp"] == 0
 
+
 def test_battle18_future_sight_offfield_item_suppression_regression_rows_match():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -949,6 +982,7 @@ def test_battle18_future_sight_offfield_item_suppression_regression_rows_match()
     assert normal_rows[44]["p1_hp"] == 295
     assert normal_rows[46]["p0_hp"] == 404
     assert normal_rows[46]["p1_hp"] == 274
+
 
 def test_battle19_flip_turn_and_futuresight_regression_rows_match():
     gd = load_game_data()
@@ -986,6 +1020,7 @@ def test_battle19_flip_turn_and_futuresight_regression_rows_match():
     assert normal_rows[34]["p1_hp"] == 0
     assert normal_rows[34]["p1_status"] == 0
 
+
 def test_battle20_switch_order_confusion_and_ko_update_regression_rows_match():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -1021,6 +1056,7 @@ def test_battle20_switch_order_confusion_and_ko_update_regression_rows_match():
     assert normal_rows[60]["p0_hp"] == 166
     assert normal_rows[60]["p1_hp"] == 0
 
+
 def test_battle24_contact_ko_notarget_prng_regression_rows_match():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -1046,6 +1082,7 @@ def test_battle24_contact_ko_notarget_prng_regression_rows_match():
     assert normal_rows[16]["p1_hp"] == 236
     assert normal_rows[18]["p0_hp"] == 105
     assert normal_rows[18]["p1_hp"] == 97
+
 
 def test_battle26_status_immunity_and_phaze_queue_regression():
     gd = load_game_data()
@@ -1086,6 +1123,7 @@ def test_battle26_status_immunity_and_phaze_queue_regression():
     assert normal_rows[9]["p0_action"] == "switch 4"
     assert normal_rows[9]["p0_hp"] == 379
 
+
 def test_battle27_inline_item_switch_and_terminal_uturn_regression_rows_match():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -1115,6 +1153,7 @@ def test_battle27_inline_item_switch_and_terminal_uturn_regression_rows_match():
     assert normal_rows[22]["p0_max_hp"] == 382
     assert normal_rows[22]["p1_hp"] == 0
 
+
 def test_battle8_inline_eject_button_cancellation_regression_rows_match():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -1140,6 +1179,7 @@ def test_battle8_inline_eject_button_cancellation_regression_rows_match():
     assert normal_rows[8]["p1_max_hp"] == 341
     assert normal_rows[55]["p0_hp"] == 0
     assert normal_rows[55]["p1_hp"] == 159
+
 
 def test_battle32_freeze_immunity_and_libero_timing_regression():
     gd = load_game_data()
@@ -1172,6 +1212,7 @@ def test_battle32_freeze_immunity_and_libero_timing_regression():
     assert normal_rows[25]["p0_hp"] == 46
     assert normal_rows[25]["p1_hp"] == 0
 
+
 def test_battle33_inline_knock_off_item_order_regression():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -1202,6 +1243,7 @@ def test_battle33_inline_knock_off_item_order_regression():
     assert normal_rows[23]["p0_hp"] == 332
     assert normal_rows[23]["p1_hp"] == 0
 
+
 def test_battle34_good_as_gold_terrain_and_switch_update_regression():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -1231,6 +1273,7 @@ def test_battle34_good_as_gold_terrain_and_switch_update_regression():
     assert normal_rows[17]["p1_hp"] == 387
     assert normal_rows[31]["p0_hp"] == 76
     assert normal_rows[31]["p1_hp"] == 0
+
 
 def test_battle36_rapid_spin_faster_onafterhit_regression():
     gd = load_game_data()
@@ -1268,6 +1311,7 @@ def test_battle36_rapid_spin_faster_onafterhit_regression():
     assert normal_rows[48]["p0_hp"] == 125
     assert normal_rows[48]["p1_hp"] == 0
 
+
 def test_battle37_fixed_multihit_count_prng_regression():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -1301,6 +1345,7 @@ def test_battle37_fixed_multihit_count_prng_regression():
     assert normal_rows[29]["p0_hp"] == 394
     assert normal_rows[29]["p1_hp"] == 0
 
+
 def test_battle28_charge_turn_residual_prng_regression():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -1331,6 +1376,7 @@ def test_battle28_charge_turn_residual_prng_regression():
     assert normal_rows[41]["p0_hp"] == 8
     assert normal_rows[41]["p1_hp"] == 0
 
+
 def test_battle38_seed_sower_and_terminal_forced_switch_regression():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -1358,6 +1404,7 @@ def test_battle38_seed_sower_and_terminal_forced_switch_regression():
     assert normal_rows[16]["p1_hp"] == 307
     assert normal_rows[23]["p0_hp"] == 0
     assert normal_rows[23]["p1_hp"] == 273
+
 
 def test_battle39_pressure_and_lockedmove_restart_regression():
     gd = load_game_data()
@@ -1391,6 +1438,7 @@ def test_battle39_pressure_and_lockedmove_restart_regression():
     assert normal_rows[65]["p0_hp"] == 250
     assert normal_rows[65]["p1_hp"] == 0
 
+
 def test_battle126_charge_lock_followup_switch_regression():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -1422,6 +1470,7 @@ def test_battle126_charge_lock_followup_switch_regression():
     assert normal_rows[23]["p0_hp"] == 0
     assert normal_rows[23]["p1_hp"] == 312
     assert normal_rows[23]["p1_status"] == 5
+
 
 def test_battle140_crash_notarget_and_sparkling_aria_secondary_roll_regression():
     gd = load_game_data()
@@ -1460,6 +1509,7 @@ def test_battle140_crash_notarget_and_sparkling_aria_secondary_roll_regression()
     assert normal_rows[9]["p1_hp"] == 173
     assert normal_rows[18]["p0_hp"] == 141
     assert normal_rows[18]["p1_hp"] == 0
+
 
 def test_battle149_partial_trap_source_faint_and_fickle_beam_regression():
     gd = load_game_data()
@@ -1511,6 +1561,7 @@ def test_battle149_partial_trap_source_faint_and_fickle_beam_regression():
     assert normal_rows[29]["p1_hp"] == 0
     assert normal_rows[29]["p1_max_hp"] == 323
 
+
 def test_battle155_eject_button_cancels_slower_move_regression():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -1554,6 +1605,7 @@ def test_battle155_eject_button_cancels_slower_move_regression():
     assert normal_rows[21]["p1_action"] == "move 1"
     assert normal_rows[21]["p1_hp"] == 206
     assert normal_rows[21]["p1_max_hp"] == 371
+
 
 def test_battle158_healing_wish_showdown_row_status_regression():
     gd = load_game_data()
@@ -1602,6 +1654,7 @@ def test_battle158_healing_wish_showdown_row_status_regression():
     assert normal_rows[44]["p1_hp"] == 281
     assert normal_rows[44]["p1_max_hp"] == 321
 
+
 def test_battle158_showdown_runner_clears_healing_wish_status():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -1646,6 +1699,7 @@ def test_battle158_showdown_runner_clears_healing_wish_status():
     assert by_turn[34]["p0_hp"] == 463
     assert by_turn[34]["p0_max_hp"] == 463
     assert by_turn[34]["p0_status"] == 1
+
 
 def test_battle172_struggle_does_not_trigger_libero_regression():
     gd = load_game_data()
@@ -1698,6 +1752,7 @@ def test_battle172_struggle_does_not_trigger_libero_regression():
     assert normal_rows[39]["p1_hp"] == 0
     assert normal_rows[39]["p1_max_hp"] == 387
     assert normal_rows[39]["p1_status"] == 0
+
 
 def test_battle173_miracle_berry_cures_early_status_before_slower_move_regression():
     gd = load_game_data()
@@ -1759,6 +1814,7 @@ def test_battle173_miracle_berry_cures_early_status_before_slower_move_regressio
     assert normal_rows[27]["p1_max_hp"] == 380
     assert normal_rows[27]["p1_status"] == 0
 
+
 def test_battle178_double_faint_replacement_intimidate_regression():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -1795,6 +1851,7 @@ def test_battle178_double_faint_replacement_intimidate_regression():
     assert normal_rows[15]["p1_action"] == "move 4+forced:switch 3"
     assert normal_rows[15]["p1_hp"] == 291
     assert normal_rows[15]["p1_max_hp"] == 364
+
 
 def test_battle181_switch_in_restores_base_ability_and_reactive_trace_regression():
     gd = load_game_data()
@@ -1833,6 +1890,7 @@ def test_battle181_switch_in_restores_base_ability_and_reactive_trace_regression
     assert normal_rows[32]["p1_hp"] == 82
     assert normal_rows[32]["p1_max_hp"] == 277
 
+
 def test_battle184_growth_uses_effective_sun_weather_regression():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -1865,6 +1923,7 @@ def test_battle184_growth_uses_effective_sun_weather_regression():
     assert normal_rows[3]["p1_max_hp"] == 379
     assert normal_rows[4]["p0_hp"] == 115
     assert normal_rows[4]["p1_hp"] == 45
+
 
 def test_battle187_notarget_status_move_does_not_clear_hazards_regression():
     gd = load_game_data()
@@ -1903,6 +1962,7 @@ def test_battle187_notarget_status_move_does_not_clear_hazards_regression():
     assert normal_rows[62]["p0_hp"] == 329
     assert normal_rows[62]["p1_hp"] == 170
 
+
 def test_battle35_pivot_hazard_ko_does_not_cancel_foe_side_move_regression():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -1937,6 +1997,7 @@ def test_battle35_pivot_hazard_ko_does_not_cancel_foe_side_move_regression():
     assert normal_rows[56]["p0_hp"] == 202
     assert normal_rows[56]["p1_hp"] == 226
 
+
 def test_battle188_clanging_scales_selfboost_updates_before_body_press_regression():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -1969,6 +2030,7 @@ def test_battle188_clanging_scales_selfboost_updates_before_body_press_regressio
     assert normal_rows[8]["p1_hp"] == 162
     assert normal_rows[8]["p1_max_hp"] == 364
 
+
 def test_battle189_magician_steals_helmet_from_fainted_target_regression():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -1998,6 +2060,7 @@ def test_battle189_magician_steals_helmet_from_fainted_target_regression():
     assert normal_rows[9]["p1_max_hp"] == 301
     assert normal_rows[10]["p0_hp"] == 251
     assert normal_rows[10]["p1_hp"] == 434
+
 
 def test_battle192_liquid_voice_rewrites_psychic_noise_to_water_regression():
     gd = load_game_data()
@@ -2029,6 +2092,7 @@ def test_battle192_liquid_voice_rewrites_psychic_noise_to_water_regression():
     assert normal_rows[3]["p1_action"] == "move 1+forced:switch 4"
     assert normal_rows[3]["p1_hp"] == 341
 
+
 def test_battle196_sticky_web_contrary_switchin_regression():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -2057,6 +2121,7 @@ def test_battle196_sticky_web_contrary_switchin_regression():
     assert normal_rows[13]["p0_hp"] == 274
     assert normal_rows[13]["p1_hp"] == 255
 
+
 def test_battle199_cute_charm_contact_prng_regression():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -2084,6 +2149,7 @@ def test_battle199_cute_charm_contact_prng_regression():
     assert normal_rows[49]["p0_hp"] == 3
     assert normal_rows[49]["p1_hp"] == 287
 
+
 def test_battle200_deferred_absorb_after_struggle_recoil_regression():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -2110,6 +2176,7 @@ def test_battle200_deferred_absorb_after_struggle_recoil_regression():
     assert normal_rows[49]["p1_hp"] == 298
     assert normal_rows[50]["p0_hp"] == 309
     assert normal_rows[50]["p1_hp"] == 297
+
 
 def test_battle21_steam_eruption_secondary_prng_regression():
     gd = load_game_data()
@@ -2147,6 +2214,7 @@ def test_battle21_steam_eruption_secondary_prng_regression():
     assert normal_rows[57]["p0_hp"] == 0
     assert normal_rows[57]["p1_hp"] == 391
 
+
 def test_battle29_switch_protect_and_forced_chain_regression():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -2174,6 +2242,7 @@ def test_battle29_switch_protect_and_forced_chain_regression():
     assert normal_rows[23]["p0_hp"] == 0
     assert normal_rows[23]["p1_hp"] == 183
     assert normal_rows[23]["p1_status"] == 1
+
 
 def test_battle41_slow_status_accuracy_fallback_regression():
     gd = load_game_data()
@@ -2206,6 +2275,7 @@ def test_battle41_slow_status_accuracy_fallback_regression():
     assert normal_rows[44]["p0_hp"] == 114
     assert normal_rows[44]["p1_hp"] == 0
 
+
 def test_battle42_multihit_noncrit_hit_does_not_inherit_first_hit_crit():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -2234,6 +2304,7 @@ def test_battle42_multihit_noncrit_hit_does_not_inherit_first_hit_crit():
     assert normal_rows[19]["p0_hp"] == 201
     assert normal_rows[19]["p1_hp"] == 0
 
+
 def test_battle44_paradox_best_stat_uses_stage_adjusted_stats():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -2261,6 +2332,7 @@ def test_battle44_paradox_best_stat_uses_stage_adjusted_stats():
     assert normal_rows[6]["p1_hp"] == 173
     assert normal_rows[51]["p0_hp"] == 0
     assert normal_rows[51]["p1_hp"] == 183
+
 
 def test_battle45_tri_attack_secondary_frames_regression():
     gd = load_game_data()
@@ -2294,6 +2366,7 @@ def test_battle45_tri_attack_secondary_frames_regression():
     assert normal_rows[43]["p0_hp"] == 5
     assert normal_rows[43]["p1_hp"] == 0
 
+
 def test_battle40_multiscale_sitrus_and_berserk_regression():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -2326,6 +2399,7 @@ def test_battle40_multiscale_sitrus_and_berserk_regression():
     assert normal_rows[25]["p1_hp"] == 132
     assert normal_rows[29]["p0_hp"] == 0
     assert normal_rows[29]["p1_hp"] == 132
+
 
 def test_battle47_confusion_priority_and_notarget_status_chain_regression():
     gd = load_game_data()
@@ -2361,6 +2435,7 @@ def test_battle47_confusion_priority_and_notarget_status_chain_regression():
     assert normal_rows[21]["p1_hp"] == 193
     assert normal_rows[21]["p1_status"] == 2
 
+
 def test_battle49_booster_energy_not_preactive_on_voluntary_switch_regression():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -2390,6 +2465,7 @@ def test_battle49_booster_energy_not_preactive_on_voluntary_switch_regression():
     assert normal_rows[12]["p1_hp"] == 41
     assert normal_rows[15]["p0_hp"] == 202
     assert normal_rows[15]["p1_hp"] == 0
+
 
 def test_battle50_water_bubble_toxic_chain_and_same_turn_stat_drop_regression():
     gd = load_game_data()
@@ -2426,6 +2502,7 @@ def test_battle50_water_bubble_toxic_chain_and_same_turn_stat_drop_regression():
     assert normal_rows[80]["p0_hp"] == 0
     assert normal_rows[80]["p1_hp"] == 89
 
+
 def test_battle51_partial_trap_primary_prng_regression():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -2457,6 +2534,7 @@ def test_battle51_partial_trap_primary_prng_regression():
     assert normal_rows[17]["p1_hp"] == 33
     assert normal_rows[18]["p0_hp"] == 27
     assert normal_rows[18]["p1_hp"] == 0
+
 
 def test_battle55_psychic_noise_heal_block_residual_regression():
     gd = load_game_data()
@@ -2490,6 +2568,7 @@ def test_battle55_psychic_noise_heal_block_residual_regression():
     assert normal_rows[19]["p0_hp"] == 0
     assert normal_rows[19]["p1_hp"] == 423
 
+
 def test_battle58_harvest_residual_roll_and_restore_regression():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -2520,6 +2599,7 @@ def test_battle58_harvest_residual_roll_and_restore_regression():
     assert normal_rows[38]["p0_hp"] == 0
     assert normal_rows[38]["p1_hp"] == 177
 
+
 def test_battle59_charge_turn_cancellation_and_switch_reset_regression():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -2547,6 +2627,7 @@ def test_battle59_charge_turn_cancellation_and_switch_reset_regression():
     assert normal_rows[19]["p1_hp"] == 227
     assert normal_rows[20]["p0_hp"] == 54
     assert normal_rows[20]["p1_hp"] == 0
+
 
 def test_battle78_confusion_self_hit_blocks_status_preapply_regression():
     gd = load_game_data()
@@ -2579,6 +2660,7 @@ def test_battle78_confusion_self_hit_blocks_status_preapply_regression():
     assert normal_rows[10]["p1_hp"] == 158
     assert normal_rows[17]["p0_hp"] == 0
     assert normal_rows[17]["p1_hp"] == 158
+
 
 def test_battle79_temper_flare_previous_move_failed_regression():
     gd = load_game_data()
@@ -2617,6 +2699,7 @@ def test_battle79_temper_flare_previous_move_failed_regression():
     assert normal_rows[45]["p0_hp"] == 0
     assert normal_rows[45]["p1_hp"] == 380
 
+
 def test_battle60_showdown_runner_drops_stale_switch_when_trapped():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -2653,6 +2736,7 @@ def test_battle60_showdown_runner_drops_stale_switch_when_trapped():
     assert meta["error"] is None
     assert raw_data is not None
     assert show_rows
+
 
 def test_battle60_source_switch_trap_cleanup_and_lockedmove_immunity_regression():
     gd = load_game_data()
@@ -2692,13 +2776,22 @@ def test_battle60_source_switch_trap_cleanup_and_lockedmove_immunity_regression(
     assert normal_rows[55]["p0_hp"] == 386
     assert normal_rows[55]["p1_hp"] == 0
 
+
 def test_battle93_lead_booster_energy_preserves_encoded_best_stat_regression():
-    from pokepy.core.constants import OFF_META, OFF_SIDE0, POKEMON_SIZE, M_ACTIVE0, FLAG_BOOSTER_ENERGY_ACTIVE
+    from pokepy.core.constants import (
+        OFF_META,
+        OFF_SIDE0,
+        POKEMON_SIZE,
+        M_ACTIVE0,
+        FLAG_BOOSTER_ENERGY_ACTIVE,
+    )
     from pokepy.env import init_battle_state
 
     gd = load_game_data()
 
-    state = init_battle_state(pool_get_team(4136), pool_get_team(13792), gd, seed=1045090807)
+    state = init_battle_state(
+        pool_get_team(4136), pool_get_team(13792), gd, seed=1045090807
+    )
 
     active0 = int(state.battle_state[OFF_META + M_ACTIVE0])
     lead0_off = OFF_SIDE0 + active0 * POKEMON_SIZE
@@ -2706,6 +2799,7 @@ def test_battle93_lead_booster_energy_preserves_encoded_best_stat_regression():
 
     assert lead0_flags & FLAG_BOOSTER_ENERGY_ACTIVE
     assert (lead0_flags & 0x6010) == 0x2010
+
 
 def test_battle93_simultaneous_lead_booster_energy_regression():
     gd = load_game_data()
@@ -2735,6 +2829,7 @@ def test_battle93_simultaneous_lead_booster_energy_regression():
     assert normal_rows[47]["p0_hp"] == 290
     assert normal_rows[47]["p1_hp"] == 0
 
+
 def test_battle62_fixed_maxhp_recoil_regression():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -2763,6 +2858,7 @@ def test_battle62_fixed_maxhp_recoil_regression():
     assert normal_rows[28]["p0_hp"] == 0
     assert normal_rows[28]["p1_hp"] == 209
 
+
 def test_battle63_self_ko_does_not_false_trigger_moxie_regression():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -2790,6 +2886,7 @@ def test_battle63_self_ko_does_not_false_trigger_moxie_regression():
     assert normal_rows[34]["p1_hp"] == 85
     assert normal_rows[35]["p0_hp"] == 0
     assert normal_rows[35]["p1_hp"] == 85
+
 
 def test_battle64_deferred_protect_and_failed_roost_regression():
     gd = load_game_data()
@@ -2827,6 +2924,7 @@ def test_battle64_deferred_protect_and_failed_roost_regression():
     assert normal_rows[120]["p0_hp"] == 0
     assert normal_rows[120]["p1_hp"] == 218
 
+
 def test_battle65_phazing_switchin_timing_regression():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -2856,6 +2954,7 @@ def test_battle65_phazing_switchin_timing_regression():
     assert normal_rows[73]["p1_hp"] == 412
     assert normal_rows[88]["p0_hp"] == 0
     assert normal_rows[88]["p1_hp"] == 514
+
 
 def test_battle67_toxic_reentry_and_terminal_switch_regression():
     gd = load_game_data()
@@ -2887,6 +2986,7 @@ def test_battle67_toxic_reentry_and_terminal_switch_regression():
     assert normal_rows[24]["p0_hp"] == 0
     assert normal_rows[24]["p1_hp"] == 0
 
+
 def test_battle69_future_sight_offfield_boost_regression():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -2916,6 +3016,7 @@ def test_battle69_future_sight_offfield_boost_regression():
     assert normal_rows[56]["p1_hp"] == 79
     assert normal_rows[57]["p0_hp"] == 76
     assert normal_rows[57]["p1_hp"] == 0
+
 
 def test_battle71_eject_button_cancels_pivot_selfswitch_regression():
     gd = load_game_data()
@@ -2956,6 +3057,7 @@ def test_battle71_eject_button_cancels_pivot_selfswitch_regression():
         "switch 6",
     ]
 
+
 def test_battle72_throat_chop_secondary_frame_regression():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -2989,6 +3091,7 @@ def test_battle72_throat_chop_secondary_frame_regression():
     assert normal_rows[20]["p1_hp"] == 321
     assert normal_rows[36]["p0_hp"] == 318
     assert normal_rows[36]["p1_hp"] == 0
+
 
 def test_battle73_neutralizing_gas_and_switch_absorb_regression():
     gd = load_game_data()
@@ -3026,6 +3129,7 @@ def test_battle73_neutralizing_gas_and_switch_absorb_regression():
     assert normal_rows[61]["p0_hp"] == 0
     assert normal_rows[61]["p1_hp"] == 4
 
+
 def test_battle74_pivot_first_impression_regression():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -3060,6 +3164,7 @@ def test_battle74_pivot_first_impression_regression():
     assert normal_rows[27]["p0_hp"] == 0
     assert normal_rows[27]["p1_hp"] == 173
 
+
 def test_battle84_fixed_maxhp_recoil_regression():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -3084,6 +3189,7 @@ def test_battle84_fixed_maxhp_recoil_regression():
     assert normal_rows[19]["p0_hp"] == 0
     assert normal_rows[19]["p1_hp"] == 67
 
+
 def test_choice_lock_mask_keeps_zero_pp_locked_move_selected():
     from pokepy.core.constants import (
         F_CHOICE_LOCK_0,
@@ -3107,7 +3213,9 @@ def test_choice_lock_mask_keeps_zero_pp_locked_move_selected():
     t1 = 34868
     battle_seed = 432652533
 
-    state = init_battle_state(pool_get_team(t0), pool_get_team(t1), gd, seed=battle_seed)
+    state = init_battle_state(
+        pool_get_team(t0), pool_get_team(t1), gd, seed=battle_seed
+    )
     prng = Gen5PRNG((battle_seed & 0xFFFF, (battle_seed >> 16) & 0xFFFF, 0, 0))
 
     battle_arr = state.battle_state
@@ -3123,7 +3231,9 @@ def test_choice_lock_mask_keeps_zero_pp_locked_move_selected():
 
     def run_forced_switch_chain():
         while int(state.phase) == PHASE_FORCED_SWITCH:
-            a0 = simple_heuristic_forced_switch(state, 0, gd, mappings, MODERN_TYPE_CHART)
+            a0 = simple_heuristic_forced_switch(
+                state, 0, gd, mappings, MODERN_TYPE_CHART
+            )
             step_forced_switch(
                 state,
                 a0,
@@ -3140,7 +3250,9 @@ def test_choice_lock_mask_keeps_zero_pp_locked_move_selected():
         else:
             a0 = simple_heuristic_action(state, 0, gd, mappings, MODERN_TYPE_CHART)
             a1 = simple_heuristic_action(state, 1, gd, mappings, MODERN_TYPE_CHART)
-            _, _, done = step_battle_gen9(state, a0, a1, gd, me, MODERN_TYPE_CHART, prng)
+            _, _, done = step_battle_gen9(
+                state, a0, a1, gd, me, MODERN_TYPE_CHART, prng
+            )
             if not done and int(state.phase) == PHASE_FORCED_SWITCH:
                 run_forced_switch_chain()
 
@@ -3151,6 +3263,7 @@ def test_choice_lock_mask_keeps_zero_pp_locked_move_selected():
 
     mask = get_battle_action_mask(state, 0, gd)
     assert mask.tolist()[:4] == [False, False, True, False]
+
 
 def test_battle76_mid_turn_pivot_resyncs_post_hit_target_regression(monkeypatch):
     from parity_heuristic_e2e import _deterministic_auto_switch
@@ -3173,7 +3286,9 @@ def test_battle76_mid_turn_pivot_resyncs_post_hit_target_regression(monkeypatch)
     mappings = load_id_mappings()
 
     battle_seed = 994727115
-    state = init_battle_state(pool_get_team(27345), pool_get_team(8838), gd, seed=battle_seed)
+    state = init_battle_state(
+        pool_get_team(27345), pool_get_team(8838), gd, seed=battle_seed
+    )
     prng = Gen5PRNG((battle_seed & 0xFFFF, (battle_seed >> 16) & 0xFFFF, 0, 0))
 
     monkeypatch.setattr(fx, "auto_switch", _deterministic_auto_switch)
@@ -3191,7 +3306,9 @@ def test_battle76_mid_turn_pivot_resyncs_post_hit_target_regression(monkeypatch)
 
     def run_forced_switch_chain():
         while int(state.phase) == PHASE_FORCED_SWITCH:
-            a0 = simple_heuristic_forced_switch(state, 0, gd, mappings, MODERN_TYPE_CHART)
+            a0 = simple_heuristic_forced_switch(
+                state, 0, gd, mappings, MODERN_TYPE_CHART
+            )
             step_forced_switch(
                 state,
                 a0,
@@ -3220,14 +3337,17 @@ def test_battle76_mid_turn_pivot_resyncs_post_hit_target_regression(monkeypatch)
                 resolve_mid_turn_switch0=lambda st: simple_heuristic_forced_switch(
                     st, 0, gd, mappings, MODERN_TYPE_CHART
                 ),
-                )
+            )
             if not done and int(state.phase) == PHASE_FORCED_SWITCH:
                 run_forced_switch_chain()
 
         corviknight_off = OFF_SIDE1 + 5 * POKEMON_SIZE
         if int(state.battle_state[corviknight_off + 1]) == 44:
             saw_low_hp_corviknight = True
-        if saw_low_hp_corviknight and int(state.battle_state[OFF_META + M_ACTIVE1]) == 0:
+        if (
+            saw_low_hp_corviknight
+            and int(state.battle_state[OFF_META + M_ACTIVE1]) == 0
+        ):
             break
 
     corviknight_off = OFF_SIDE1 + 5 * POKEMON_SIZE
@@ -3235,6 +3355,7 @@ def test_battle76_mid_turn_pivot_resyncs_post_hit_target_regression(monkeypatch)
     assert int(state.battle_state[OFF_META + M_ACTIVE1]) == 0
     assert int(state.battle_state[corviknight_off + 1]) == 44
     assert int(state.battle_state[corviknight_off + 6]) == ITEM_LEFTOVERS
+
 
 def test_battle88_disguise_bust_does_not_feed_recoil_regression(monkeypatch):
     from parity_heuristic_e2e import _deterministic_auto_switch
@@ -3257,7 +3378,9 @@ def test_battle88_disguise_bust_does_not_feed_recoil_regression(monkeypatch):
     mappings = load_id_mappings()
 
     battle_seed = 960007121
-    state = init_battle_state(pool_get_team(49484), pool_get_team(29053), gd, seed=battle_seed)
+    state = init_battle_state(
+        pool_get_team(49484), pool_get_team(29053), gd, seed=battle_seed
+    )
     prng = Gen5PRNG((battle_seed & 0xFFFF, (battle_seed >> 16) & 0xFFFF, 0, 0))
 
     monkeypatch.setattr(fx, "auto_switch", _deterministic_auto_switch)
@@ -3275,7 +3398,9 @@ def test_battle88_disguise_bust_does_not_feed_recoil_regression(monkeypatch):
 
     def run_forced_switch_chain():
         while int(state.phase) == PHASE_FORCED_SWITCH:
-            a0 = simple_heuristic_forced_switch(state, 0, gd, mappings, MODERN_TYPE_CHART)
+            a0 = simple_heuristic_forced_switch(
+                state, 0, gd, mappings, MODERN_TYPE_CHART
+            )
             step_forced_switch(
                 state,
                 a0,
@@ -3313,6 +3438,7 @@ def test_battle88_disguise_bust_does_not_feed_recoil_regression(monkeypatch):
     assert active1 == 3
     assert int(state.battle_state[OFF_SIDE0 + active0 * POKEMON_SIZE + 1]) == 106
     assert int(state.battle_state[OFF_SIDE1 + active1 * POKEMON_SIZE + 1]) == 18
+
 
 def test_battle124_rest_sleep_talk_and_wake_turn_prng_regression():
     gd = load_game_data()
@@ -3361,6 +3487,7 @@ def test_battle124_rest_sleep_talk_and_wake_turn_prng_regression():
     assert normal_rows[78]["p1_hp"] == 67
     assert normal_rows[78]["p1_status"] == 1
 
+
 def test_battle202_eject_pack_mixed_boosts_regression():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -3384,6 +3511,7 @@ def test_battle202_eject_pack_mixed_boosts_regression():
     assert normal_rows[5]["p1_hp"] == 264
     assert normal_rows[5]["p1_max_hp"] == 301
     assert normal_rows[5]["p1_status"] == 5
+
 
 def test_battle203_red_card_single_choice_drag_regression():
     gd = load_game_data()
@@ -3416,6 +3544,7 @@ def test_battle203_red_card_single_choice_drag_regression():
     assert normal_rows[55]["p0_status"] == 5
     assert normal_rows[55]["p1_hp"] == 22
 
+
 def test_battle204_future_sight_active_source_item_regression():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -3446,6 +3575,7 @@ def test_battle204_future_sight_active_source_item_regression():
     assert normal_rows[28]["p0_hp"] == 393
     assert normal_rows[28]["p1_hp"] == 148
 
+
 def test_battle206_tied_double_switch_update_frame_regression():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -3475,6 +3605,7 @@ def test_battle206_tied_double_switch_update_frame_regression():
     assert normal_rows[21]["p0_hp"] == 137
     assert normal_rows[21]["p1_hp"] == 227
 
+
 def test_battle210_white_herb_immediate_after_move_regression():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -3502,6 +3633,7 @@ def test_battle210_white_herb_immediate_after_move_regression():
     assert normal_rows[25]["p1_hp"] == 17
     assert normal_rows[25]["p1_max_hp"] == 321
 
+
 def test_battle213_light_clay_reflect_duration_regression():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -3528,6 +3660,7 @@ def test_battle213_light_clay_reflect_duration_regression():
     assert normal_rows[51]["p1_hp"] == 193
     assert normal_rows[52]["p0_hp"] == 41
     assert normal_rows[52]["p1_hp"] == 91
+
 
 def test_battle214_toxic_chain_uturn_preroll_regression():
     gd = load_game_data()
@@ -3563,6 +3696,7 @@ def test_battle214_toxic_chain_uturn_preroll_regression():
     assert normal_rows[27]["p0_hp"] == 0
     assert normal_rows[27]["p1_hp"] == 55
 
+
 def test_battle215_triple_arrows_dual_secondary_regression():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -3588,6 +3722,7 @@ def test_battle215_triple_arrows_dual_secondary_regression():
     assert normal_rows[44]["p0_hp"] == 303
     assert normal_rows[44]["p0_max_hp"] == 303
     assert normal_rows[44]["p1_hp"] == 123
+
 
 def test_battle217_future_sight_focus_sash_regression():
     gd = load_game_data()
@@ -3617,6 +3752,7 @@ def test_battle217_future_sight_focus_sash_regression():
     assert normal_rows[30]["p1_hp"] == 209
     assert normal_rows[31]["p0_hp"] == 1
     assert normal_rows[31]["p1_hp"] == 0
+
 
 def test_battle222_grassy_terrain_skips_phantom_force_charge_regression():
     gd = load_game_data()
@@ -3649,6 +3785,7 @@ def test_battle222_grassy_terrain_skips_phantom_force_charge_regression():
     assert normal_rows[21]["p1_action"] == "move 4"
     assert normal_rows[21]["p1_hp"] == 139
 
+
 def test_battle224_hurricane_confusion_focus_sash_regression():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -3679,6 +3816,7 @@ def test_battle224_hurricane_confusion_focus_sash_regression():
     assert normal_rows[16]["p1_action"] == "move 4"
     assert normal_rows[16]["p1_hp"] == 0
     assert normal_rows[16]["p1_max_hp"] == 302
+
 
 def test_battle225_throat_chop_choice_lock_disablemove_regression():
     gd = load_game_data()
@@ -3712,6 +3850,7 @@ def test_battle225_throat_chop_choice_lock_disablemove_regression():
     assert "forced:switch" in normal_rows[29]["p0_action"]
     assert normal_rows[29]["p0_hp"] == 226
     assert normal_rows[29]["p1_hp"] == 390
+
 
 def test_battle230_slower_secondary_uses_projected_target_hp_regression():
     gd = load_game_data()
@@ -3748,6 +3887,7 @@ def test_battle230_slower_secondary_uses_projected_target_hp_regression():
     assert normal_rows[20]["p1_action"] == "move 1+forced:switch 3"
     assert normal_rows[20]["p1_active"] == 2
     assert normal_rows[20]["p1_hp"] == 394
+
 
 def test_battle232_eject_button_forced_switch_skips_update_regression():
     gd = load_game_data()
@@ -3788,6 +3928,7 @@ def test_battle232_eject_button_forced_switch_skips_update_regression():
         "switch 4",
         "move 4",
     ]
+
 
 def test_battle233_player_eject_button_switch_completes_before_residual_regression():
     gd = load_game_data()
@@ -3834,6 +3975,7 @@ def test_battle233_player_eject_button_switch_completes_before_residual_regressi
     assert normal_rows[9]["p1_active"] == 0
     assert normal_rows[9]["p1_hp"] == 89
 
+
 def test_battle77_midturn_pivot_and_item_switch_queue_regression():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -3864,6 +4006,7 @@ def test_battle77_midturn_pivot_and_item_switch_queue_regression():
         "switch 3",
         "switch 3",
     ]
+
 
 def test_battle24_voluntary_switch_then_inline_forced_switch_queue_rebase_regression():
     gd = load_game_data()
@@ -3902,6 +4045,7 @@ def test_battle24_voluntary_switch_then_inline_forced_switch_queue_rebase_regres
     assert normal_rows[39]["p1_active"] == 4
     assert normal_rows[39]["p1_hp"] == 303
 
+
 def test_battle242_ceaseless_edge_second_layer_survives_faster_user_faint_regression():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -3933,6 +4077,7 @@ def test_battle242_ceaseless_edge_second_layer_survives_faster_user_faint_regres
     assert normal_rows[12]["p1_action"] == "move 2"
     assert normal_rows[12]["p1_active"] == 2
     assert normal_rows[12]["p1_hp"] == 243
+
 
 def test_battle250_switch_weather_change_and_weather_residual_prng_regression():
     gd = load_game_data()
@@ -3971,6 +4116,7 @@ def test_battle250_switch_weather_change_and_weather_residual_prng_regression():
     assert normal_rows[7]["p1_action"] == "move 1"
     assert normal_rows[7]["p1_hp"] == 339
 
+
 def test_battle251_dragon_energy_hp_scaled_power_regression():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -3999,6 +4145,7 @@ def test_battle251_dragon_energy_hp_scaled_power_regression():
     assert normal_rows[25]["p1_action"] == "move 1"
     assert normal_rows[26]["p0_hp"] == 72
     assert normal_rows[26]["p1_hp"] == 340
+
 
 def test_battle253_side1_pivot_contact_preroll_regression():
     gd = load_game_data()
@@ -4029,6 +4176,7 @@ def test_battle253_side1_pivot_contact_preroll_regression():
     assert normal_rows[24]["p1_status"] == 0
     assert normal_rows[25]["p0_hp"] == 91
     assert normal_rows[25]["p1_hp"] == 0
+
 
 def test_battle264_steel_beam_mind_blown_recoil_on_miss_regression():
     gd = load_game_data()
@@ -4061,6 +4209,7 @@ def test_battle264_steel_beam_mind_blown_recoil_on_miss_regression():
     assert normal_rows[5]["p1_active"] == 2
     assert normal_rows[5]["p1_hp"] == 315
 
+
 def test_battle313_hazard_ko_pivot_replacement_waits_until_post_upkeep_regression():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -4090,6 +4239,7 @@ def test_battle313_hazard_ko_pivot_replacement_waits_until_post_upkeep_regressio
     assert normal_rows[31]["p1_action"] == "move 1+forced:switch 3"
     assert normal_rows[31]["p1_active"] == 2
     assert normal_rows[31]["p1_hp"] == 514
+
 
 def test_battle273_defog_pressure_partial_trap_and_stockpile_regression():
     gd = load_game_data()
@@ -4124,6 +4274,7 @@ def test_battle273_defog_pressure_partial_trap_and_stockpile_regression():
     assert normal_rows[98]["p1_hp"] == 449
     assert normal_rows[99]["p1_hp"] == 430
 
+
 def test_battle351_faster_user_faint_in_damaging_hit_invalidates_slower_targeted_move_regression():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -4154,6 +4305,7 @@ def test_battle351_faster_user_faint_in_damaging_hit_invalidates_slower_targeted
     assert normal_rows[5]["p1_active"] == 2
     assert normal_rows[5]["p1_hp"] == 289
 
+
 def test_battle365_shields_down_switch_in_regression():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -4182,6 +4334,7 @@ def test_battle365_shields_down_switch_in_regression():
 
     assert normal_rows[40]["p1_hp"] == 72
 
+
 def test_battle417_first_mover_eject_pack_retargets_slower_move_regression():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -4204,6 +4357,7 @@ def test_battle417_first_mover_eject_pack_retargets_slower_move_regression():
     assert normal_rows[4]["p0_active"] == 2
     assert normal_rows[4]["p0_hp"] == 218
     assert normal_rows[4]["p1_hp"] == 142
+
 
 def test_battle235_strike_turn_phantom_force_residual_regression():
     gd = load_game_data()
@@ -4237,6 +4391,7 @@ def test_battle235_strike_turn_phantom_force_residual_regression():
     assert normal_rows[15]["p0_status"] == 2
     assert normal_rows[15]["p1_hp"] == 99
 
+
 def test_battle256_mid_turn_pivot_pp_bookkeeping_regression():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -4261,6 +4416,7 @@ def test_battle256_mid_turn_pivot_pp_bookkeeping_regression():
     assert normal_rows[25]["p0_hp"] == 354
     assert normal_rows[26]["p1_action"] == "move 1"
     assert normal_rows[27]["p1_action"] == "move 4"
+
 
 def test_battle269_charge_turn_on_try_move_selfboost_regression():
     gd = load_game_data()
@@ -4295,6 +4451,7 @@ def test_battle269_charge_turn_on_try_move_selfboost_regression():
     assert normal_rows[8]["p1_action"] == "switch 5"
     assert normal_rows[8]["p1_hp"] == 225
 
+
 def test_battle269_knock_off_unburden_residual_speed_refresh_regression():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -4322,6 +4479,7 @@ def test_battle269_knock_off_unburden_residual_speed_refresh_regression():
     assert normal_rows[24]["p0_hp"] == 136
     assert normal_rows[24]["p1_action"] == "move 3+forced:switch 3"
     assert normal_rows[24]["p1_hp"] == 225
+
 
 def test_battle270_disable_plus_choice_lock_disablemove_shuffle_regression():
     gd = load_game_data()
@@ -4355,6 +4513,7 @@ def test_battle270_disable_plus_choice_lock_disablemove_shuffle_regression():
     assert normal_rows[13]["p0_hp"] == 254
     assert normal_rows[13]["p1_action"] == "move 2"
     assert normal_rows[13]["p1_hp"] == 111
+
 
 def test_battle276_avalanche_base_power_callback_regression():
     gd = load_game_data()
@@ -4399,6 +4558,7 @@ def test_battle276_avalanche_base_power_callback_regression():
     assert normal_rows[22]["p1_action"] == "move 1"
     assert normal_rows[22]["p1_hp"] == 75
 
+
 def test_battle276_fixed_damage_immunity_prng_regression():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -4442,6 +4602,7 @@ def test_battle276_fixed_damage_immunity_prng_regression():
     assert normal_rows[38]["p1_action"] == "move 1"
     assert normal_rows[38]["p1_hp"] == 223
 
+
 def test_battle276_knock_off_restores_contact_item_for_slower_recoil_projection():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -4474,6 +4635,7 @@ def test_battle276_knock_off_restores_contact_item_for_slower_recoil_projection(
     assert normal_rows[21]["p0_hp"] == 399
     assert normal_rows[21]["p1_action"] == "move 1"
     assert normal_rows[21]["p1_hp"] == 89
+
 
 def test_battle279_switch_out_ability_suppression_regression():
     gd = load_game_data()
@@ -4520,6 +4682,7 @@ def test_battle279_switch_out_ability_suppression_regression():
     assert normal_rows[49]["p1_action"] == "move 4"
     assert normal_rows[49]["p1_hp"] == 193
 
+
 def test_battle336_late_uturn_switch_resume_tie_frames_regression():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -4553,6 +4716,7 @@ def test_battle336_late_uturn_switch_resume_tie_frames_regression():
     assert normal_rows[5]["p0_hp"] == 391
     assert normal_rows[5]["p1_action"] == "move 2+forced:switch 5"
     assert normal_rows[5]["p1_hp"] == 321
+
 
 def test_battle407_lockedmove_notarget_execute_regression():
     gd = load_game_data()
@@ -4599,6 +4763,7 @@ def test_battle407_lockedmove_notarget_execute_regression():
     assert normal_rows[12]["p1_action"] == "move 1"
     assert normal_rows[12]["p1_hp"] == 29
 
+
 def test_battle282_magic_bounce_phazing_target_side_regression():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -4637,6 +4802,7 @@ def test_battle282_magic_bounce_phazing_target_side_regression():
     assert normal_rows[69]["p1_active"] == 1
     assert normal_rows[69]["p1_hp"] == 279
     assert normal_rows[69]["p1_max_hp"] == 318
+
 
 def test_battle283_tied_ko_skip_update_regression():
     gd = load_game_data()
@@ -4689,6 +4855,7 @@ def test_battle283_tied_ko_skip_update_regression():
     assert normal_rows[53]["p1_hp"] == 394
     assert normal_rows[53]["p1_max_hp"] == 394
 
+
 def test_battle486_dragontail_single_target_phaze_regression():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -4739,6 +4906,7 @@ def test_battle486_dragontail_single_target_phaze_regression():
     assert normal_rows[29]["p1_action"] == "move 1"
     assert normal_rows[29]["p1_hp"] == 0
 
+
 def test_battle491_gulp_missile_fires_on_ko_regression():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -4774,6 +4942,7 @@ def test_battle491_gulp_missile_fires_on_ko_regression():
     assert normal_rows[50]["p1_active"] == 5
     assert normal_rows[50]["p1_hp"] == 323
     assert normal_rows[50]["p1_max_hp"] == 454
+
 
 def test_battle699_multihit_update_frames_on_ko_regression():
     gd = load_game_data()
@@ -4818,6 +4987,7 @@ def test_battle699_multihit_update_frames_on_ko_regression():
     assert normal_rows[10]["p1_hp"] == 195
     assert normal_rows[10]["p1_max_hp"] == 301
 
+
 def test_battle408_double_shock_live_type_removal_regression():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -4854,6 +5024,7 @@ def test_battle408_double_shock_live_type_removal_regression():
     assert normal_rows[12]["p1_hp"] == 140
     assert normal_rows[12]["p1_max_hp"] == 301
 
+
 def test_battle464_water_pulse_confusion_secondary_prng_regression():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -4889,6 +5060,7 @@ def test_battle464_water_pulse_confusion_secondary_prng_regression():
     assert normal_rows[15]["p1_active"] == 4
     assert normal_rows[15]["p1_hp"] == 13
     assert normal_rows[15]["p1_max_hp"] == 374
+
 
 def test_battle287_red_card_suppresses_attacker_aftermove_hp_effects_regression():
     gd = load_game_data()
@@ -4935,6 +5107,7 @@ def test_battle287_red_card_suppresses_attacker_aftermove_hp_effects_regression(
     assert normal_rows[17]["p1_hp"] == 371
     assert normal_rows[17]["p1_max_hp"] == 371
 
+
 def test_battle300_weakness_policy_preapplies_before_slower_move_regression():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -4970,6 +5143,7 @@ def test_battle300_weakness_policy_preapplies_before_slower_move_regression():
     assert normal_rows[2]["p1_active"] == 2
     assert normal_rows[2]["p1_hp"] == 323
     assert normal_rows[2]["p1_max_hp"] == 323
+
 
 def test_battle302_quick_draw_fractional_priority_prng_regression():
     gd = load_game_data()
@@ -5015,6 +5189,7 @@ def test_battle302_quick_draw_fractional_priority_prng_regression():
     assert normal_rows[9]["p1_active"] == 4
     assert normal_rows[9]["p1_hp"] == 277
     assert normal_rows[9]["p1_max_hp"] == 394
+
 
 def test_battle309_endure_and_substitute_secondary_preroll_regression():
     gd = load_game_data()
@@ -5069,6 +5244,7 @@ def test_battle309_endure_and_substitute_secondary_preroll_regression():
     assert normal_rows[73]["p1_hp"] == 353
     assert normal_rows[73]["p1_status"] == 6
 
+
 def test_battle926_same_turn_freeze_thaw_before_flinch_regression():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -5111,6 +5287,7 @@ def test_battle926_same_turn_freeze_thaw_before_flinch_regression():
     assert normal_rows[14]["p1_action"] == "move 1"
     assert normal_rows[14]["p1_hp"] == 96
 
+
 def test_battle311_status_immunity_blocks_accuracy_preroll_regression():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -5148,6 +5325,7 @@ def test_battle311_status_immunity_blocks_accuracy_preroll_regression():
     assert normal_rows[36]["p1_active"] == 2
     assert normal_rows[36]["p1_hp"] == 261
 
+
 def test_battle316_instaswitch_update_and_repeated_wish_regression():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -5181,6 +5359,7 @@ def test_battle316_instaswitch_update_and_repeated_wish_regression():
     assert normal_rows[22]["p1_hp"] == 327
     assert normal_rows[23]["p1_action"] == "move 2"
     assert normal_rows[23]["p1_hp"] == 134
+
 
 def test_battle504_skill_link_skips_multihit_preroll_regression():
     gd = load_game_data()
@@ -5224,6 +5403,7 @@ def test_battle504_skill_link_skips_multihit_preroll_regression():
     assert normal_rows[52]["p1_action"] == "move 4"
     assert normal_rows[52]["p1_hp"] == 40
 
+
 def test_battle319_fainted_pivot_user_does_not_switch_in_replacement_regression():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -5264,6 +5444,7 @@ def test_battle319_fainted_pivot_user_does_not_switch_in_replacement_regression(
     assert normal_rows[4]["p1_action"] == "switch 4"
     assert normal_rows[4]["p1_hp"] == 255
 
+
 def test_battle731_prankster_parting_shot_dark_immunity_blocks_inline_pivot_regression():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -5294,6 +5475,7 @@ def test_battle731_prankster_parting_shot_dark_immunity_blocks_inline_pivot_regr
     assert normal_rows[11]["p1_active"] == 1
     assert normal_rows[11]["p1_hp"] == 35
     assert normal_rows[11]["p1_max_hp"] == 394
+
 
 def test_battle330_covert_cloak_blocks_confusion_secondary_preroll_regression():
     gd = load_game_data()
@@ -5329,6 +5511,7 @@ def test_battle330_covert_cloak_blocks_confusion_secondary_preroll_regression():
     assert normal_rows[51]["p1_action"] == "move 2"
     assert normal_rows[51]["p1_hp"] == 27
 
+
 def test_battle334_toxic_debris_does_not_double_lay_toxic_spikes_regression():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -5359,6 +5542,7 @@ def test_battle334_toxic_debris_does_not_double_lay_toxic_spikes_regression():
     assert normal_rows[12]["p1_action"] == "switch 2"
     assert normal_rows[12]["p1_active"] == 0
     assert normal_rows[12]["p1_hp"] == 164
+
 
 def test_battle338_residual_uses_cached_speed_for_fainted_switchin_regression():
     gd = load_game_data()
@@ -5394,6 +5578,7 @@ def test_battle338_residual_uses_cached_speed_for_fainted_switchin_regression():
     assert normal_rows[43]["p0_hp"] == 2
     assert normal_rows[43]["p1_hp"] == 0
 
+
 def test_battle342_disablemove_shuffle_skips_expiring_heal_block_regression():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -5428,6 +5613,7 @@ def test_battle342_disablemove_shuffle_skips_expiring_heal_block_regression():
     assert normal_rows[12]["p1_action"] == "switch 5"
     assert normal_rows[12]["p1_active"] == 4
     assert normal_rows[12]["p1_hp"] == 182
+
 
 def test_battle343_speed_boost_and_residual_use_showdown_cached_action_speeds_regression():
     gd = load_game_data()
@@ -5475,6 +5661,7 @@ def test_battle343_speed_boost_and_residual_use_showdown_cached_action_speeds_re
     assert normal_rows[14]["p1_action"] == "move 4"
     assert normal_rows[14]["p1_hp"] == 2
 
+
 def test_battle344_all_moves_disabled_fall_back_to_struggle_regression():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -5500,6 +5687,7 @@ def test_battle344_all_moves_disabled_fall_back_to_struggle_regression():
     assert normal_rows[50]["p1_active"] == 0
     assert normal_rows[50]["p1_hp"] == 120
 
+
 def test_battle347_payback_does_not_boost_vs_fresh_switch_in_regression():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -5523,6 +5711,7 @@ def test_battle347_payback_does_not_boost_vs_fresh_switch_in_regression():
     assert normal_rows[25]["p0_hp"] == 262
     assert normal_rows[25]["p1_action"] == "move 1"
     assert normal_rows[25]["p1_hp"] == 366
+
 
 def test_battle354_deferred_hit_loop_update_preserves_cursed_body_roll_regression():
     gd = load_game_data()
@@ -5565,6 +5754,7 @@ def test_battle354_deferred_hit_loop_update_preserves_cursed_body_roll_regressio
     assert normal_rows[15]["p1_action"] == "move 3"
     assert normal_rows[15]["p1_hp"] == 144
 
+
 def test_battle361_lando_uturn_flame_body_contact_preroll_regression():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -5600,6 +5790,7 @@ def test_battle361_lando_uturn_flame_body_contact_preroll_regression():
     assert normal_rows[31]["p0_hp"] == 0
     assert normal_rows[31]["p1_action"] == "move 3"
     assert normal_rows[31]["p1_hp"] == 212
+
 
 def test_battle362_residual_ability_frames_preserve_turn6_focus_blast_regression():
     gd = load_game_data()
@@ -5641,6 +5832,7 @@ def test_battle362_residual_ability_frames_preserve_turn6_focus_blast_regression
     assert normal_rows[7]["p1_action"] == "move 1"
     assert normal_rows[7]["p1_active"] == 2
     assert normal_rows[7]["p1_hp"] == 241
+
 
 def test_battle367_psychic_noise_blocks_poison_heal_regression():
     gd = load_game_data()
@@ -5688,6 +5880,7 @@ def test_battle367_psychic_noise_blocks_poison_heal_regression():
     assert normal_rows[7]["p1_hp"] == 281
     assert normal_rows[7]["p1_status"] == 0
 
+
 def test_battle371_faster_ko_skips_slower_status_accuracy_frame_regression():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -5734,6 +5927,7 @@ def test_battle371_faster_ko_skips_slower_status_accuracy_frame_regression():
     assert normal_rows[20]["p1_active"] == 1
     assert normal_rows[20]["p1_hp"] == 388
 
+
 def test_battle456_booster_energy_is_nonremovable_on_paradox_holder_regression():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -5772,6 +5966,7 @@ def test_battle456_booster_energy_is_nonremovable_on_paradox_holder_regression()
     assert normal_rows[7]["p1_action"] == "move 2"
     assert normal_rows[7]["p1_active"] == 1
     assert normal_rows[7]["p1_hp"] == 270
+
 
 def test_battle372_plate_family_type_boost_regression():
     gd = load_game_data()
@@ -5812,6 +6007,7 @@ def test_battle372_plate_family_type_boost_regression():
     assert normal_rows[3]["p1_active"] == 0
     assert normal_rows[3]["p1_hp"] == 190
 
+
 def test_battle460_phazing_triggers_switch_out_abilities_regression():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -5848,6 +6044,7 @@ def test_battle460_phazing_triggers_switch_out_abilities_regression():
     assert normal_rows[49]["p1_action"] == "move 4"
     assert normal_rows[49]["p1_active"] == 5
     assert normal_rows[49]["p1_hp"] == 169
+
 
 def test_battle460_pivot_then_hidden_drag_preserves_showdown_switch_order():
     gd = load_game_data()
@@ -5888,6 +6085,7 @@ def test_battle460_pivot_then_hidden_drag_preserves_showdown_switch_order():
     assert normal_rows[32]["p1_hp"] == 201
     assert normal_rows[32]["p1_max_hp"] == 386
 
+
 def test_battle374_lockedmove_immunity_clears_forced_repeat_regression():
     from pokepy.core.constants import (
         M_ACTIVE0,
@@ -5908,7 +6106,9 @@ def test_battle374_lockedmove_immunity_clears_forced_repeat_regression():
     me = load_move_effect_data()
 
     battle_seed = 1805130656
-    state = init_battle_state(pool_get_team(13443), pool_get_team(12183), gd, seed=battle_seed)
+    state = init_battle_state(
+        pool_get_team(13443), pool_get_team(12183), gd, seed=battle_seed
+    )
     prng = Gen5PRNG((battle_seed & 0xFFFF, (battle_seed >> 16) & 0xFFFF, 0, 0))
 
     battle_arr = state.battle_state
@@ -5956,6 +6156,7 @@ def test_battle374_lockedmove_immunity_clears_forced_repeat_regression():
     assert int(state.battle_state[p0_off + 1]) == 149
     assert int(state.battle_state[p1_off + 1]) == 85
 
+
 def test_battle375_mid_turn_pivot_replacement_hp_caps_slower_recoil_regression():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -5989,6 +6190,7 @@ def test_battle375_mid_turn_pivot_replacement_hp_caps_slower_recoil_regression()
     assert normal_rows[29]["p0_max_hp"] == 394
     assert normal_rows[29]["p1_hp"] == 62
 
+
 def test_battle381_cursed_body_preroll_before_slower_move_regression():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -6017,6 +6219,7 @@ def test_battle381_cursed_body_preroll_before_slower_move_regression():
     assert normal_rows[41]["p0_max_hp"] == 301
     assert normal_rows[41]["p1_hp"] == 9
     assert normal_rows[41]["p1_max_hp"] == 317
+
 
 def test_battle381_midturn_forced_switch_sd_pos_sync_regression():
     gd = load_game_data()
@@ -6071,6 +6274,7 @@ def test_battle381_midturn_forced_switch_sd_pos_sync_regression():
     assert by_turn[85]["p0_hp"] == 83
     assert by_turn[85]["p1_hp"] == 394
 
+
 def test_battle428_court_change_orders_before_slower_hazard_setter_regression():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -6102,6 +6306,7 @@ def test_battle428_court_change_orders_before_slower_hazard_setter_regression():
     assert normal_rows[36]["p0_max_hp"] == 403
     assert normal_rows[36]["p1_hp"] == 190
     assert normal_rows[36]["p1_max_hp"] == 404
+
 
 def test_battle66_red_card_drag_and_faster_drain_sash_regression():
     gd = load_game_data()
@@ -6139,6 +6344,7 @@ def test_battle66_red_card_drag_and_faster_drain_sash_regression():
     assert normal_rows[35]["p1_hp"] == 34
     assert normal_rows[35]["p1_max_hp"] == 291
 
+
 def test_battle47_faster_drain_replay_uses_live_slower_hit_hp_regression():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -6168,6 +6374,7 @@ def test_battle47_faster_drain_replay_uses_live_slower_hit_hp_regression():
     assert normal_rows[12]["p1_status"] == 2
     assert normal_rows[13]["p1_hp"] == 275
 
+
 def test_battle28_red_card_does_not_drag_on_switch_turn_regression():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -6195,6 +6402,7 @@ def test_battle28_red_card_does_not_drag_on_switch_turn_regression():
     assert normal_rows[1]["p1_hp"] == 339
     assert normal_rows[1]["p1_max_hp"] == 339
     assert normal_rows[2]["p1_hp"] == 339
+
 
 def test_battle385_disablemove_shuffle_respects_showdown_suborders_regression():
     gd = load_game_data()
@@ -6227,6 +6435,7 @@ def test_battle385_disablemove_shuffle_respects_showdown_suborders_regression():
     assert normal_rows[18]["p1_hp"] == 40
     assert normal_rows[18]["p1_max_hp"] == 321
 
+
 def test_battle641_same_turn_spikes_materialize_before_eject_pack_switch_in_regression():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -6254,6 +6463,7 @@ def test_battle641_same_turn_spikes_materialize_before_eject_pack_switch_in_regr
     assert normal_rows[1]["p0_max_hp"] == 321
     assert normal_rows[1]["p1_hp"] == 354
     assert normal_rows[1]["p1_max_hp"] == 404
+
 
 def test_battle390_item_forced_switch_skips_ko_only_move2_update_frame_regression():
     gd = load_game_data()
@@ -6289,6 +6499,7 @@ def test_battle390_item_forced_switch_skips_ko_only_move2_update_frame_regressio
     assert normal_rows[33]["p1_hp"] == 334
     assert normal_rows[33]["p1_max_hp"] == 334
 
+
 def test_battle232_eject_button_canceled_move_skips_between_move_update_frames_regression():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -6322,6 +6533,7 @@ def test_battle232_eject_button_canceled_move_skips_between_move_update_frames_r
     assert normal_rows[12]["p0_max_hp"] == 371
     assert normal_rows[12]["p1_hp"] == 315
 
+
 def test_battle398_rapid_spin_does_not_clear_hazards_after_rocky_helmet_ko_regression():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -6353,6 +6565,7 @@ def test_battle398_rapid_spin_does_not_clear_hazards_after_rocky_helmet_ko_regre
     assert normal_rows[14]["p1_active"] == 3
     assert normal_rows[14]["p1_hp"] == 296
     assert normal_rows[14]["p1_max_hp"] == 315
+
 
 def test_battle418_trick_room_expires_before_glimmora_can_reverse_turn_order_regression():
     gd = load_game_data()
@@ -6392,6 +6605,7 @@ def test_battle418_trick_room_expires_before_glimmora_can_reverse_turn_order_reg
     assert normal_rows[24]["p1_hp"] == 261
     assert normal_rows[24]["p1_max_hp"] == 261
 
+
 def test_battle420_crit_rebuilds_attacker_stat_after_intimidate_regression():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -6425,6 +6639,7 @@ def test_battle420_crit_rebuilds_attacker_stat_after_intimidate_regression():
     assert normal_rows[2]["p1_max_hp"] == 399
     assert normal_rows[3]["p0_hp"] == 105
     assert normal_rows[3]["p1_hp"] == 307
+
 
 def test_battle425_toxic_damage_respects_neutralizing_gas_suppression_regression():
     gd = load_game_data()
@@ -6463,6 +6678,7 @@ def test_battle425_toxic_damage_respects_neutralizing_gas_suppression_regression
     assert normal_rows[58]["p1_action"] == "move 1"
     assert normal_rows[58]["p1_hp"] == 378
     assert normal_rows[58]["p1_status"] == 6
+
 
 def test_battle426_triple_axel_stops_after_ko_without_burning_later_hit_frames_regression():
     gd = load_game_data()
@@ -6504,6 +6720,7 @@ def test_battle426_triple_axel_stops_after_ko_without_burning_later_hit_frames_r
     assert normal_rows[8]["p1_action"] == "move 2"
     assert normal_rows[8]["p1_hp"] == 213
 
+
 def test_battle530_miracle_berry_cures_lockedmove_fatigue_confusion():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -6540,6 +6757,7 @@ def test_battle530_miracle_berry_cures_lockedmove_fatigue_confusion():
     assert normal_rows[39]["p1_hp"] == 0
     assert normal_rows[39]["p1_max_hp"] == 351
 
+
 def test_battle959_eject_button_regenerator_hp_persists_on_bench():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -6573,6 +6791,7 @@ def test_battle959_eject_button_regenerator_hp_persists_on_bench():
     assert normal_rows[6]["p1_active"] == 0
     assert normal_rows[6]["p1_hp"] == 532
     assert normal_rows[6]["p1_max_hp"] == 532
+
 
 def test_battle433_effect_spore_sleep_uses_standard_duration_roll_regression():
     gd = load_game_data()
@@ -6609,6 +6828,7 @@ def test_battle433_effect_spore_sleep_uses_standard_duration_roll_regression():
     assert normal_rows[6]["p0_hp"] == 251
     assert normal_rows[6]["p1_hp"] == 29
     assert normal_rows[6]["p1_status"] == 0
+
 
 def test_battle445_hidden_startup_and_eject_button_frames_stay_in_sync():
     gd = load_game_data()
@@ -6654,6 +6874,7 @@ def test_battle445_hidden_startup_and_eject_button_frames_stay_in_sync():
     assert normal_rows[5]["p1_status"] == 1
     assert normal_rows[2]["p1_max_hp"] == 301
 
+
 def test_battle439_toxic_chain_respects_purifying_salt_regression():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -6684,6 +6905,7 @@ def test_battle439_toxic_chain_respects_purifying_salt_regression():
     assert normal_rows[20]["p1_hp"] == 253
     assert normal_rows[20]["p1_status"] == 0
 
+
 def test_battle448_static_respects_comatose_regression():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -6713,6 +6935,7 @@ def test_battle448_static_respects_comatose_regression():
     assert normal_rows[3]["p0_status"] == 0
     assert normal_rows[3]["p1_hp"] == 183
 
+
 def test_battle448_ice_beam_freeze_respects_ice_type_immunity_regression():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -6741,6 +6964,7 @@ def test_battle448_ice_beam_freeze_respects_ice_type_immunity_regression():
     assert normal_rows[20]["p1_status"] == 0
     assert normal_rows[21]["p1_hp"] == 32
     assert normal_rows[21]["p1_status"] == 0
+
 
 def test_battle448_failed_hyper_beam_does_not_force_recharge_regression():
     gd = load_game_data()
@@ -6775,6 +6999,7 @@ def test_battle448_failed_hyper_beam_does_not_force_recharge_regression():
     assert normal_rows[26]["p0_hp"] == 158
     assert normal_rows[26]["p1_hp"] == 147
 
+
 def test_battle466_effect_spore_powder_immunity_skips_roll_regression():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -6805,6 +7030,7 @@ def test_battle466_effect_spore_powder_immunity_skips_roll_regression():
     assert normal_rows[19]["p1_max_hp"] == 379
     assert normal_rows[20]["p0_hp"] == 355
     assert normal_rows[20]["p1_hp"] == 140
+
 
 def test_battle469_game_ending_weather_ko_skips_later_leftovers_regression():
     gd = load_game_data()
@@ -6837,6 +7063,7 @@ def test_battle469_game_ending_weather_ko_skips_later_leftovers_regression():
     assert normal_rows[41]["p1_hp"] == 0
     assert normal_rows[41]["p1_max_hp"] == 393
 
+
 def test_battle14_slower_brave_bird_uses_post_helmet_target_hp_regression():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -6867,6 +7094,7 @@ def test_battle14_slower_brave_bird_uses_post_helmet_target_hp_regression():
     assert normal_rows[11]["p1_action"] == "move 1+forced:switch 4"
     assert normal_rows[11]["p0_hp"] == 138
     assert normal_rows[11]["p1_hp"] == 434
+
 
 def test_battle481_slower_draining_kiss_uses_post_drain_target_hp_regression():
     gd = load_game_data()
@@ -6899,6 +7127,7 @@ def test_battle481_slower_draining_kiss_uses_post_drain_target_hp_regression():
     assert normal_rows[22]["p1_hp"] == 288
     assert normal_rows[22]["p1_max_hp"] == 318
 
+
 def test_battle441_slower_move_after_hard_switch_hits_new_active_regression():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -6928,6 +7157,7 @@ def test_battle441_slower_move_after_hard_switch_hits_new_active_regression():
     assert normal_rows[32]["p1_hp"] == 126
     assert normal_rows[33]["p0_hp"] == 307
 
+
 def test_battle488_electromorphosis_charge_boost_regression():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -6955,6 +7185,7 @@ def test_battle488_electromorphosis_charge_boost_regression():
     assert normal_rows[40]["p1_hp"] == 168
     assert normal_rows[40]["p1_status"] == 3
 
+
 def test_battle488_switched_in_sleep_does_not_tick_before_move_regression():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -6981,6 +7212,7 @@ def test_battle488_switched_in_sleep_does_not_tick_before_move_regression():
     assert normal_rows[59]["p1_action"] == "move 1"
     assert normal_rows[59]["p1_hp"] == 168
     assert normal_rows[59]["p1_status"] == 3
+
 
 def test_battle88_paradox_stat_flag_does_not_act_as_charge_regression():
     gd = load_game_data()
@@ -7011,6 +7243,7 @@ def test_battle88_paradox_stat_flag_does_not_act_as_charge_regression():
     assert normal_rows[14]["p1_hp"] == 55
     assert normal_rows[14]["p1_max_hp"] == 391
 
+
 def test_battle748_tied_speed_inline_pivot_resume_uses_switch_request_frames_regression():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -7039,6 +7272,7 @@ def test_battle748_tied_speed_inline_pivot_resume_uses_switch_request_frames_reg
     assert normal_rows[23]["p0_max_hp"] == 534
     assert normal_rows[23]["p1_hp"] == 120
     assert normal_rows[23]["p1_max_hp"] == 534
+
 
 def test_battle512_confused_second_mover_does_not_preroll_blocked_curse_regression():
     gd = load_game_data()
@@ -7072,6 +7306,7 @@ def test_battle512_confused_second_mover_does_not_preroll_blocked_curse_regressi
     assert normal_rows[50]["p1_max_hp"] == 534
     assert normal_rows[50]["p1_status"] == 0
 
+
 def test_battle516_kee_berry_on_damaging_hit_reduces_future_pyro_balls_regression():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -7103,6 +7338,7 @@ def test_battle516_kee_berry_on_damaging_hit_reduces_future_pyro_balls_regressio
     assert normal_rows[17]["p0_max_hp"] == 301
     assert normal_rows[17]["p1_hp"] == 227
 
+
 def test_battle537_fractional_custap_priority_is_not_blocked_by_psychic_terrain_regression():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -7133,6 +7369,7 @@ def test_battle537_fractional_custap_priority_is_not_blocked_by_psychic_terrain_
     assert normal_rows[9]["p0_hp"] == 271
     assert normal_rows[9]["p0_max_hp"] == 289
     assert normal_rows[9]["p1_hp"] == 102
+
 
 def test_battle530_lockedmove_expiry_confusion_rolls_even_on_immune_hit_regression():
     gd = load_game_data()
@@ -7167,6 +7404,7 @@ def test_battle530_lockedmove_expiry_confusion_rolls_even_on_immune_hit_regressi
     assert normal_rows[38]["p0_hp"] == 394
     assert normal_rows[38]["p1_hp"] == 211
 
+
 def test_battle514_fainted_slower_lockedmove_user_does_not_spend_post_move_frame_regression():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -7200,6 +7438,7 @@ def test_battle514_fainted_slower_lockedmove_user_does_not_spend_post_move_frame
     assert normal_rows[45]["p0_hp"] == 512
     assert normal_rows[45]["p1_hp"] == 339
 
+
 def test_battle525_prism_armor_reduces_crit_super_effective_damage_regression():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -7229,6 +7468,7 @@ def test_battle525_prism_armor_reduces_crit_super_effective_damage_regression():
     assert normal_rows[59]["p0_hp"] == 341
     assert normal_rows[59]["p1_hp"] == 307
 
+
 def test_battle529_future_sight_keeps_live_ruin_aura_when_source_is_off_field_regression():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -7257,6 +7497,7 @@ def test_battle529_future_sight_keeps_live_ruin_aura_when_source_is_off_field_re
     assert normal_rows[19]["p1_max_hp"] == 301
     assert normal_rows[20]["p0_hp"] == 394
     assert normal_rows[20]["p1_hp"] == 175
+
 
 def test_battle551_cached_runswitch_speed_and_fainted_field_move_replay_regression():
     gd = load_game_data()
@@ -7302,6 +7543,7 @@ def test_battle551_cached_runswitch_speed_and_fainted_field_move_replay_regressi
     assert normal_rows[10]["p1_action"] == "move 2"
     assert normal_rows[10]["p1_hp"] == 318
 
+
 def test_battle552_air_balloon_blocks_psychic_terrain_offensive_boost_regression():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -7334,6 +7576,7 @@ def test_battle552_air_balloon_blocks_psychic_terrain_offensive_boost_regression
     assert normal_rows[5]["p0_hp"] == 60
     assert normal_rows[6]["p0_action"] == "move 2+forced:switch 6"
     assert normal_rows[6]["p0_hp"] == 307
+
 
 def test_battle555_red_card_overrides_inline_pivot_before_switch_in_state_mutates():
     gd = load_game_data()
@@ -7370,6 +7613,7 @@ def test_battle555_red_card_overrides_inline_pivot_before_switch_in_state_mutate
     assert normal_rows[2]["p0_hp"] == 353
     assert normal_rows[2]["p0_max_hp"] == 534
 
+
 def test_battle565_red_card_drag_cancels_late_pivot_and_switch_turn_stays_aligned():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -7404,6 +7648,7 @@ def test_battle565_red_card_drag_cancels_late_pivot_and_switch_turn_stays_aligne
     assert normal_rows[14]["p1_max_hp"] == 434
     assert normal_rows[15]["p1_hp"] == 252
 
+
 def test_battle575_red_card_drag_keeps_showdown_switch_order_for_same_turn_replacement():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -7437,6 +7682,7 @@ def test_battle575_red_card_drag_keeps_showdown_switch_order_for_same_turn_repla
     assert normal_rows[2]["p1_active"] == 0
     assert normal_rows[2]["p1_hp"] == 277
     assert normal_rows[2]["p1_max_hp"] == 349
+
 
 def test_battle622_poison_puppeteer_confusion_waits_until_after_red_card_drag():
     gd = load_game_data()
@@ -7476,6 +7722,7 @@ def test_battle622_poison_puppeteer_confusion_waits_until_after_red_card_drag():
     assert normal_rows[7]["p0_active"] == 3
     assert normal_rows[7]["p0_hp"] == 380
     assert normal_rows[7]["p1_hp"] == 126
+
 
 def test_battle632_tied_ko_before_slower_move_keeps_followup_prng_aligned():
     gd = load_game_data()
@@ -7550,6 +7797,7 @@ def test_battle632_tied_ko_before_slower_move_keeps_followup_prng_aligned():
     assert normal_rows[19]["p0_hp"] == 282
     assert normal_rows[19]["p1_hp"] == 318
 
+
 def test_battle634_ko_residual_refresh_uses_fainted_active_speed_not_stale_action_speed():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -7589,6 +7837,7 @@ def test_battle634_ko_residual_refresh_uses_fainted_active_speed_not_stale_actio
     assert normal_rows[18]["p1_active"] == 1
     assert normal_rows[18]["p1_hp"] == 30
 
+
 def test_battle643_rapid_spin_still_clears_before_life_orb_ko_regression():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -7626,6 +7875,7 @@ def test_battle643_rapid_spin_still_clears_before_life_orb_ko_regression():
     assert normal_rows[43]["p1_action"] == "move 2"
     assert normal_rows[43]["p1_hp"] == 313
 
+
 def test_battle577_struggle_recoil_ignores_rock_head():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -7659,6 +7909,7 @@ def test_battle577_struggle_recoil_ignores_rock_head():
     assert normal_rows[34]["p1_action"] == "move 4"
     assert normal_rows[34]["p1_hp"] == 69
     assert normal_rows[34]["p1_max_hp"] == 331
+
 
 def test_battle577_mist_ball_secondary_consumes_showdown_prng_frame():
     gd = load_game_data()
@@ -7696,6 +7947,7 @@ def test_battle577_mist_ball_secondary_consumes_showdown_prng_frame():
     assert normal_rows[38]["p1_hp"] == 116
     assert normal_rows[38]["p1_max_hp"] == 304
 
+
 def test_battle577_trick_choice_lock_does_not_reapply_after_item_swap():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -7731,6 +7983,7 @@ def test_battle577_trick_choice_lock_does_not_reapply_after_item_swap():
     assert normal_rows[74]["p0_hp"] == 251
     assert normal_rows[74]["p1_hp"] == 369
 
+
 def test_battle20_one_sided_switch_resume_uses_raw_switchin_speed_frames():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -7757,6 +8010,7 @@ def test_battle20_one_sided_switch_resume_uses_raw_switchin_speed_frames():
     assert normal_rows[39]["p1_active"] == 5
     assert normal_rows[39]["p1_hp"] == 127
     assert normal_rows[39]["p1_max_hp"] == 321
+
 
 def test_battle259_one_sided_switch_resume_keeps_passive_speed_mods_but_skips_paradox_entry_boosts():
     gd = load_game_data()
@@ -7788,6 +8042,7 @@ def test_battle259_one_sided_switch_resume_keeps_passive_speed_mods_but_skips_pa
     assert normal_rows[3]["p1_hp"] == 227
     assert normal_rows[3]["p1_max_hp"] == 321
 
+
 def test_battle574_screen_break_moves_ignore_aurora_veil_for_their_own_damage():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -7815,6 +8070,7 @@ def test_battle574_screen_break_moves_ignore_aurora_veil_for_their_own_damage():
     assert normal_rows[12]["p1_active"] == 3
     assert normal_rows[12]["p1_hp"] == 150
     assert normal_rows[12]["p1_max_hp"] == 364
+
 
 def test_battle822_hazard_fainted_switchin_counts_for_supreme_overlord():
     gd = load_game_data()
@@ -7845,6 +8101,7 @@ def test_battle822_hazard_fainted_switchin_counts_for_supreme_overlord():
     assert normal_rows[13]["p1_hp"] == 125
     assert normal_rows[13]["p1_max_hp"] == 341
 
+
 def test_battle905_fickle_beam_roll_happens_before_damage_roll():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -7872,6 +8129,7 @@ def test_battle905_fickle_beam_roll_happens_before_damage_roll():
     assert normal_rows[44]["p0_status"] == 2
     assert normal_rows[44]["p1_hp"] == 291
     assert normal_rows[44]["p1_max_hp"] == 416
+
 
 def test_battle858_tachyon_cutter_rechecks_multiscale_each_hit():
     gd = load_game_data()
@@ -7905,6 +8163,7 @@ def test_battle858_tachyon_cutter_rechecks_multiscale_each_hit():
     assert normal_rows[17]["p1_max_hp"] == 383
     assert normal_rows[18]["p0_hp"] == 97
 
+
 def test_battle142_later_multihit_crit_uses_per_hit_crit_state():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -7934,6 +8193,7 @@ def test_battle142_later_multihit_crit_uses_per_hit_crit_state():
     assert normal_rows[25]["p1_active"] == 2
     assert normal_rows[25]["p1_hp"] == 157
     assert normal_rows[25]["p1_max_hp"] == 281
+
 
 def test_battle580_lockedmove_pp_and_typeless_struggle_regression():
     gd = load_game_data()
@@ -7971,6 +8231,7 @@ def test_battle580_lockedmove_pp_and_typeless_struggle_regression():
     assert normal_rows[22]["p1_hp"] == 321
     assert normal_rows[22]["p1_max_hp"] == 321
 
+
 def test_battle296_slower_recoil_caps_at_post_confusion_target_hp_regression():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -8007,6 +8268,7 @@ def test_battle296_slower_recoil_caps_at_post_confusion_target_hp_regression():
     assert normal_rows[40]["p1_hp"] == 357
     assert normal_rows[40]["p1_max_hp"] == 380
 
+
 def test_battle582_confusion_bit_does_not_block_grassy_terrain_switch_in_heal_regression():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -8038,6 +8300,7 @@ def test_battle582_confusion_bit_does_not_block_grassy_terrain_switch_in_heal_re
 
     assert normal_rows[4]["p1_hp"] == 279
     assert normal_rows[4]["p1_max_hp"] == 391
+
 
 def test_battle0_paradox_switch_in_does_not_false_flag_semi_invul_regression():
     gd = load_game_data()
@@ -8071,6 +8334,7 @@ def test_battle0_paradox_switch_in_does_not_false_flag_semi_invul_regression():
     assert normal_rows[4]["p1_active"] == 2
     assert normal_rows[4]["p1_hp"] == 323
     assert normal_rows[4]["p1_max_hp"] == 323
+
 
 def test_battle586_healing_wish_consumes_on_manual_switch_before_hazards_regression():
     gd = load_game_data()
@@ -8109,6 +8373,7 @@ def test_battle586_healing_wish_consumes_on_manual_switch_before_hazards_regress
     assert normal_rows[15]["p1_hp"] == 312
     assert normal_rows[15]["p1_max_hp"] == 378
 
+
 def test_battle783_sticky_web_switch_resume_keeps_pre_hazard_tie_frames_regression():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -8146,6 +8411,7 @@ def test_battle783_sticky_web_switch_resume_keeps_pre_hazard_tie_frames_regressi
     assert normal_rows[5]["p1_active"] == 3
     assert normal_rows[5]["p1_hp"] == 371
     assert normal_rows[5]["p1_max_hp"] == 371
+
 
 def test_battle650_late_pivot_residual_snapshot_uses_pre_weather_speed_regression():
     gd = load_game_data()
@@ -8187,6 +8453,7 @@ def test_battle650_late_pivot_residual_snapshot_uses_pre_weather_speed_regressio
     assert normal_rows[12]["p1_active"] == 4
     assert normal_rows[12]["p1_hp"] == 235
     assert normal_rows[12]["p1_max_hp"] == 371
+
 
 def test_battle910_last_queued_protect_fails_before_stall_rng_regression():
     gd = load_game_data()
@@ -8238,6 +8505,7 @@ def test_battle910_last_queued_protect_fails_before_stall_rng_regression():
     assert normal_rows[111]["p1_hp"] == 264
     assert normal_rows[111]["p1_max_hp"] == 354
 
+
 def test_battle587_purifying_salt_halves_shadow_ball_on_spa_chain_regression():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -8285,6 +8553,7 @@ def test_battle587_purifying_salt_halves_shadow_ball_on_spa_chain_regression():
     assert normal_rows[6]["p1_hp"] == 390
     assert normal_rows[6]["p1_max_hp"] == 404
 
+
 def test_battle588_revelation_dance_uses_live_primary_type_regression():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -8331,6 +8600,7 @@ def test_battle588_revelation_dance_uses_live_primary_type_regression():
     assert normal_rows[22]["p1_active"] == 3
     assert normal_rows[22]["p1_hp"] == 118
     assert normal_rows[22]["p1_max_hp"] == 321
+
 
 def test_battle719_eject_button_does_not_consume_or_clear_without_bench_regression():
     gd = load_game_data()
@@ -8382,6 +8652,7 @@ def test_battle719_eject_button_does_not_consume_or_clear_without_bench_regressi
     assert normal_rows[38]["p1_hp"] == 20
     assert normal_rows[38]["p1_max_hp"] == 534
 
+
 def test_battle590_switching_side_does_not_spend_incoming_priority_rng_regression():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -8426,6 +8697,7 @@ def test_battle590_switching_side_does_not_spend_incoming_priority_rng_regressio
     assert normal_rows[4]["p1_active"] == 4
     assert normal_rows[4]["p1_hp"] == 238
     assert normal_rows[4]["p1_max_hp"] == 393
+
 
 def test_battle603_rain_perfect_storm_moves_skip_accuracy_rng_regression():
     gd = load_game_data()
@@ -8476,6 +8748,7 @@ def test_battle603_rain_perfect_storm_moves_skip_accuracy_rng_regression():
     assert normal_rows[13]["p1_hp"] == 271
     assert normal_rows[13]["p1_max_hp"] == 321
 
+
 def test_battle619_multihit_contact_status_resolves_per_hit_regression():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -8515,6 +8788,7 @@ def test_battle619_multihit_contact_status_resolves_per_hit_regression():
     assert normal_rows[10]["p1_active"] == 3
     assert normal_rows[10]["p1_hp"] == 101
     assert normal_rows[10]["p1_max_hp"] == 384
+
 
 def test_battle825_fainted_active_skips_disablemove_shuffle_regression():
     gd = load_game_data()
@@ -8565,6 +8839,7 @@ def test_battle825_fainted_active_skips_disablemove_shuffle_regression():
     assert normal_rows[9]["p1_hp"] == 73
     assert normal_rows[9]["p1_max_hp"] == 349
 
+
 def test_battle662_snowscape_def_boost_applies_to_psyshock_regression():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -8605,6 +8880,7 @@ def test_battle662_snowscape_def_boost_applies_to_psyshock_regression():
     assert normal_rows[15]["p1_hp"] == 110
     assert normal_rows[15]["p1_max_hp"] == 318
 
+
 def test_battle666_fainted_target_cannot_reflect_moonblast_secondary_regression():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -8644,6 +8920,7 @@ def test_battle666_fainted_target_cannot_reflect_moonblast_secondary_regression(
     assert normal_rows[15]["p1_active"] == 0
     assert normal_rows[15]["p1_hp"] == 253
     assert normal_rows[15]["p1_max_hp"] == 289
+
 
 def test_battle679_first_move_self_ko_skips_extra_tied_update_regression():
     gd = load_game_data()
@@ -8686,6 +8963,7 @@ def test_battle679_first_move_self_ko_skips_extra_tied_update_regression():
     assert normal_rows[6]["p1_hp"] == 331
     assert normal_rows[6]["p1_max_hp"] == 394
 
+
 def test_battle680_slower_same_turn_confusion_checks_after_between_move_updates():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -8726,6 +9004,7 @@ def test_battle680_slower_same_turn_confusion_checks_after_between_move_updates(
     assert normal_rows[13]["p1_active"] == 4
     assert normal_rows[13]["p1_hp"] == 183
     assert normal_rows[13]["p1_max_hp"] == 534
+
 
 def test_battle685_fatal_hit_on_damaging_hit_abilities_still_apply():
     gd = load_game_data()
@@ -8768,6 +9047,7 @@ def test_battle685_fatal_hit_on_damaging_hit_abilities_still_apply():
     assert normal_rows[21]["p1_hp"] == 255
     assert normal_rows[21]["p1_max_hp"] == 341
 
+
 def test_battle688_neutralizing_gas_suppresses_late_status_ability_checks():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -8808,6 +9088,7 @@ def test_battle688_neutralizing_gas_suppresses_late_status_ability_checks():
     assert normal_rows[17]["p1_hp"] == 299
     assert normal_rows[17]["p1_max_hp"] == 315
 
+
 def test_battle102_fatal_hit_toxic_debris_only_adds_one_layer():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -8846,6 +9127,7 @@ def test_battle102_fatal_hit_toxic_debris_only_adds_one_layer():
     assert normal_rows[19]["p1_hp"] == 150
     assert normal_rows[19]["p1_max_hp"] == 301
     assert normal_rows[19]["p1_status"] == 5
+
 
 def test_battle696_tied_speed_blocked_move_and_weather_expiry_updates_stay_aligned():
     gd = load_game_data()
@@ -8894,6 +9176,7 @@ def test_battle696_tied_speed_blocked_move_and_weather_expiry_updates_stay_align
     assert normal_rows[42]["p1_action"] == "move 4"
     assert normal_rows[42]["p1_hp"] == 323
 
+
 def test_battle712_neutralizing_gas_end_replays_grassy_surge_before_upkeep():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -8924,6 +9207,7 @@ def test_battle712_neutralizing_gas_end_replays_grassy_surge_before_upkeep():
     assert normal_rows[79]["p1_hp"] == 282
     assert normal_rows[79]["p1_max_hp"] == 341
 
+
 def test_battle716_switch_in_hazard_damage_triggers_same_switch_update_items():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -8952,6 +9236,7 @@ def test_battle716_switch_in_hazard_damage_triggers_same_switch_update_items():
     assert normal_rows[39]["p1_active"] == 3
     assert normal_rows[39]["p1_hp"] == 230
     assert normal_rows[39]["p1_max_hp"] == 343
+
 
 def test_battle752_fainted_target_skips_partial_trap_duration_regression():
     gd = load_game_data()
@@ -8984,6 +9269,7 @@ def test_battle752_fainted_target_skips_partial_trap_duration_regression():
     assert normal_rows[5]["p1_action"] == "move 3"
     assert normal_rows[5]["p1_hp"] == 187
 
+
 def test_battle5_first_mover_recoil_is_not_double_applied_regression():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -9013,6 +9299,7 @@ def test_battle5_first_mover_recoil_is_not_double_applied_regression():
     assert normal_rows[4]["p1_active"] == 0
     assert normal_rows[4]["p1_hp"] == 277
 
+
 def test_battle127_first_mover_drain_replay_does_not_double_apply_rocky_helmet():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -9041,6 +9328,7 @@ def test_battle127_first_mover_drain_replay_does_not_double_apply_rocky_helmet()
     assert normal_rows[25]["p1_active"] == 2
     assert normal_rows[25]["p1_hp"] == 208
     assert normal_rows[26]["p0_hp"] == 243
+
 
 def test_battle129_faster_recover_updates_slower_target_hp_snapshot_regression():
     gd = load_game_data()
@@ -9075,6 +9363,7 @@ def test_battle129_faster_recover_updates_slower_target_hp_snapshot_regression()
     assert normal_rows[53]["p1_action"] == "move 4"
     assert normal_rows[53]["p1_hp"] == 140
 
+
 def test_battle121_slower_knock_off_does_not_double_apply_faster_life_orb():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -9101,6 +9390,7 @@ def test_battle121_slower_knock_off_does_not_double_apply_faster_life_orb():
     assert normal_rows[4]["p1_action"] == "move 1"
     assert normal_rows[4]["p1_hp"] == 196
     assert normal_rows[4]["p1_max_hp"] == 289
+
 
 def test_battle181_canceled_slower_move_preserves_faster_recoil_hp_snapshot():
     gd = load_game_data()
@@ -9130,6 +9420,7 @@ def test_battle181_canceled_slower_move_preserves_faster_recoil_hp_snapshot():
     assert normal_rows[8]["p1_hp"] == 203
     assert normal_rows[8]["p1_max_hp"] == 311
 
+
 def test_battle210_first_mover_drain_is_not_removed_by_slower_side_status_move():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -9157,6 +9448,7 @@ def test_battle210_first_mover_drain_is_not_removed_by_slower_side_status_move()
     assert normal_rows[21]["p1_action"] == "move 3"
     assert normal_rows[21]["p1_hp"] == 157
     assert normal_rows[21]["p1_max_hp"] == 261
+
 
 def test_battle768_missing_hidden_burn_secondary_must_not_shift_followup_prng():
     gd = load_game_data()
@@ -9187,6 +9479,7 @@ def test_battle768_missing_hidden_burn_secondary_must_not_shift_followup_prng():
     assert normal_rows[51]["p1_hp"] == 89
     assert normal_rows[51]["p1_max_hp"] == 379
 
+
 def test_battle798_red_card_drag_must_clear_same_turn_partial_trap_before_residual():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -9214,6 +9507,7 @@ def test_battle798_red_card_drag_must_clear_same_turn_partial_trap_before_residu
     assert normal_rows[14]["p1_action"] == "move 1"
     assert normal_rows[14]["p1_hp"] == 364
     assert normal_rows[14]["p1_max_hp"] == 370
+
 
 def test_battle801_player_red_card_drag_must_consume_hidden_tie_frames_before_next_turn():
     gd = load_game_data()
@@ -9245,6 +9539,7 @@ def test_battle801_player_red_card_drag_must_consume_hidden_tie_frames_before_ne
     assert normal_rows[2]["p1_hp"] == 45
     assert normal_rows[2]["p1_max_hp"] == 340
 
+
 def test_battle860_double_future_sight_must_resolve_in_target_slot_order():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -9272,6 +9567,7 @@ def test_battle860_double_future_sight_must_resolve_in_target_slot_order():
     assert normal_rows[37]["p1_action"] == "move 1"
     assert normal_rows[37]["p1_hp"] == 288
     assert normal_rows[37]["p1_max_hp"] == 393
+
 
 def test_battle873_failed_future_sight_turn_keeps_pre_residual_and_delayed_hit_updates():
     gd = load_game_data()
@@ -9306,6 +9602,7 @@ def test_battle873_failed_future_sight_turn_keeps_pre_residual_and_delayed_hit_u
     assert normal_rows[9]["p0_max_hp"] == 357
     assert normal_rows[9]["p1_hp"] == 262
 
+
 def test_battle876_same_turn_paralysis_blocks_slower_soft_boiled():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -9335,6 +9632,7 @@ def test_battle876_same_turn_paralysis_blocks_slower_soft_boiled():
     assert normal_rows[7]["p1_max_hp"] == 714
     assert normal_rows[7]["p1_status"] == 2
 
+
 def test_battle878_target_eject_pack_cancels_forced_out_slow_move():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -9363,6 +9661,7 @@ def test_battle878_target_eject_pack_cancels_forced_out_slow_move():
     assert normal_rows[2]["p1_active"] == 1
     assert normal_rows[2]["p1_hp"] == 394
     assert normal_rows[2]["p1_max_hp"] == 394
+
 
 def test_battle895_multihit_contact_hooks_use_actual_hits_after_early_ko():
     gd = load_game_data()
@@ -9404,6 +9703,7 @@ def test_battle895_multihit_contact_hooks_use_actual_hits_after_early_ko():
     assert normal_rows[21]["p1_hp"] == 220
     assert normal_rows[21]["p1_max_hp"] == 283
 
+
 def test_battle902_lockedmove_fatigue_confusion_after_ko_update():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -9435,6 +9735,7 @@ def test_battle902_lockedmove_fatigue_confusion_after_ko_update():
     assert normal_rows[32]["p1_hp"] == 172
     assert normal_rows[33]["p1_hp"] == 139
     assert normal_rows[34]["p1_hp"] == 139
+
 
 def test_battle580_lockedmove_fatigue_confusion_before_future_sight_after_ko():
     gd = load_game_data()
@@ -9469,6 +9770,7 @@ def test_battle580_lockedmove_fatigue_confusion_before_future_sight_after_ko():
     assert normal_rows[4]["p1_action"] == "move 1"
     assert normal_rows[4]["p1_hp"] == 151
     assert normal_rows[4]["p1_max_hp"] == 341
+
 
 def test_battle915_future_sight_can_queue_into_fainted_target_slot():
     gd = load_game_data()
@@ -9505,6 +9807,7 @@ def test_battle915_future_sight_can_queue_into_fainted_target_slot():
     assert normal_rows[57]["p1_action"] == "move 4"
     assert normal_rows[57]["p1_hp"] == 84
     assert normal_rows[57]["p1_max_hp"] == 394
+
 
 def test_battle924_last_resort_requires_other_move_slots_since_switch_in():
     gd = load_game_data()
@@ -9544,6 +9847,7 @@ def test_battle924_last_resort_requires_other_move_slots_since_switch_in():
     assert normal_rows[6]["p0_action"] == "move 4+forced:switch 6"
     assert normal_rows[6]["p1_hp"] == 444
 
+
 def test_battle933_neutralizing_gas_suppresses_rock_head_recoil_immunity():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -9578,6 +9882,7 @@ def test_battle933_neutralizing_gas_suppresses_rock_head_recoil_immunity():
     assert normal_rows[4]["p1_action"] == "move 4+forced:switch 3"
     assert normal_rows[4]["p1_active"] == 2
 
+
 def test_battle941_residual_faint_skips_post_residual_update_frame():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -9611,6 +9916,7 @@ def test_battle941_residual_faint_skips_post_residual_update_frame():
     assert normal_rows[12]["p1_hp"] == 174
     assert normal_rows[12]["p1_status"] == 1
 
+
 def test_battle951_notarget_status_move_skips_accuracy_frame():
     gd = load_game_data()
     me = load_move_effect_data()
@@ -9642,6 +9948,7 @@ def test_battle951_notarget_status_move_skips_accuracy_frame():
     assert normal_rows[65]["p1_action"] == "switch 2"
     assert normal_rows[65]["p1_active"] == 1
     assert normal_rows[65]["p1_hp"] == 298
+
 
 def test_battle964_mold_breaker_good_as_gold_still_reaches_accuracy():
     gd = load_game_data()

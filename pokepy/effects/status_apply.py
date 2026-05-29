@@ -6,6 +6,7 @@ The the Showdown reference versions are batched the reference functions that thr
 each call. The pokepy ports mutate `battle: np.ndarray[256]` in place and
 take a stateful `Gen5PRNG`.
 """
+
 from __future__ import annotations
 
 from pokepy.effects._common import np, MultiFormatState, Gen5PRNG
@@ -76,16 +77,21 @@ ABILITY_SWEET_VEIL = 175
 ABILITY_LEAF_GUARD = 102
 MOVE_TRI_ATTACK = 161
 
+
 def _has_heal_block(battle: np.ndarray, pokemon_offset: int) -> bool:
     """Return True iff the holder is currently under Heal Block."""
     poff = int(pokemon_offset)
-    ext_off = OFF_FIELD + (F_EXTENDED_VOLATILE_0 if poff < OFF_SIDE1 else F_EXTENDED_VOLATILE_1)
+    ext_off = OFF_FIELD + (
+        F_EXTENDED_VOLATILE_0 if poff < OFF_SIDE1 else F_EXTENDED_VOLATILE_1
+    )
     ext = int(battle[ext_off]) & 0xFFFF
     return (ext & EXT_VOL_HEAL_BLOCK) != 0
+
 
 def _is_grounded(battle: np.ndarray, pokemon_offset: int) -> bool:
     """Check if a Pokemon is grounded for terrain/status interactions."""
     return is_grounded(battle, pokemon_offset)
+
 
 def can_set_self_status(
     battle: np.ndarray,
@@ -141,7 +147,9 @@ def can_set_self_status(
     if status == STATUS_PARALYSIS and ability == ABILITY_LIMBER:
         return False
     if status == STATUS_SLEEP and ability in (
-        ABILITY_INSOMNIA, ABILITY_VITAL_SPIRIT, ABILITY_SWEET_VEIL,
+        ABILITY_INSOMNIA,
+        ABILITY_VITAL_SPIRIT,
+        ABILITY_SWEET_VEIL,
     ):
         return False
     if status in (STATUS_POISON, STATUS_TOXIC) and ability == ABILITY_IMMUNITY:
@@ -165,8 +173,12 @@ def can_set_self_status(
         # psn/tox. Self-application passes `source = this`.
         has_corrosion = ability == ABILITY_CORROSION
         if not has_corrosion:
-            if (t1 == TYPE_POISON or t2 == TYPE_POISON or
-                t1 == TYPE_STEEL or t2 == TYPE_STEEL):
+            if (
+                t1 == TYPE_POISON
+                or t2 == TYPE_POISON
+                or t1 == TYPE_STEEL
+                or t2 == TYPE_STEEL
+            ):
                 return False
 
     # Terrain immunities for grounded Pokemon
@@ -183,10 +195,14 @@ def can_set_self_status(
         if status == STATUS_SLEEP and current_terrain == TERRAIN_ELECTRIC:
             return False
 
-    if status == STATUS_FREEZE and current_weather in (WEATHER_SUN, WEATHER_DESOLATE_LAND):
+    if status == STATUS_FREEZE and current_weather in (
+        WEATHER_SUN,
+        WEATHER_DESOLATE_LAND,
+    ):
         return False
 
     return True
+
 
 def _can_apply_status(
     battle: np.ndarray,
@@ -239,13 +255,16 @@ def _can_apply_status(
 
     # Ability-based status immunities
     burn_immune_ability = (
-        target_ability in (
+        target_ability
+        in (
             ABILITY_WATER_VEIL,
             ABILITY_WATER_BUBBLE,
             ABILITY_THERMAL_EXCHANGE,
         )
     ) and (status == STATUS_BURN)
-    para_immune_ability = (target_ability == ABILITY_LIMBER) and (status == STATUS_PARALYSIS)
+    para_immune_ability = (target_ability == ABILITY_LIMBER) and (
+        status == STATUS_PARALYSIS
+    )
     sleep_immune = (
         target_ability == ABILITY_INSOMNIA
         or target_ability == ABILITY_VITAL_SPIRIT
@@ -254,7 +273,9 @@ def _can_apply_status(
     poison_immune_ability = (target_ability == ABILITY_IMMUNITY) and (
         status == STATUS_POISON or status == STATUS_TOXIC
     )
-    freeze_immune = (target_ability == ABILITY_MAGMA_ARMOR) and (status == STATUS_FREEZE)
+    freeze_immune = (target_ability == ABILITY_MAGMA_ARMOR) and (
+        status == STATUS_FREEZE
+    )
     current_weather = int(battle[OFF_FIELD + F_WEATHER])
     freeze_immune_weather = (status == STATUS_FREEZE) and (
         current_weather == WEATHER_SUN or current_weather == WEATHER_DESOLATE_LAND
@@ -268,7 +289,9 @@ def _can_apply_status(
     is_fire_type = (target_type1 == TYPE_FIRE) or (target_type2 == TYPE_FIRE)
     burn_immune_type = is_fire_type and (status == STATUS_BURN)
 
-    is_electric_type = (target_type1 == TYPE_ELECTRIC) or (target_type2 == TYPE_ELECTRIC)
+    is_electric_type = (target_type1 == TYPE_ELECTRIC) or (
+        target_type2 == TYPE_ELECTRIC
+    )
     para_immune_type = is_electric_type and (status == STATUS_PARALYSIS)
 
     is_ice_type = (target_type1 == TYPE_ICE) or (target_type2 == TYPE_ICE)
@@ -316,15 +339,17 @@ def _can_apply_status(
     has_overcoat_status = target_ability == ABILITY_OVERCOAT
     has_goggles_status = target_item == ITEM_SAFETY_GOGGLES
     grass_powder_immune = (
-        (is_grass_type or has_overcoat_status or has_goggles_status) and is_powder_move
-    )
+        is_grass_type or has_overcoat_status or has_goggles_status
+    ) and is_powder_move
 
     # Safeguard blocks all non-volatile status from opponents.
     target_is_side0 = target_offset < OFF_SIDE1
     from pokepy.core.constants import (
-        F_SCREENS_0 as _FS0_SA, F_SCREENS_1 as _FS1_SA,
+        F_SCREENS_0 as _FS0_SA,
+        F_SCREENS_1 as _FS1_SA,
         SCREEN_SAFEGUARD_SHIFT as _SAFEGUARD_SHIFT,
     )
+
     screens_target = int(battle[OFF_FIELD + (_FS0_SA if target_is_side0 else _FS1_SA)])
     safeguard_active = ((screens_target >> _SAFEGUARD_SHIFT) & 0x3) > 0
     user_has_infiltrator = False
@@ -357,6 +382,7 @@ def _can_apply_status(
         return False
 
     return True
+
 
 def _try_apply_status(
     battle: np.ndarray,
@@ -409,7 +435,12 @@ def _try_apply_status(
     # Synchronize reflects burn / para / poison / toxic back at the source.
     if user_offset is not None:
         has_synchronize = target_ability == ABILITY_SYNCHRONIZE
-        sync_valid = status in (STATUS_BURN, STATUS_PARALYSIS, STATUS_POISON, STATUS_TOXIC)
+        sync_valid = status in (
+            STATUS_BURN,
+            STATUS_PARALYSIS,
+            STATUS_POISON,
+            STATUS_TOXIC,
+        )
         if has_synchronize and sync_valid:
             user_status_offset = user_offset + 12
             user_current_status = get_status(int(battle[user_status_offset]))
@@ -419,12 +450,16 @@ def _try_apply_status(
                 if user_ability in (ABILITY_PURIFYING_SALT, ABILITY_COMATOSE):
                     blocked = True
                 if status == STATUS_BURN and user_ability in (
-                    ABILITY_WATER_VEIL, ABILITY_THERMAL_EXCHANGE,
+                    ABILITY_WATER_VEIL,
+                    ABILITY_THERMAL_EXCHANGE,
                 ):
                     blocked = True
                 if status == STATUS_PARALYSIS and user_ability == ABILITY_LIMBER:
                     blocked = True
-                if status in (STATUS_POISON, STATUS_TOXIC) and user_ability == ABILITY_IMMUNITY:
+                if (
+                    status in (STATUS_POISON, STATUS_TOXIC)
+                    and user_ability == ABILITY_IMMUNITY
+                ):
                     blocked = True
                 if user_ability == ABILITY_SHIELDS_DOWN_STATUS:
                     u_hp = int(battle[user_offset + 1])
@@ -433,6 +468,7 @@ def _try_apply_status(
                         blocked = True
                 if not blocked:
                     battle[user_status_offset] = set_status(status, 0)
+
 
 def apply_status_from_move(
     battle: np.ndarray,
@@ -472,6 +508,7 @@ def apply_status_from_move(
     # to the opponent.
     from pokepy.data.move_effects import EFFECT_RECOVERY as _EFFECT_RECOVERY_SA
     from pokepy.core.constants import MOVE_REST as _MOVE_REST_SA
+
     if move_id == _MOVE_REST_SA and move_effect_type == _EFFECT_RECOVERY_SA:
         return
 
@@ -487,6 +524,7 @@ def apply_status_from_move(
             # Serene Grace: double secondary effect chance
             status_chance = min(status_chance * 2, 100)
         from pokepy.core.constants import ABILITY_SHEER_FORCE as _ABILITY_SHEER_FORCE_SA
+
         user_has_sheer_force = user_ability == _ABILITY_SHEER_FORCE_SA
 
     # Shield Dust (data/abilities.ts:shielddust) and Covert Cloak
@@ -499,11 +537,12 @@ def apply_status_from_move(
     # Turboblaze / Teravolt — pokepy doesn't track Mold Breaker here, but
     # those abilities are rare in OU.
     from pokepy.data.move_effects import EFFECT_STATUS as _EFFECT_STATUS_SD
+
     _ABILITY_SHIELD_DUST_SA = 19
     _ITEM_COVERT_CLOAK_SA = 750
     target_ability_sd = int(battle[target_offset + 5])
     target_item_sd = int(battle[target_offset + 6])
-    is_secondary_status = (move_effect_type != _EFFECT_STATUS_SD)
+    is_secondary_status = move_effect_type != _EFFECT_STATUS_SD
     target_has_shield_dust = target_ability_sd == _ABILITY_SHIELD_DUST_SA
     target_has_covert_cloak = target_item_sd == _ITEM_COVERT_CLOAK_SA
     shield_dust_blocks = is_secondary_status and (
@@ -516,9 +555,13 @@ def apply_status_from_move(
     # secondary status (including 100% chance ones like Zap Cannon, Nuzzle);
     # primary status moves (Will-O-Wisp etc.) have effect_type == EFFECT_STATUS
     # and are NOT secondaries, so Sheer Force ignores them.
-    sheer_force_blocks = user_has_sheer_force and (move_effect_type != _EFFECT_STATUS_SD)
+    sheer_force_blocks = user_has_sheer_force and (
+        move_effect_type != _EFFECT_STATUS_SD
+    )
     has_status_effect = (
-        hit and (status > 0) and (status_chance > 0)
+        hit
+        and (status > 0)
+        and (status_chance > 0)
         and not sheer_force_blocks
         and not shield_dust_blocks
     )
@@ -565,6 +608,7 @@ def apply_status_from_move(
         is_status_move=not is_secondary_status,
     )
 
+
 def apply_tri_attack_status_from_move(
     battle: np.ndarray,
     move_id: int,
@@ -589,14 +633,25 @@ def apply_tri_attack_status_from_move(
         return
 
     chance = 20
-    if user_offset is not None and int(battle[int(user_offset) + 5]) == ABILITY_SERENE_GRACE:
+    if (
+        user_offset is not None
+        and int(battle[int(user_offset) + 5]) == ABILITY_SERENE_GRACE
+    ):
         chance = min(100, chance * 2)
 
-    roll = int(prerolled_roll) if prerolled_roll is not None else int(gen5_prng.random(100))
+    roll = (
+        int(prerolled_roll)
+        if prerolled_roll is not None
+        else int(gen5_prng.random(100))
+    )
     if roll >= chance:
         return
 
-    choice = int(prerolled_status) if prerolled_status is not None else int(gen5_prng.random(3))
+    choice = (
+        int(prerolled_status)
+        if prerolled_status is not None
+        else int(gen5_prng.random(3))
+    )
     if choice == 0:
         status = STATUS_BURN
     elif choice == 1:
@@ -614,6 +669,7 @@ def apply_tri_attack_status_from_move(
         user_offset=user_offset,
         is_status_move=False,
     )
+
 
 def apply_end_of_turn_status(
     battle: np.ndarray,
@@ -733,6 +789,7 @@ def apply_end_of_turn_status(
     new_status = status
 
     battle[status_offset] = set_status(new_status, new_turns)
+
 
 def apply_end_of_turn_status_effects(
     battle: np.ndarray,

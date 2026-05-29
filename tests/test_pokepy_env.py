@@ -7,6 +7,7 @@ import pytest
 
 from pokepy.env import BattleEnv, init_battle_state, DEFAULT_TEAM
 
+
 def test_battle_env_reset_and_obs_shapes():
     env = BattleEnv()
     obs = env.reset()
@@ -14,6 +15,7 @@ def test_battle_env_reset_and_obs_shapes():
     assert obs["text_tokens"].shape == (106,)
     assert obs["numbers"].shape == (55,)
     assert obs["illegal_actions"].shape == (13,)
+
 
 def test_battle_env_runs_a_full_battle():
     env = BattleEnv()
@@ -29,6 +31,7 @@ def test_battle_env_runs_a_full_battle():
     assert done, "battle should finish within 200 turns of mash-attack"
     assert rewards_seen
 
+
 def test_battle_env_action_mask_excludes_illegal_switches():
     env = BattleEnv()
     env.reset()
@@ -37,14 +40,17 @@ def test_battle_env_action_mask_excludes_illegal_switches():
     assert mask[:4].any()
     assert not mask[4:].any()
 
+
 def test_init_battle_state_writes_buffer():
     state = init_battle_state(DEFAULT_TEAM, DEFAULT_TEAM)
     from pokepy.core.constants import OFF_SIDE0, POKEMON_SIZE
+
     bs = state.battle_state
     # Slot 0 should have valid species + nonzero hp
     assert int(bs[OFF_SIDE0 + 0]) == 1  # bulbasaur
-    assert int(bs[OFF_SIDE0 + 1]) > 0   # current_hp > 0
-    assert int(bs[OFF_SIDE0 + 2]) > 0   # max_hp > 0
+    assert int(bs[OFF_SIDE0 + 1]) > 0  # current_hp > 0
+    assert int(bs[OFF_SIDE0 + 2]) > 0  # max_hp > 0
+
 
 def test_init_battle_state_marks_leadoff_revealed_symmetrically():
     state = init_battle_state(DEFAULT_TEAM, DEFAULT_TEAM)
@@ -53,6 +59,7 @@ def test_init_battle_state_marks_leadoff_revealed_symmetrically():
     # side-0 view, team_revealed for the side-1 view).
     assert bool(state.opp_revealed[0])
     assert bool(state.team_revealed[0])
+
 
 def test_battle_step_reveals_both_sides_moves_symmetrically():
     """Engine-level symmetry: step_battle_gen9 must update both
@@ -73,6 +80,7 @@ def test_battle_step_reveals_both_sides_moves_symmetrically():
     # we expect exactly the (0, 0) entry on each side to flip to True.
     assert bool(env.state.opp_moves_revealed[0, 0])
     assert bool(env.state.team_moves_revealed[0, 0])
+
 
 def state_any_revealed(arr: np.ndarray) -> bool:
     return bool(np.asarray(arr).any())

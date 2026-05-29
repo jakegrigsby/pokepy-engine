@@ -5,6 +5,7 @@ in place and takes a stateful `Gen5PRNG`. The orchestrator wires together
 status, weather, salt cure, speed boost, weather healing, shed skin /
 hydration, and the trick room / screens / weather / terrain decrements.
 """
+
 from __future__ import annotations
 
 from pokepy.effects._common import np, MultiFormatState, Gen5PRNG
@@ -38,19 +39,38 @@ from pokepy.core.constants import (
 
 # Pre-computed (shift, mask, clear_mask) tuples for screen decrement.
 _SCREEN_FIELDS = [
-    (SCREEN_REFLECT_SHIFT, SCREEN_MASK_3BIT,
-     screen_clear_mask(SCREEN_MASK_3BIT, SCREEN_REFLECT_SHIFT)),
-    (SCREEN_LIGHTSCREEN_SHIFT, SCREEN_MASK_3BIT,
-     screen_clear_mask(SCREEN_MASK_3BIT, SCREEN_LIGHTSCREEN_SHIFT)),
-    (SCREEN_AURORAVEIL_SHIFT, SCREEN_MASK_3BIT,
-     screen_clear_mask(SCREEN_MASK_3BIT, SCREEN_AURORAVEIL_SHIFT)),
-    (SCREEN_TAILWIND_SHIFT, SCREEN_MASK_3BIT,
-     screen_clear_mask(SCREEN_MASK_3BIT, SCREEN_TAILWIND_SHIFT)),
-    (SCREEN_SAFEGUARD_SHIFT, SCREEN_MASK_2BIT,
-     screen_clear_mask(SCREEN_MASK_2BIT, SCREEN_SAFEGUARD_SHIFT)),
-    (SCREEN_MIST_SHIFT, SCREEN_MASK_2BIT,
-     screen_clear_mask(SCREEN_MASK_2BIT, SCREEN_MIST_SHIFT)),
+    (
+        SCREEN_REFLECT_SHIFT,
+        SCREEN_MASK_3BIT,
+        screen_clear_mask(SCREEN_MASK_3BIT, SCREEN_REFLECT_SHIFT),
+    ),
+    (
+        SCREEN_LIGHTSCREEN_SHIFT,
+        SCREEN_MASK_3BIT,
+        screen_clear_mask(SCREEN_MASK_3BIT, SCREEN_LIGHTSCREEN_SHIFT),
+    ),
+    (
+        SCREEN_AURORAVEIL_SHIFT,
+        SCREEN_MASK_3BIT,
+        screen_clear_mask(SCREEN_MASK_3BIT, SCREEN_AURORAVEIL_SHIFT),
+    ),
+    (
+        SCREEN_TAILWIND_SHIFT,
+        SCREEN_MASK_3BIT,
+        screen_clear_mask(SCREEN_MASK_3BIT, SCREEN_TAILWIND_SHIFT),
+    ),
+    (
+        SCREEN_SAFEGUARD_SHIFT,
+        SCREEN_MASK_2BIT,
+        screen_clear_mask(SCREEN_MASK_2BIT, SCREEN_SAFEGUARD_SHIFT),
+    ),
+    (
+        SCREEN_MIST_SHIFT,
+        SCREEN_MASK_2BIT,
+        screen_clear_mask(SCREEN_MASK_2BIT, SCREEN_MIST_SHIFT),
+    ),
 ]
+
 
 def apply_end_of_turn_effects(
     battle: np.ndarray,
@@ -148,6 +168,7 @@ def apply_end_of_turn_effects(
     decrement_weather(battle)
     decrement_terrain(battle)
 
+
 def apply_partial_trap_damage(
     battle: np.ndarray,
     pokemon_offset: int,
@@ -183,7 +204,9 @@ def apply_partial_trap_damage(
     if hp <= 0:
         return
 
-    ext_off = OFF_FIELD + (F_EXTENDED_VOLATILE_0 if side == 0 else F_EXTENDED_VOLATILE_1)
+    ext_off = OFF_FIELD + (
+        F_EXTENDED_VOLATILE_0 if side == 0 else F_EXTENDED_VOLATILE_1
+    )
     ext_vol = int(battle[ext_off]) & 0xFFFF
     if (ext_vol & EXT_VOL_PARTIAL_TRAP) == 0:
         return
@@ -192,7 +215,9 @@ def apply_partial_trap_damage(
         v = int(v) & 0xFFFF
         return v - 0x10000 if v >= 0x8000 else v
 
-    turns_off = OFF_MOVES + (M_PARTIAL_TRAP_TURNS_0 if side == 0 else M_PARTIAL_TRAP_TURNS_1)
+    turns_off = OFF_MOVES + (
+        M_PARTIAL_TRAP_TURNS_0 if side == 0 else M_PARTIAL_TRAP_TURNS_1
+    )
     turns = int(battle[turns_off])
     if turns <= 0:
         battle[ext_off] = np.int16(_wrap_i16(ext_vol & ~EXT_VOL_PARTIAL_TRAP))
@@ -228,6 +253,7 @@ def apply_partial_trap_damage(
     dmg = max(1, max_hp // divisor)
     battle[poff + 1] = max(0, hp - dmg)
 
+
 def _apply_aqua_ring_ingrain_heal(
     battle: np.ndarray,
     pokemon_offset: int,
@@ -252,7 +278,9 @@ def _apply_aqua_ring_ingrain_heal(
     if hp <= 0:
         return
 
-    ext_off = OFF_FIELD + (F_EXTENDED_VOLATILE_0 if side == 0 else F_EXTENDED_VOLATILE_1)
+    ext_off = OFF_FIELD + (
+        F_EXTENDED_VOLATILE_0 if side == 0 else F_EXTENDED_VOLATILE_1
+    )
     ext_vol = int(battle[ext_off]) & 0xFFFF
 
     has_aqua_ring = (ext_vol & EXT_VOL_AQUA_RING) != 0
@@ -285,6 +313,7 @@ def _apply_aqua_ring_ingrain_heal(
     new_hp = min(max_hp, hp + total)
     battle[pokemon_offset + 1] = new_hp
 
+
 def _process_yawn(
     battle: np.ndarray,
     pokemon_offset: int,
@@ -304,14 +333,19 @@ def _process_yawn(
     Showdown: data/moves.ts yawn -> condition.onEnd.
     """
     from pokepy.core.constants import (
-        F_YAWN_TURNS_0, F_YAWN_TURNS_1,
-        F_EXTENDED_VOLATILE_0, F_EXTENDED_VOLATILE_1,
-        EXT_VOL_YAWN, STATUS_SLEEP,
+        F_YAWN_TURNS_0,
+        F_YAWN_TURNS_1,
+        F_EXTENDED_VOLATILE_0,
+        F_EXTENDED_VOLATILE_1,
+        EXT_VOL_YAWN,
+        STATUS_SLEEP,
     )
     from pokepy.effects.status_apply import can_set_self_status
 
     yawn_off = OFF_FIELD + (F_YAWN_TURNS_0 if side == 0 else F_YAWN_TURNS_1)
-    ext_off = OFF_FIELD + (F_EXTENDED_VOLATILE_0 if side == 0 else F_EXTENDED_VOLATILE_1)
+    ext_off = OFF_FIELD + (
+        F_EXTENDED_VOLATILE_0 if side == 0 else F_EXTENDED_VOLATILE_1
+    )
     turns = int(battle[yawn_off])
     if turns <= 0:
         return
@@ -338,6 +372,7 @@ def _process_yawn(
     else:
         battle[yawn_off] = new_turns
 
+
 def decrement_terrain(battle: np.ndarray) -> None:
     """Decrement terrain turns at end of turn. Terrain expires after 5 turns.
 
@@ -350,6 +385,7 @@ def decrement_terrain(battle: np.ndarray) -> None:
         battle[OFF_FIELD + F_TERRAIN] = 0
     battle[OFF_META + M_TERRAIN_TURNS] = new_turns
 
+
 def decrement_trick_room(battle: np.ndarray) -> None:
     """Decrement Trick Room turns at end of turn.
 
@@ -358,6 +394,7 @@ def decrement_trick_room(battle: np.ndarray) -> None:
     trick_room_turns = int(battle[OFF_FIELD + F_TRICK_ROOM])
     new_turns = trick_room_turns - 1 if trick_room_turns > 0 else 0
     battle[OFF_FIELD + F_TRICK_ROOM] = new_turns
+
 
 def decrement_screens(battle: np.ndarray) -> None:
     """Decrement screen turns for both sides at end of turn.
@@ -375,6 +412,7 @@ def decrement_screens(battle: np.ndarray) -> None:
         if new_screens >= 0x8000:
             new_screens -= 0x10000
         battle[screens_offset] = new_screens
+
 
 def decrement_weather(battle: np.ndarray) -> None:
     """Decrement weather turns at end of turn.

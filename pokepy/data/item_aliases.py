@@ -6,6 +6,7 @@ HP, while Sitrus Berry heals 25% max HP. We keep Sitrus on the extracted id
 and route Gold Berry through a synthetic internal id so battle-state logic can
 distinguish them.
 """
+
 from __future__ import annotations
 
 from typing import Dict
@@ -13,8 +14,10 @@ from typing import Dict
 ITEM_GOLD_BERRY_INTERNAL = 3001
 ITEM_SITRUS_BERRY_COLLAPSED = 448
 
+
 def _normalize(name: str) -> str:
     return "".join(c for c in str(name) if c.isalnum()).lower()
+
 
 def encode_item_id(name: str, item_to_idx: Dict[str, int]) -> int:
     """Map a raw item name to the internal battle-state item id."""
@@ -26,6 +29,7 @@ def encode_item_id(name: str, item_to_idx: Dict[str, int]) -> int:
     if str(name) in item_to_idx:
         return int(item_to_idx[str(name)])
     return -1
+
 
 def pack_item_name(item_id: int, item_names: Dict[int, str]) -> str:
     """Map an internal item id back to the Showdown item name."""

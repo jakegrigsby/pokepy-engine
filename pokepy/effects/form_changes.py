@@ -14,12 +14,20 @@ import numpy as np
 
 from pokepy.mechanics.stats import calc_stat_modern
 from pokepy.core.constants import (
-    OFF_SIDE0, OFF_SIDE1, OFF_FIELD, OFF_META, POKEMON_SIZE,
-    M_ACTIVE0B, M_ACTIVE1B,
-    F_EXTENDED_VOLATILE_0, F_EXTENDED_VOLATILE_1,
-    F_LAST_MOVE_0, F_LAST_MOVE_1,
+    OFF_SIDE0,
+    OFF_SIDE1,
+    OFF_FIELD,
+    OFF_META,
+    POKEMON_SIZE,
+    M_ACTIVE0B,
+    M_ACTIVE1B,
+    F_EXTENDED_VOLATILE_0,
+    F_EXTENDED_VOLATILE_1,
+    F_LAST_MOVE_0,
+    F_LAST_MOVE_1,
     EXT_VOL_SCHOOLING_SOLO,
-    TYPE_FIRE, TYPE_PSYCHIC,
+    TYPE_FIRE,
+    TYPE_PSYCHIC,
     ABILITY_SHIELDS_DOWN,
     ABILITY_GULP_MISSILE,
     MOVE_SURF,
@@ -39,15 +47,18 @@ GULP_MISSILE_NONE = 0
 GULP_MISSILE_GULPING = 1
 GULP_MISSILE_GORGING = 2
 
+
 def _to_int16(val: int) -> int:
     val = int(val) & 0xFFFF
     if val >= 0x8000:
         val -= 0x10000
     return val
 
+
 def _gulp_missile_meta_offset(pokemon_offset: int) -> int:
     poff = int(pokemon_offset)
     return OFF_META + (M_ACTIVE0B if poff < OFF_SIDE1 else M_ACTIVE1B)
+
 
 def get_gulp_missile_state(
     battle: np.ndarray,
@@ -55,11 +66,13 @@ def get_gulp_missile_state(
 ) -> int:
     return int(battle[_gulp_missile_meta_offset(pokemon_offset)])
 
+
 def clear_gulp_missile_state(
     battle: np.ndarray,
     pokemon_offset: int,
 ) -> None:
     battle[_gulp_missile_meta_offset(pokemon_offset)] = 0
+
 
 def prime_gulp_missile_state_from_move(
     battle: np.ndarray,
@@ -96,6 +109,7 @@ def prime_gulp_missile_state_from_move(
     max_hp = int(battle[poff + 2])
     state = GULP_MISSILE_GORGING if hp * 2 <= max_hp else GULP_MISSILE_GULPING
     battle[_gulp_missile_meta_offset(poff)] = np.int16(state)
+
 
 def apply_shields_down_form_state(
     battle: np.ndarray,
@@ -148,6 +162,7 @@ def apply_shields_down_form_state(
             )
         )
 
+
 def apply_stance_change_pre_move(
     battle: np.ndarray,
     p0_off: int,
@@ -168,8 +183,10 @@ def apply_stance_change_pre_move(
     """
     p0_off = int(p0_off)
     p1_off = int(p1_off)
-    for poff, mid, is_sw in [(p0_off, int(move_id0), bool(is_switch0)),
-                              (p1_off, int(move_id1), bool(is_switch1))]:
+    for poff, mid, is_sw in [
+        (p0_off, int(move_id0), bool(is_switch0)),
+        (p1_off, int(move_id1), bool(is_switch1)),
+    ]:
         ab = int(battle[poff + 5])
         if ab != ABILITY_STANCE_CHANGE or is_sw:
             continue
@@ -187,6 +204,7 @@ def apply_stance_change_pre_move(
             battle[poff + 8] = np.int16(atk)
             battle[poff + 9] = np.int16(spd)
             battle[poff + 10] = np.int16(spa)
+
 
 def apply_form_changes(
     battle: np.ndarray,
@@ -253,7 +271,9 @@ def apply_form_changes(
         max_hp = int(battle[poff + 2])
         if hp <= 0:
             continue
-        ev_off = OFF_FIELD + (F_EXTENDED_VOLATILE_0 if poff < OFF_SIDE1 else F_EXTENDED_VOLATILE_1)
+        ev_off = OFF_FIELD + (
+            F_EXTENDED_VOLATILE_0 if poff < OFF_SIDE1 else F_EXTENDED_VOLATILE_1
+        )
         ext_vol = int(battle[ev_off]) & 0xFFFF
         in_solo = (ext_vol & EXT_VOL_SCHOOLING_SOLO) != 0
         is_below = hp * 4 <= max_hp

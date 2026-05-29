@@ -25,30 +25,38 @@ from pokepy.obs.universal import (
 # Consistent ordering helpers (sort by name) — same as metamon's
 # -----------------------------------------------------------------------------
 
+
 def consistent_pokemon_order(pokemon: List[UniversalPokemon]) -> List[UniversalPokemon]:
     return sorted(pokemon, key=lambda p: p.name)
 
+
 def consistent_move_order(moves: List[UniversalMove]) -> List[UniversalMove]:
     return sorted(moves, key=lambda m: m.name)
+
 
 # -----------------------------------------------------------------------------
 # Move features (OpponentMove variant: 2 tokens for active moves, not 3)
 # -----------------------------------------------------------------------------
 
+
 def _move_string_features_active(move: UniversalMove) -> List[str]:
     # OpponentMove: just name + type for active moves (saves 4 tokens vs default)
     return [clean_name(move.name), clean_name(move.move_type)]
+
 
 def _move_string_features_inactive(move: UniversalMove) -> List[str]:
     # Inactive (in moveset listings): just name
     return [clean_name(move.name)]
 
+
 def _move_pad_string_active() -> List[str]:
     # OpponentMove: 2 blanks for active pad
     return ["<blank>", "<blank>"]
 
+
 def _move_pad_string_inactive() -> List[str]:
     return ["<blank>"]
+
 
 def _move_numerical_features_active(move: UniversalMove) -> List[float]:
     # 4 features: bp/200, accuracy, priority/5, pp_warning
@@ -65,12 +73,15 @@ def _move_numerical_features_active(move: UniversalMove) -> List[float]:
         float(pp_warning),
     ]
 
+
 def _move_pad_numerical_active() -> List[float]:
     return [-2.0] * 4
+
 
 # -----------------------------------------------------------------------------
 # Pokemon features (TeamPreview/Expanded extends Default with tera_type)
 # -----------------------------------------------------------------------------
+
 
 def _pokemon_string_features(pokemon: UniversalPokemon, active: bool) -> List[str]:
     # Default base: [name, item, ability, ...]
@@ -93,6 +104,7 @@ def _pokemon_string_features(pokemon: UniversalPokemon, active: bool) -> List[st
     out.append(clean_name(pokemon.tera_type))
     return out
 
+
 def _opponent_pokemon_string_features(
     pokemon: UniversalPokemon, active: bool
 ) -> List[str]:
@@ -103,14 +115,14 @@ def _opponent_pokemon_string_features(
         moves[i] = clean_name(move.name)
     return base + moves
 
+
 def _pokemon_pad_string(active: bool) -> List[str]:
     # Expanded: 4 + (4 active / 5 inactive) blanks
     blanks = 4 + (4 if active else 5)
     return ["<blank>"] * blanks
 
-def _pokemon_numerical_features(
-    pokemon: UniversalPokemon, active: bool
-) -> List[float]:
+
+def _pokemon_numerical_features(pokemon: UniversalPokemon, active: bool) -> List[float]:
     out = [pokemon.hp_pct]
     if active:
         out.append(pokemon.lvl / 100.0)
@@ -133,13 +145,16 @@ def _pokemon_numerical_features(
         ]
     return out
 
+
 def _pokemon_pad_numerical(active: bool) -> List[float]:
     blanks = 1 + (14 if active else 0)
     return [-2.0] * blanks
 
+
 # -----------------------------------------------------------------------------
 # Top-level state_to_obs (OpponentMoveObservationSpace)
 # -----------------------------------------------------------------------------
+
 
 def state_to_obs(state: UniversalState) -> Tuple[str, np.ndarray]:
     """Build the (text, numbers) pair from a UniversalState.
@@ -171,7 +186,9 @@ def state_to_obs(state: UniversalState) -> Tuple[str, np.ndarray]:
     # --- Player switches ---
     switch_str: List[str] = []
     switch_num = -1
-    for switch_num, switch in enumerate(consistent_pokemon_order(state.available_switches)):
+    for switch_num, switch in enumerate(
+        consistent_pokemon_order(state.available_switches)
+    ):
         switch_str += ["<switch>"] + _pokemon_string_features(switch, active=False)
         numerical += _pokemon_numerical_features(switch, active=False)
     while switch_num < 4:
@@ -181,11 +198,18 @@ def state_to_obs(state: UniversalState) -> Tuple[str, np.ndarray]:
 
     # --- Opponent active ---
     force_switch = "<forcedswitch>" if state.forced_switch else "<anychoice>"
-    opponent_str = ["<opponent>"] + _opponent_pokemon_string_features(opponent, active=True)
+    opponent_str = ["<opponent>"] + _opponent_pokemon_string_features(
+        opponent, active=True
+    )
     numerical += _pokemon_numerical_features(opponent, active=True)
 
     # --- Conditions / prev moves ---
-    global_str = ["<conditions>", state.weather, state.player_conditions, state.opponent_conditions]
+    global_str = [
+        "<conditions>",
+        state.weather,
+        state.player_conditions,
+        state.opponent_conditions,
+    ]
     prev_move_str = (
         ["<player_prev>"]
         + _move_string_features_inactive(state.player_prev_move)

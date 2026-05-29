@@ -22,21 +22,39 @@ import numpy as np
 
 from pokepy.core.state import MultiFormatState
 from pokepy.core.constants import (
-    OFF_SIDE0, OFF_SIDE1, OFF_FIELD, OFF_META, POKEMON_SIZE,
-    M_ACTIVE0, M_ACTIVE1, F_WEATHER, F_TERRAIN,
-    F_LAST_MOVE_0, F_LAST_MOVE_1,
-    F_SCREENS_0, F_SCREENS_1, F_HAZARDS_0, F_HAZARDS_1,
-    WEATHER_NAMES, TERRAIN_NAMES, STATUS_NAMES, TYPE_NAMES,
+    OFF_SIDE0,
+    OFF_SIDE1,
+    OFF_FIELD,
+    OFF_META,
+    POKEMON_SIZE,
+    M_ACTIVE0,
+    M_ACTIVE1,
+    F_WEATHER,
+    F_TERRAIN,
+    F_LAST_MOVE_0,
+    F_LAST_MOVE_1,
+    F_SCREENS_0,
+    F_SCREENS_1,
+    F_HAZARDS_0,
+    F_HAZARDS_1,
+    WEATHER_NAMES,
+    TERRAIN_NAMES,
+    STATUS_NAMES,
+    TYPE_NAMES,
 )
 from pokepy.core.bitpack import extract_boost, get_status, get_spikes_layers
 from pokepy.data.loader import GameData, IDMappings
 from pokepy.obs.universal import (
-    UniversalMove, UniversalPokemon, UniversalState, clean_name,
+    UniversalMove,
+    UniversalPokemon,
+    UniversalState,
+    clean_name,
 )
 
 # -----------------------------------------------------------------------------
 # Lookups
 # -----------------------------------------------------------------------------
+
 
 def _species_name(idx: int, mappings: IDMappings) -> str:
     if idx < 0:
@@ -44,11 +62,13 @@ def _species_name(idx: int, mappings: IDMappings) -> str:
     name = mappings.species_names.get(int(idx), "")
     return clean_name(name) if name else "<blank>"
 
+
 def _move_name(idx: int, mappings: IDMappings) -> str:
     if idx < 0:
         return "nomove"
     name = mappings.move_names.get(int(idx), "")
     return clean_name(name) if name else "nomove"
+
 
 def _item_name(idx: int, mappings: IDMappings) -> str:
     if idx < 0:
@@ -56,16 +76,19 @@ def _item_name(idx: int, mappings: IDMappings) -> str:
     name = mappings.item_names.get(int(idx), "")
     return clean_name(name) if name else "noitem"
 
+
 def _ability_name(idx: int, mappings: IDMappings) -> str:
     if idx < 0:
         return "noability"
     name = mappings.ability_names.get(int(idx), "")
     return clean_name(name) if name else "noability"
 
+
 def _type_name(idx: int) -> str:
     if idx < 0 or idx >= len(TYPE_NAMES):
         return "notype"
     return clean_name(TYPE_NAMES[idx])
+
 
 def _types_string(type1: int, type2: int) -> str:
     """Space-joined sorted type names, padded to 2."""
@@ -73,27 +96,37 @@ def _types_string(type1: int, type2: int) -> str:
     t2 = _type_name(type2) if type2 >= 0 else "notype"
     return " ".join(sorted([t1, t2]))
 
+
 def _weather_name(idx: int) -> str:
     if 0 <= idx < len(WEATHER_NAMES) and WEATHER_NAMES[idx]:
         return WEATHER_NAMES[idx]
     return "noweather"
+
 
 def _terrain_name(idx: int) -> str:
     if 0 <= idx < len(TERRAIN_NAMES) and TERRAIN_NAMES[idx]:
         return TERRAIN_NAMES[idx]
     return "nofield"
 
+
 def _status_name(idx: int) -> str:
     if 0 <= idx < len(STATUS_NAMES) and STATUS_NAMES[idx]:
         return STATUS_NAMES[idx]
     return "nostatus"
 
+
 # -----------------------------------------------------------------------------
 # Build helpers
 # -----------------------------------------------------------------------------
 
-def _build_move(move_id: int, current_pp: int, max_pp: int,
-                game_data: GameData, mappings: IDMappings) -> UniversalMove:
+
+def _build_move(
+    move_id: int,
+    current_pp: int,
+    max_pp: int,
+    game_data: GameData,
+    mappings: IDMappings,
+) -> UniversalMove:
     if move_id < 0:
         return UniversalMove.blank()
     return UniversalMove(
@@ -106,6 +139,7 @@ def _build_move(move_id: int, current_pp: int, max_pp: int,
         current_pp=int(current_pp),
         max_pp=int(max_pp) if int(max_pp) > 0 else int(game_data.move_pp[move_id]),
     )
+
 
 def _build_static_pokemon(
     slot: int,
@@ -137,7 +171,9 @@ def _build_static_pokemon(
     for j in range(4):
         mid = int(moves_arr[slot, j])
         moves.append(
-            _build_move(mid, int(pp_arr[slot, j]), int(pp_arr[slot, j]), game_data, mappings)
+            _build_move(
+                mid, int(pp_arr[slot, j]), int(pp_arr[slot, j]), game_data, mappings
+            )
         )
     if boosts is None:
         boosts = [0] * 7
@@ -165,8 +201,11 @@ def _build_static_pokemon(
         base_spa=int(bs[3]),
         base_spd=int(bs[4]),
         base_spe=int(bs[5]),
-        tera_type=_type_name(int(tera_arr[slot])) if int(tera_arr[slot]) >= 0 else "notype",
+        tera_type=(
+            _type_name(int(tera_arr[slot])) if int(tera_arr[slot]) >= 0 else "notype"
+        ),
     )
+
 
 def _build_active_pokemon_from_battle(
     state: MultiFormatState,
@@ -223,7 +262,13 @@ def _build_active_pokemon_from_battle(
     for j in range(4):
         mid = int(moves_arr[active_idx, j])
         moves.append(
-            _build_move(mid, int(pp_arr[active_idx, j]), int(pp_arr[active_idx, j]), game_data, mappings)
+            _build_move(
+                mid,
+                int(pp_arr[active_idx, j]),
+                int(pp_arr[active_idx, j]),
+                game_data,
+                mappings,
+            )
         )
 
     return UniversalPokemon(
@@ -253,6 +298,7 @@ def _build_active_pokemon_from_battle(
         tera_type=_type_name(tera_type_idx) if has_tera else "notype",
     )
 
+
 def _conditions_string(side_screens: int, side_hazards: int) -> str:
     """Pick the most-prominent condition for the obs string."""
     if side_screens & 0x7:
@@ -269,9 +315,11 @@ def _conditions_string(side_screens: int, side_hazards: int) -> str:
         return "stealthrock"
     return "noconditions"
 
+
 # -----------------------------------------------------------------------------
 # Main entry point
 # -----------------------------------------------------------------------------
+
 
 def state_to_universal_state(
     state: MultiFormatState,
@@ -323,11 +371,20 @@ def state_to_universal_state(
         fainted = (flags & 0x1) != 0
         if fainted or cur_hp == 0:
             continue
-        available_switches.append(_build_static_pokemon(
-            slot, species_arr, moves_arr, items_arr, abilities_arr, tera_arr, pp_arr,
-            game_data, mappings,
-            hp_pct=(cur_hp / max_hp) if max_hp > 0 else 0.0,
-        ))
+        available_switches.append(
+            _build_static_pokemon(
+                slot,
+                species_arr,
+                moves_arr,
+                items_arr,
+                abilities_arr,
+                tera_arr,
+                pp_arr,
+                game_data,
+                mappings,
+                hp_pct=(cur_hp / max_hp) if max_hp > 0 else 0.0,
+            )
+        )
 
     # Counts and global state
     opponents_remaining = 0
@@ -343,20 +400,45 @@ def state_to_universal_state(
     weather = _weather_name(int(battle[OFF_FIELD + F_WEATHER]))
     battle_field = _terrain_name(int(battle[OFF_FIELD + F_TERRAIN]))
 
-    p_screens = int(battle[OFF_FIELD + (F_SCREENS_0 if player_side == 0 else F_SCREENS_1)])
-    p_hazards = int(battle[OFF_FIELD + (F_HAZARDS_0 if player_side == 0 else F_HAZARDS_1)])
-    o_screens = int(battle[OFF_FIELD + (F_SCREENS_1 if player_side == 0 else F_SCREENS_0)])
-    o_hazards = int(battle[OFF_FIELD + (F_HAZARDS_1 if player_side == 0 else F_HAZARDS_0)])
+    p_screens = int(
+        battle[OFF_FIELD + (F_SCREENS_0 if player_side == 0 else F_SCREENS_1)]
+    )
+    p_hazards = int(
+        battle[OFF_FIELD + (F_HAZARDS_0 if player_side == 0 else F_HAZARDS_1)]
+    )
+    o_screens = int(
+        battle[OFF_FIELD + (F_SCREENS_1 if player_side == 0 else F_SCREENS_0)]
+    )
+    o_hazards = int(
+        battle[OFF_FIELD + (F_HAZARDS_1 if player_side == 0 else F_HAZARDS_0)]
+    )
     player_conditions = _conditions_string(p_screens, p_hazards)
     opponent_conditions = _conditions_string(o_screens, o_hazards)
 
     # Previous moves
-    p_last_id = int(battle[OFF_FIELD + (F_LAST_MOVE_0 if player_side == 0 else F_LAST_MOVE_1)])
-    o_last_id = int(battle[OFF_FIELD + (F_LAST_MOVE_1 if player_side == 0 else F_LAST_MOVE_0)])
-    player_prev_move = _build_move(p_last_id, 0, 0, game_data, mappings) if p_last_id >= 0 else UniversalMove.blank()
-    opponent_prev_move = _build_move(o_last_id, 0, 0, game_data, mappings) if o_last_id >= 0 else UniversalMove.blank()
+    p_last_id = int(
+        battle[OFF_FIELD + (F_LAST_MOVE_0 if player_side == 0 else F_LAST_MOVE_1)]
+    )
+    o_last_id = int(
+        battle[OFF_FIELD + (F_LAST_MOVE_1 if player_side == 0 else F_LAST_MOVE_0)]
+    )
+    player_prev_move = (
+        _build_move(p_last_id, 0, 0, game_data, mappings)
+        if p_last_id >= 0
+        else UniversalMove.blank()
+    )
+    opponent_prev_move = (
+        _build_move(o_last_id, 0, 0, game_data, mappings)
+        if o_last_id >= 0
+        else UniversalMove.blank()
+    )
 
-    forced_switch = bool(state.forced_switch_slot >= 0)
+    from pokepy.core.constants import PHASE_FORCED_SWITCH
+
+    _fs_side = int(getattr(state, "forced_switch_side", -1))
+    forced_switch = bool(state.forced_switch_slot >= 0) or (
+        int(state.phase) == PHASE_FORCED_SWITCH and _fs_side in (player_side, 2)
+    )
 
     # Tera availability for this side: bit 3 of any team flag (tera_used) NOT set
     can_tera = True
@@ -367,12 +449,18 @@ def state_to_universal_state(
             can_tera = False
             break
 
-    # Opponent teampreview: list of revealed opponent species names
-    opp_revealed = state.opp_revealed
+    # Opponent teampreview: list of revealed opponent species names, from THIS
+    # player's perspective. The engine keeps symmetric reveal masks: `opp_*` are
+    # side-1's mons (as seen by side 0) and `team_*`/`team_revealed` are side-0's
+    # mons (as seen by side 1). Must be keyed on player_side like everything else
+    # in this function, otherwise a side-1 agent is shown a filtered view of its
+    # OWN team as the "opponent" preview.
+    opp_revealed_arr = state.opp_revealed if player_side == 0 else state.team_revealed
+    opp_species_arr = state.opp_species if player_side == 0 else state.team_species
     teampreview: List[str] = []
     for slot in range(6):
-        if bool(opp_revealed[slot]):
-            sid = int(state.opp_species[slot])
+        if bool(opp_revealed_arr[slot]):
+            sid = int(opp_species_arr[slot])
             if sid >= 0:
                 teampreview.append(_species_name(sid, mappings))
 

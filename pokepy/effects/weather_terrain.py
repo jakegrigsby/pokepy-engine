@@ -10,6 +10,7 @@
 - _apply_grassy_terrain_healing   (9033)
 - _apply_weather_healing          (7763)
 """
+
 from __future__ import annotations
 
 from pokepy.effects._common import np, MultiFormatState, Gen5PRNG
@@ -73,11 +74,15 @@ from pokepy.core.constants import (
 # Move-triggered weather / terrain / trick room
 # -----------------------------------------------------------------------------
 
+
 def _has_heal_block(battle: np.ndarray, pokemon_offset: int) -> bool:
     poff = int(pokemon_offset)
-    ext_off = OFF_FIELD + (F_EXTENDED_VOLATILE_0 if poff < OFF_SIDE1 else F_EXTENDED_VOLATILE_1)
+    ext_off = OFF_FIELD + (
+        F_EXTENDED_VOLATILE_0 if poff < OFF_SIDE1 else F_EXTENDED_VOLATILE_1
+    )
     ext = int(battle[ext_off]) & 0xFFFF
     return (ext & EXT_VOL_HEAL_BLOCK) != 0
+
 
 def _is_grounded_for_terrain_residual(battle: np.ndarray, pokemon_offset: int) -> bool:
     """Approximate Showdown's Pokemon.isGrounded() for terrain residuals.
@@ -88,12 +93,14 @@ def _is_grounded_for_terrain_residual(battle: np.ndarray, pokemon_offset: int) -
     """
     return is_grounded(battle, pokemon_offset)
 
+
 def _is_semi_invulnerable(battle: np.ndarray, pokemon_offset: int) -> bool:
     poff = int(pokemon_offset)
     actions_off = OFF_MOVES + (
         M_ACTIVE_MOVE_ACTIONS_0 if poff < OFF_SIDE1 else M_ACTIVE_MOVE_ACTIONS_1
     )
     return (int(battle[actions_off]) & ACTIVE_MOVE_ACTIONS_SEMI_INVUL) != 0
+
 
 def apply_weather_from_move(
     battle: np.ndarray,
@@ -118,6 +125,7 @@ def apply_weather_from_move(
         WEATHER_DESOLATE_LAND as _WDL,
         WEATHER_DELTA_STREAM as _WDS,
     )
+
     weather = int(move_effects.weather[int(move_id)])
     should_set = bool(hit) and (weather > 0)
     if not should_set:
@@ -145,6 +153,7 @@ def apply_weather_from_move(
             base_turns = 8
     battle[OFF_META + M_WEATHER_TURNS] = base_turns
 
+
 def apply_terrain_from_move(
     battle: np.ndarray,
     move_id: int,
@@ -169,13 +178,20 @@ def apply_terrain_from_move(
                 base_turns = 8
         battle[OFF_META + M_TERRAIN_TURNS] = base_turns
 
-        from pokepy.core.constants import OFF_SIDE0, OFF_SIDE1, POKEMON_SIZE, M_ACTIVE0, M_ACTIVE1
+        from pokepy.core.constants import (
+            OFF_SIDE0,
+            OFF_SIDE1,
+            POKEMON_SIZE,
+            M_ACTIVE0,
+            M_ACTIVE1,
+        )
         from pokepy.effects.abilities import apply_terrain_seed_item
 
         active0 = int(battle[OFF_META + M_ACTIVE0])
         active1 = int(battle[OFF_META + M_ACTIVE1])
         apply_terrain_seed_item(battle, OFF_SIDE0 + active0 * POKEMON_SIZE)
         apply_terrain_seed_item(battle, OFF_SIDE1 + active1 * POKEMON_SIZE)
+
 
 def apply_trick_room_from_move(
     battle: np.ndarray,
@@ -197,9 +213,11 @@ def apply_trick_room_from_move(
         current_turns = int(battle[OFF_FIELD + F_TRICK_ROOM])
         battle[OFF_FIELD + F_TRICK_ROOM] = 0 if current_turns > 0 else 5
 
+
 # -----------------------------------------------------------------------------
 # Type multipliers (consumed by damage calc)
 # -----------------------------------------------------------------------------
+
 
 def get_weather_type_multiplier(weather: int, move_type: int) -> float:
     """Return type multiplier based on current weather.
@@ -226,6 +244,7 @@ def get_weather_type_multiplier(weather: int, move_type: int) -> float:
             return 0.5
         return 1.0
     return 1.0
+
 
 def get_terrain_type_multiplier(terrain: int, move_type: int, grounded: bool) -> float:
     """Return type multiplier for terrain effects.
@@ -257,9 +276,11 @@ def get_terrain_type_multiplier(terrain: int, move_type: int, grounded: bool) ->
         return 0.5
     return 1.0
 
+
 # -----------------------------------------------------------------------------
 # End-of-turn weather damage / healing
 # -----------------------------------------------------------------------------
+
 
 def apply_weather_damage(
     battle: np.ndarray,
@@ -278,16 +299,24 @@ def apply_weather_damage(
     pokemon_offset = int(pokemon_offset)
     # Air Lock / Cloud Nine on either active mon suppresses weather effects.
     from pokepy.core.constants import (
-        ABILITY_AIR_LOCK, ABILITY_CLOUD_NINE,
-        OFF_SIDE0 as _OS0, OFF_SIDE1 as _OS1,
-        OFF_META as _OM, M_ACTIVE0 as _MA0, M_ACTIVE1 as _MA1,
+        ABILITY_AIR_LOCK,
+        ABILITY_CLOUD_NINE,
+        OFF_SIDE0 as _OS0,
+        OFF_SIDE1 as _OS1,
+        OFF_META as _OM,
+        M_ACTIVE0 as _MA0,
+        M_ACTIVE1 as _MA1,
         POKEMON_SIZE as _PS,
     )
+
     a0 = int(battle[_OM + _MA0])
     a1 = int(battle[_OM + _MA1])
     ab0 = int(battle[_OS0 + a0 * _PS + 5])
     ab1 = int(battle[_OS1 + a1 * _PS + 5])
-    if ab0 in (ABILITY_AIR_LOCK, ABILITY_CLOUD_NINE) or ab1 in (ABILITY_AIR_LOCK, ABILITY_CLOUD_NINE):
+    if ab0 in (ABILITY_AIR_LOCK, ABILITY_CLOUD_NINE) or ab1 in (
+        ABILITY_AIR_LOCK,
+        ABILITY_CLOUD_NINE,
+    ):
         return
     weather = int(battle[OFF_FIELD + F_WEATHER])
     if weather != WEATHER_SAND:
@@ -312,8 +341,11 @@ def apply_weather_damage(
     item = int(battle[pokemon_offset + 6])
     # Utility Umbrella also blocks weather effects on the holder
     from pokepy.core.constants import (
-        ITEM_UTILITY_UMBRELLA, ABILITY_SAND_VEIL, ABILITY_SAND_RUSH,
+        ITEM_UTILITY_UMBRELLA,
+        ABILITY_SAND_VEIL,
+        ABILITY_SAND_RUSH,
     )
+
     # Sand Force / Sand Rush / Sand Veil have `onImmunity('sandstorm')`
     # in Showdown, exempting their holders from sand damage. Sand Force
     # is local id 159 and isn't in constants.py.
@@ -331,6 +363,7 @@ def apply_weather_damage(
     sand_damage = max_hp // 16
     new_hp = max(0, hp - sand_damage)
     battle[pokemon_offset + 1] = new_hp
+
 
 def apply_grassy_terrain_healing(
     battle: np.ndarray,
@@ -365,6 +398,7 @@ def apply_grassy_terrain_healing(
     new_hp = min(max_hp, current_hp + heal_amount)
     battle[pokemon_offset + 1] = new_hp
 
+
 def apply_weather_healing(
     battle: np.ndarray,
     pokemon_offset: int,
@@ -393,16 +427,24 @@ def apply_weather_healing(
 
     # Air Lock / Cloud Nine on either active mon suppresses weather effects.
     from pokepy.core.constants import (
-        ABILITY_AIR_LOCK, ABILITY_CLOUD_NINE,
-        OFF_SIDE0 as _OS0, OFF_SIDE1 as _OS1,
-        OFF_META as _OM, M_ACTIVE0 as _MA0, M_ACTIVE1 as _MA1,
+        ABILITY_AIR_LOCK,
+        ABILITY_CLOUD_NINE,
+        OFF_SIDE0 as _OS0,
+        OFF_SIDE1 as _OS1,
+        OFF_META as _OM,
+        M_ACTIVE0 as _MA0,
+        M_ACTIVE1 as _MA1,
         POKEMON_SIZE as _PS,
     )
+
     a0 = int(battle[_OM + _MA0])
     a1 = int(battle[_OM + _MA1])
     ab0 = int(battle[_OS0 + a0 * _PS + 5])
     ab1 = int(battle[_OS1 + a1 * _PS + 5])
-    if ab0 in (ABILITY_AIR_LOCK, ABILITY_CLOUD_NINE) or ab1 in (ABILITY_AIR_LOCK, ABILITY_CLOUD_NINE):
+    if ab0 in (ABILITY_AIR_LOCK, ABILITY_CLOUD_NINE) or ab1 in (
+        ABILITY_AIR_LOCK,
+        ABILITY_CLOUD_NINE,
+    ):
         return
     weather = int(battle[OFF_FIELD + F_WEATHER])
     item = int(battle[pokemon_offset + 6])
@@ -419,8 +461,10 @@ def apply_weather_healing(
     # `effect.id === 'hail' || 'snowscape'`. Showdown's `heal()` enforces
     # minimum 1 HP. Utility umbrella is irrelevant (snow not sun/rain).
     from pokepy.core.constants import (
-        WEATHER_PRIMORDIAL_SEA as _WPS_WT, WEATHER_DESOLATE_LAND as _WDL_WT,
+        WEATHER_PRIMORDIAL_SEA as _WPS_WT,
+        WEATHER_DESOLATE_LAND as _WDL_WT,
     )
+
     if has_ice_body and weather == WEATHER_SNOW and not heal_blocked:
         heal_amount = max(1, max_hp // 16)
         battle[pokemon_offset + 1] = min(max_hp, hp + heal_amount)
@@ -428,7 +472,12 @@ def apply_weather_healing(
 
     # Rain Dish: heal 1/16 in rain or primordial sea, suppressed by utility
     # umbrella. Showdown data/abilities.ts:3680.
-    if has_rain_dish and weather in (WEATHER_RAIN, _WPS_WT) and not has_umbrella and not heal_blocked:
+    if (
+        has_rain_dish
+        and weather in (WEATHER_RAIN, _WPS_WT)
+        and not has_umbrella
+        and not heal_blocked
+    ):
         heal_amount = max(1, max_hp // 16)
         battle[pokemon_offset + 1] = min(max_hp, hp + heal_amount)
         return
@@ -449,10 +498,12 @@ def apply_weather_healing(
             battle[pokemon_offset + 1] = max(0, hp - dmg)
             return
 
+
 # -----------------------------------------------------------------------------
 # Salt Cure (lives in volatiles.py too — keep this body in sync if either
 # location is updated). Port of _apply_salt_cure_damage (line ~8824).
 # -----------------------------------------------------------------------------
+
 
 def apply_salt_cure_damage(
     battle: np.ndarray,

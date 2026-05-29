@@ -7,18 +7,32 @@ import pytest
 
 from pokepy.core.state import MultiFormatState
 from pokepy.core.constants import (
-    OFF_SIDE0, OFF_SIDE1, OFF_FIELD, OFF_META, OFF_MOVES, POKEMON_SIZE,
-    M_ACTIVE0, M_ACTIVE1,
+    OFF_SIDE0,
+    OFF_SIDE1,
+    OFF_FIELD,
+    OFF_META,
+    OFF_MOVES,
+    POKEMON_SIZE,
+    M_ACTIVE0,
+    M_ACTIVE1,
     M_CHARGING_0,
-    M_LOCKED_MOVE_0, M_LOCKED_TURNS_0,
+    M_LOCKED_MOVE_0,
+    M_LOCKED_TURNS_0,
     M_RECHARGE_0,
-    F_CHOICE_LOCK_0, F_CHOICE_LOCK_1, F_LAST_MOVE_0, F_LAST_MOVE_1,
-    F_DISABLE_0, F_DISABLE_1,
+    F_CHOICE_LOCK_0,
+    F_CHOICE_LOCK_1,
+    F_LAST_MOVE_0,
+    F_LAST_MOVE_1,
+    F_DISABLE_0,
+    F_DISABLE_1,
     ITEM_ASSAULT_VEST,
-    PHASE_BATTLE, PHASE_FORCED_SWITCH, NUM_BATTLE_ACTIONS,
+    PHASE_BATTLE,
+    PHASE_FORCED_SWITCH,
+    NUM_BATTLE_ACTIONS,
 )
 from pokepy.data.loader import load_game_data, load_id_mappings
 from pokepy.engine.action_mask import get_battle_action_mask, get_action_mask
+
 
 def _hand_state():
     gd = load_game_data()
@@ -37,8 +51,14 @@ def _hand_state():
     bs[OFF_META + M_ACTIVE0] = 0
     bs[OFF_META + M_ACTIVE1] = 0
     # Sentinel fields default to -1 in real init
-    for off in (F_CHOICE_LOCK_0, F_CHOICE_LOCK_1, F_LAST_MOVE_0, F_LAST_MOVE_1,
-                F_DISABLE_0, F_DISABLE_1):
+    for off in (
+        F_CHOICE_LOCK_0,
+        F_CHOICE_LOCK_1,
+        F_LAST_MOVE_0,
+        F_LAST_MOVE_1,
+        F_DISABLE_0,
+        F_DISABLE_1,
+    ):
         bs[OFF_FIELD + off] = -1
     for side, base in [(0, OFF_SIDE0), (1, OFF_SIDE1)]:
         for slot in range(2):
@@ -53,6 +73,7 @@ def _hand_state():
             bs[poff + 13] = 0x6666
             bs[poff + 14] = 0x0666
     return state, gd
+
 
 def test_battle_mask_basic():
     state, gd = _hand_state()
@@ -69,6 +90,7 @@ def test_battle_mask_basic():
     for s in range(2, 6):
         assert not mask[4 + s]
 
+
 def test_battle_mask_no_pp_struggle():
     state, gd = _hand_state()
     state.team_pp[0] = [0, 0, 0, 0]
@@ -76,6 +98,7 @@ def test_battle_mask_no_pp_struggle():
     # Only move 0 valid (Struggle slot)
     assert mask[0]
     assert not mask[1] and not mask[2] and not mask[3]
+
 
 def test_battle_mask_fainted_no_switch():
     state, gd = _hand_state()
@@ -86,12 +109,14 @@ def test_battle_mask_fainted_no_switch():
     mask = get_battle_action_mask(state, 0, gd)
     assert not mask[4 + 1]
 
+
 def test_forced_switch_no_moves():
     state, gd = _hand_state()
     state.phase = np.int8(PHASE_FORCED_SWITCH)
     mask = get_action_mask(state, side=0, game_data=gd)
     assert not mask[0:4].any()  # no moves
     assert mask[4 + 1]  # switch to slot 1 still legal
+
 
 def test_battle_mask_lockedmove_forces_slot_and_blocks_switches():
     state, gd = _hand_state()
@@ -104,6 +129,7 @@ def test_battle_mask_lockedmove_forces_slot_and_blocks_switches():
     assert mask.tolist()[:4] == [False, True, False, False]
     assert not mask[4:].any()
 
+
 def test_battle_mask_charging_forces_slot_and_blocks_switches():
     state, gd = _hand_state()
     bs = state.battle_state
@@ -114,6 +140,7 @@ def test_battle_mask_charging_forces_slot_and_blocks_switches():
     assert mask.tolist()[:4] == [False, False, True, False]
     assert not mask[4:].any()
 
+
 def test_battle_mask_recharge_blocks_switches():
     state, gd = _hand_state()
     bs = state.battle_state
@@ -123,6 +150,7 @@ def test_battle_mask_recharge_blocks_switches():
 
     assert mask.tolist()[:4] == [True, False, False, False]
     assert not mask[4:].any()
+
 
 def test_battle_mask_assault_vest_all_status_moves_falls_back_to_struggle_slot():
     state, gd = _hand_state()

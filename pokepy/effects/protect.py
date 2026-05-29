@@ -3,6 +3,7 @@
 Port of MultiFormatFastEnv._apply_protect_from_move and friends
 (the Showdown reference implementation).
 """
+
 from __future__ import annotations
 
 from pokepy.effects._common import np, MultiFormatState, Gen5PRNG
@@ -50,11 +51,13 @@ from pokepy.core.constants import (
     ABILITY_THERMAL_EXCHANGE,
 )
 
+
 def _to_int16(val: int) -> int:
     val = int(val) & 0xFFFF
     if val >= 0x8000:
         val -= 0x10000
     return val
+
 
 def _protect_type_for_move(move_id: int) -> int:
     if move_id == 203:  # Endure
@@ -74,6 +77,7 @@ def _protect_type_for_move(move_id: int) -> int:
     if move_id == MOVE_BURNING_BULWARK:
         return PROTECT_BURNING_BULWARK
     return PROTECT_BASIC
+
 
 def apply_protect_from_move(
     battle: np.ndarray,
@@ -126,6 +130,7 @@ def apply_protect_from_move(
 
     return bool(success)
 
+
 def check_protected(battle: np.ndarray, target_side: int) -> bool:
     """Port of _check_protected (line ~9776).
 
@@ -141,6 +146,7 @@ def check_protected(battle: np.ndarray, target_side: int) -> bool:
     protect_type = get_protect_type(protect_state)
     return bool(is_active and protect_type not in (PROTECT_QUICK_GUARD, PROTECT_ENDURE))
 
+
 def check_protected_with_type(battle: np.ndarray, target_side: int):
     """Port of _check_protected_with_type (line ~9796).
 
@@ -153,6 +159,7 @@ def check_protected_with_type(battle: np.ndarray, target_side: int):
     protect_type = get_protect_type(protect_state)
     return bool(is_active), int(protect_type)
 
+
 def clear_protect_at_turn_end(battle: np.ndarray) -> None:
     """Port of _clear_protect_at_turn_end (line ~9812).
 
@@ -162,6 +169,7 @@ def clear_protect_at_turn_end(battle: np.ndarray) -> None:
     for off in (OFF_FIELD + F_PROTECT_0, OFF_FIELD + F_PROTECT_1):
         cur = int(battle[off])
         battle[off] = _to_int16(clear_protect_active(cur))
+
 
 def apply_protect_contact_effects(
     battle: np.ndarray,
@@ -201,9 +209,13 @@ def apply_protect_contact_effects(
     # non-contact from the attacker's perspective.
     # Punching Glove strips the contact flag from PUNCH moves
     # (data/items.ts:4604 `delete move.flags['contact']`).
-    from pokepy.core.constants import ABILITY_LONG_REACH as _ABILITY_LONG_REACH, FLAG_PUNCH as _FLAG_PUNCH
-    _ITEM_PROTECTIVE_PADS = 663
-    _ITEM_PUNCHING_GLOVE = 749
+    from pokepy.core.constants import (
+        ABILITY_LONG_REACH as _ABILITY_LONG_REACH,
+        FLAG_PUNCH as _FLAG_PUNCH,
+    )
+
+    _ITEM_PROTECTIVE_PADS = 880
+    _ITEM_PUNCHING_GLOVE = 1884
     atk_item_pp = int(battle[int(attacker_offset) + 6])
     atk_ab_pp = int(battle[int(attacker_offset) + 5])
     is_punch = (int(game_data.move_flags[move_id]) & _FLAG_PUNCH) != 0
@@ -236,12 +248,12 @@ def apply_protect_contact_effects(
         ABILITY_COMPETITIVE as _AB_CM_P,
         ABILITY_MIRROR_ARMOR as _AB_MA_P,
     )
+
     _ITEM_CA_P = 747  # Clear Amulet (matches other effects modules)
     atk_ab_prt = int(battle[int(attacker_offset) + 5])
     atk_item_prt = int(battle[int(attacker_offset) + 6])
     atk_blocks_drops = (
-        atk_ab_prt in (_AB_CB_P, _AB_WS_P, _AB_FMB_P)
-        or atk_item_prt == _ITEM_CA_P
+        atk_ab_prt in (_AB_CB_P, _AB_WS_P, _AB_FMB_P) or atk_item_prt == _ITEM_CA_P
     )
     atk_has_contrary = atk_ab_prt == _AB_CO_P
     atk_has_simple = atk_ab_prt == _AB_SI_P
@@ -338,6 +350,7 @@ def apply_protect_contact_effects(
         )
         if cur_status == STATUS_NONE and not is_fire and not burn_blocking_ability:
             battle[atk_status_off] = set_status(STATUS_BURN, 0)
+
 
 def reset_protect_if_not_used(
     battle: np.ndarray,

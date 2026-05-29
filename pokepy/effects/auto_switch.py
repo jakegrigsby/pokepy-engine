@@ -9,10 +9,12 @@ and matches the calling convention used by `pokepy.engine.battle_gen9`:
     auto_switch(battle, side_base, current_active, needs_switch=True) -> int
     count_alive(battle, side_base) -> int
 """
+
 from __future__ import annotations
 
 from pokepy.effects._common import np, MultiFormatState, Gen5PRNG
 from pokepy.core.constants import POKEMON_SIZE
+
 
 def auto_switch(
     battle: np.ndarray,
@@ -47,7 +49,9 @@ def auto_switch(
             is_fainted = (flags & 0x1) != 0
             hp = int(battle[offset + 1])
             is_alive = (hp > 0) and (not is_fainted)
-            should_select = needs_switch and is_alive and (next_active == int(current_active))
+            should_select = (
+                needs_switch and is_alive and (next_active == int(current_active))
+            )
             if should_select:
                 next_active = i
 
@@ -57,10 +61,13 @@ def auto_switch(
         is_fainted = (flags & 0x1) != 0
         hp = int(battle[offset + 1])
         is_alive = (hp > 0) and (not is_fainted)
-        should_select = needs_switch and is_alive and (next_active == int(current_active))
+        should_select = (
+            needs_switch and is_alive and (next_active == int(current_active))
+        )
         if should_select:
             next_active = i
     return int(next_active)
+
 
 def count_alive(battle: np.ndarray, base_offset: int) -> int:
     """Count alive (non-fainted, hp>0) Pokemon on a side.

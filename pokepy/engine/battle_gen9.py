@@ -107,7 +107,7 @@ Effects helpers referenced (from pokepy.effects.*  — TBD per parallel port):
 
 from __future__ import annotations
 
-from typing import Tuple
+from typing import Dict, Generator, Tuple
 import numpy as np
 
 from pokepy.core.state import MultiFormatState
@@ -153,12 +153,19 @@ from pokepy.effects.switch_slot_conditions import (
 from pokepy.mechanics.stats import get_boost_multiplier
 from pokepy.engine.speed_sort import SpeedSortTracker
 from pokepy.utils.gen5_prng import Gen5PRNG
+from pokepy.engine.switch_requests import (
+    SwitchRequest,
+    resolve_switch_choices_sync,
+    slot_from_pokepy_action,
+    pokepy_action_from_slot,
+)
 
 # -----------------------------------------------------------------------------
 # Optional dependency loaders. Effects + damage are being ported in parallel.
 # We import lazily so this module loads even when nothing else exists yet.
 # Each loader returns either the real callable or a no-op stub.
 # -----------------------------------------------------------------------------
+
 
 def _try_import(modpath, name):
     try:
@@ -167,12 +174,15 @@ def _try_import(modpath, name):
     except Exception:
         return None
 
+
 def _stub_calc_damage(*args, **kwargs):
     return 0
+
 
 def _get_calc_damage():
     fn = _try_import("pokepy.mechanics.damage_gen9", "calc_damage_gen9")
     return fn if fn is not None else _stub_calc_damage
+
 
 # Phase enum lives in pokepy.core.constants (or state); fall back to a small enum.
 try:
@@ -182,6 +192,7 @@ except ImportError:
     class Phase:  # minimal fallback so the module imports
         BATTLE = 2
         FORCED_SWITCH = 3
+
 
 # Constants used here that may not yet be in pokepy.core.constants.
 # These match the Showdown reference implementation.
@@ -250,6 +261,7 @@ ITEM_TERRAIN_EXTENDER = globals().get("ITEM_TERRAIN_EXTENDER", 662)
 # Tiny helpers
 # -----------------------------------------------------------------------------
 
+
 def _is_valid_switch_target(battle, base_offset, target, current_active):
     if target < 0 or target >= 6:
         return False
@@ -261,6 +273,7 @@ def _is_valid_switch_target(battle, base_offset, target, current_active):
     is_fainted = (flags & 1) != 0
     return (hp > 0) and not is_fainted
 
+
 def _count_alive(battle, side_base):
     alive = 0
     for i in range(6):
@@ -268,6 +281,7 @@ def _count_alive(battle, side_base):
         if battle[off + 1] > 0 and (battle[off + 15] & 1) == 0:
             alive += 1
     return alive
+
 
 def _preroll_contact_status_ability(
     battle,
@@ -333,7 +347,7 @@ def _preroll_contact_status_ability(
     # Poison Touch — mirrors the guard conditions in apply_contact_status_ability
     _ABILITY_POISON_TOUCH = 143
     _ABILITY_SHIELD_DUST = 19
-    _ITEM_COVERT_CLOAK = 816
+    _ITEM_COVERT_CLOAK = 1885
     _ABILITY_CORROSION = 212
     _TYPE_POISON = TYPE_POISON
     _TYPE_STEEL = TYPE_STEEL
@@ -348,7 +362,10 @@ def _preroll_contact_status_ability(
         tt1 = tt_packed & 0xFF
         tt2 = (tt_packed >> 8) & 0xFF
         type_immune_pt = (
-            tt1 == _TYPE_POISON or tt2 == _TYPE_POISON or tt1 == _TYPE_STEEL or tt2 == _TYPE_STEEL
+            tt1 == _TYPE_POISON
+            or tt2 == _TYPE_POISON
+            or tt1 == _TYPE_STEEL
+            or tt2 == _TYPE_STEEL
         ) and atk_ability != _ABILITY_CORROSION
         should_roll_pt = not target_has_block
         if should_roll_pt:
@@ -395,6 +412,7 @@ def _preroll_contact_status_ability(
         rolls.append(gen5_prng.random(10))
     return rolls
 
+
 def _preroll_toxic_chain(
     battle,
     attacker_off,
@@ -417,7 +435,7 @@ def _preroll_toxic_chain(
 
     _ABILITY_TOXIC_CHAIN = 305
     _ABILITY_SHIELD_DUST = 19
-    _ITEM_COVERT_CLOAK = 816
+    _ITEM_COVERT_CLOAK = 1885
     if int(battle[a_off + 5]) != _ABILITY_TOXIC_CHAIN:
         return None
 
@@ -427,6 +445,7 @@ def _preroll_toxic_chain(
         return None
 
     return int(gen5_prng.random(10))
+
 
 def _preroll_move_secondaries(
     battle,
@@ -589,7 +608,7 @@ def _preroll_move_secondaries(
     # (Showdown: abilities.ts:shielddust onModifySecondaries, items.ts:
     # covertcloak onModifySecondaries). Check these off the target.
     _ABIL_SHIELD_DUST = 19
-    _ITEM_COVERT_CLOAK = 750
+    _ITEM_COVERT_CLOAK = 1885
     target_ab = int(battle[target_off + 5])
     target_it = int(battle[target_off + 6])
     has_shield_dust = target_ab == _ABIL_SHIELD_DUST
@@ -667,6 +686,7 @@ def _preroll_move_secondaries(
         F_EXTENDED_VOLATILE_0 as _F_EXTVOL0_PR,
         F_EXTENDED_VOLATILE_1 as _F_EXTVOL1_PR,
     )
+
     _ITEM_GRIP_CLAW_PR = 179
 
     vol_type = int(move_effects.volatile[mid])
@@ -680,18 +700,20 @@ def _preroll_move_secondaries(
     # volatiles into `volatile_chance == 100`, so classify the actual trapping
     # move ids here instead of treating every 100%-chance extended volatile as
     # a secondary, and keep the rolled duration for the late apply path.
-    _PRIMARY_PARTIAL_TRAP_MOVE_IDS = frozenset((
-        20,   # Bind
-        35,   # Wrap
-        83,   # Fire Spin
-        128,  # Clamp
-        250,  # Whirlpool
-        328,  # Sand Tomb
-        463,  # Magma Storm
-        611,  # Infestation
-        779,  # Snap Trap
-        819,  # Thunder Cage
-    ))
+    _PRIMARY_PARTIAL_TRAP_MOVE_IDS = frozenset(
+        (
+            20,  # Bind
+            35,  # Wrap
+            83,  # Fire Spin
+            128,  # Clamp
+            250,  # Whirlpool
+            328,  # Sand Tomb
+            463,  # Magma Storm
+            611,  # Infestation
+            779,  # Snap Trap
+            819,  # Thunder Cage
+        )
+    )
     is_primary_partial_trap_move = (
         vol_type == _VOL_PT_PR and mid in _PRIMARY_PARTIAL_TRAP_MOVE_IDS
     )
@@ -755,11 +777,13 @@ def _preroll_move_secondaries(
     #     callback that later cures burns on hit targets
     # We still need to spend the same random(100) frame here so the next
     # move's PRNG lands at the correct offset.
-    _SECONDARY_ROLL_ONLY_MOVE_IDS = frozenset((
-        664,  # Sparkling Aria
-        830,  # Stone Axe
-        845,  # Ceaseless Edge
-    ))
+    _SECONDARY_ROLL_ONLY_MOVE_IDS = frozenset(
+        (
+            664,  # Sparkling Aria
+            830,  # Stone Axe
+            845,  # Ceaseless Edge
+        )
+    )
     if (
         mid in _SECONDARY_ROLL_ONLY_MOVE_IDS
         and not has_sheer_force
@@ -803,16 +827,23 @@ def _preroll_move_secondaries(
         )
     )
     has_any_sc = any(int(sc_arr[i]) != 0 for i in range(7))
-    _ON_TRY_MOVE_SELFBOOST_PR = frozenset((130, 800, 905))  # Skull Bash / Meteor Beam / Electro Shot
-    is_primary_sc_move = effect_type_m in (
-        _EFFECT_STAT_CHANGE_PR,
-        _EFFECT_STATUS_PR,
-        EFFECT_SWITCH,
-    ) or mid in _ON_TRY_MOVE_SELFBOOST_PR or (
-        is_selfboost_like
-        and stat_target_m == 0
-        and stat_chance == 100
-        and has_any_sc
+    _ON_TRY_MOVE_SELFBOOST_PR = frozenset(
+        (130, 800, 905)
+    )  # Skull Bash / Meteor Beam / Electro Shot
+    is_primary_sc_move = (
+        effect_type_m
+        in (
+            _EFFECT_STAT_CHANGE_PR,
+            _EFFECT_STATUS_PR,
+            EFFECT_SWITCH,
+        )
+        or mid in _ON_TRY_MOVE_SELFBOOST_PR
+        or (
+            is_selfboost_like
+            and stat_target_m == 0
+            and stat_chance == 100
+            and has_any_sc
+        )
     )
     sc_sheer_block = has_sheer_force and (stat_chance < 100)
     sc_dust_block = (
@@ -881,7 +912,11 @@ def _preroll_move_secondaries(
     # Match the gates inside apply_confusion_from_move so we consume the
     # SAME number of frames in the SAME order.
     # ------------------------------------------------------------------
-    if vol_type == _VOL_CONF_PR and vol_chance > 0 and prerolled["confusion"] is not None:
+    if (
+        vol_type == _VOL_CONF_PR
+        and vol_chance > 0
+        and prerolled["confusion"] is not None
+    ):
         chance_landed = int(prerolled["confusion"]) < vol_chance
         if chance_landed:
             _MOVE_ALLURING_VOICE_PR = 914
@@ -948,9 +983,11 @@ def _preroll_move_secondaries(
 
     return prerolled
 
+
 # =============================================================================
 # Residual speedSort frame counter
 # =============================================================================
+
 
 def _count_residual_speedsort_frames(
     battle,
@@ -1081,7 +1118,9 @@ def _count_residual_speedsort_frames(
         # volatile with its own duration during the charge turn. Showdown then
         # has two residual duration handlers for that active: `twoturnmove`
         # plus the move-specific volatile (for example `phantomforce`).
-        charge_meta_off = _OFF_META_R + (_M_CHG0_R if poff < _OFF_SIDE1_R else _M_CHG1_R)
+        charge_meta_off = _OFF_META_R + (
+            _M_CHG0_R if poff < _OFF_SIDE1_R else _M_CHG1_R
+        )
         charge_move = int(battle[charge_meta_off])
         if charge_move in (
             _MOVE_DIG_R,
@@ -1099,6 +1138,7 @@ def _count_residual_speedsort_frames(
     # Sort entries by comparePriority so tied groups are consecutive.
     handlers.sort(key=cmp_to_key(tracker.compare_priority))
     tracker.speed_sort_consume(handlers)
+
 
 def _consume_residual_weather_event_frames(
     battle,
@@ -1124,6 +1164,7 @@ def _consume_residual_weather_event_frames(
 
     tracker.each_event_update([int(p0_speed), int(p1_speed)])
     tracker.each_event_update([int(p0_speed), int(p1_speed)])
+
 
 def _consume_runswitch_tie_frame(
     battle,
@@ -1161,6 +1202,7 @@ def _consume_runswitch_tie_frame(
     if int(switcher_speed) == int(foe_speed):
         gen5_prng.random(0, 2)
 
+
 def _consume_switch_request_resume_tie_frames(
     switcher_speed: int,
     foe_speed: int,
@@ -1182,6 +1224,7 @@ def _consume_switch_request_resume_tie_frames(
         for _ in range(3):
             gen5_prng.random(0, 2)
 
+
 def _run_switch_in_update_item_hooks_common(
     battle: np.ndarray,
     pokemon_offset: int,
@@ -1201,6 +1244,7 @@ def _run_switch_in_update_item_hooks_common(
     run_hook(fx.apply_persim_berry, poff, battle, poff, game_data)
     run_hook(fx.apply_stat_boosting_berries, poff, battle, poff, game_data)
     run_hook(fx.apply_pinch_healing_berries, poff, battle, poff, game_data)
+
 
 def _consume_team_preview_queue_sort_frames(
     battle: np.ndarray,
@@ -1229,6 +1273,7 @@ def _consume_team_preview_queue_sort_frames(
         if int(battle[p0_off + 11]) == int(battle[p1_off + 11]):
             gen5_prng.random(2 * slot, 2 * slot + 2)
 
+
 def _sync_had_item_flag_on_switch_in(battle: np.ndarray, pokemon_offset: int) -> None:
     """Refresh current-entry item state on switch-in.
 
@@ -1239,11 +1284,13 @@ def _sync_had_item_flag_on_switch_in(battle: np.ndarray, pokemon_offset: int) ->
     poff = int(pokemon_offset)
     flags = int(battle[poff + 15])
     from pokepy.core.constants import FLAG_BOOSTER_ENERGY_ACTIVE as _FLAG_BOOSTER
+
     flags &= ~_FLAG_BOOSTER
     if int(battle[poff + 6]) > 0:
         battle[poff + 15] = flags | 0x80
     else:
         battle[poff + 15] = flags & ~0x80
+
 
 def _get_switch_resume_action_speed(
     battle: np.ndarray,
@@ -1274,12 +1321,14 @@ def _get_switch_resume_action_speed(
     finally:
         battle[poff + 5] = ability
 
+
 def _reset_toxic_counter_on_switch_in(battle: np.ndarray, pokemon_offset: int) -> None:
     """Showdown resets a toxic stage counter when the mon re-enters."""
     poff = int(pokemon_offset)
     status_field = int(battle[poff + 12])
     if get_status(status_field) == STATUS_TOXIC:
         battle[poff + 12] = set_status(STATUS_TOXIC, 0)
+
 
 def _clear_opponent_source_tied_lock_state(battle: np.ndarray, side: int) -> None:
     """Clear opponent volatiles that should end when this side's source leaves."""
@@ -1302,6 +1351,7 @@ def _clear_opponent_source_tied_lock_state(battle: np.ndarray, side: int) -> Non
         _EXT_VOL_MEAN_LOOK_SW | _EXT_VOL_PARTIAL_TRAP_SW
     )
     battle[OFF_MOVES + opp_partial_trap_turns] = 0
+
 
 def _clear_side_switch_state_common(battle: np.ndarray, side: int) -> None:
     """Clear per-side move/choice state that Showdown drops on switch-out."""
@@ -1341,7 +1391,10 @@ def _clear_side_switch_state_common(battle: np.ndarray, side: int) -> None:
 
     _clear_opponent_source_tied_lock_state(battle, side)
 
-def _reset_move_used_mask_for_offset(state: MultiFormatState, pokemon_offset: int) -> None:
+
+def _reset_move_used_mask_for_offset(
+    state: MultiFormatState, pokemon_offset: int
+) -> None:
     poff = int(pokemon_offset)
     if poff < OFF_SIDE1:
         slot = (poff - OFF_SIDE0) // POKEMON_SIZE
@@ -1350,7 +1403,10 @@ def _reset_move_used_mask_for_offset(state: MultiFormatState, pokemon_offset: in
         slot = (poff - OFF_SIDE1) // POKEMON_SIZE
         state.opp_move_used_masks[slot] = np.int8(0)
 
-def _mark_move_slot_used(state: MultiFormatState, side: int, slot: int, move_slot: int) -> None:
+
+def _mark_move_slot_used(
+    state: MultiFormatState, side: int, slot: int, move_slot: int
+) -> None:
     if not (0 <= int(slot) < 6 and 0 <= int(move_slot) < 4):
         return
     if int(side) == 0:
@@ -1362,6 +1418,7 @@ def _mark_move_slot_used(state: MultiFormatState, side: int, slot: int, move_slo
             int(state.opp_move_used_masks[int(slot)]) | (1 << int(move_slot))
         )
 
+
 def _last_resort_fails_for_slot(
     state: MultiFormatState,
     side: int,
@@ -1372,7 +1429,9 @@ def _last_resort_fails_for_slot(
         return False
     if not (0 <= int(slot) < 6):
         return True
-    moves = state.team_moves[int(slot)] if int(side) == 0 else state.opp_moves[int(slot)]
+    moves = (
+        state.team_moves[int(slot)] if int(side) == 0 else state.opp_moves[int(slot)]
+    )
     used_mask = (
         int(state.team_move_used_masks[int(slot)])
         if int(side) == 0
@@ -1392,11 +1451,13 @@ def _last_resort_fails_for_slot(
             return True
     return known_moves < 2 or not has_last_resort
 
+
 # =============================================================================
 # Main turn loop
 # =============================================================================
 
-def step_battle_gen9(
+
+def step_battle_gen9_iter(
     state: MultiFormatState,
     action0: int,
     action1: int,
@@ -1407,7 +1468,7 @@ def step_battle_gen9(
     resolve_mid_turn_switch0=None,
     wants_tera0: bool = False,
     wants_tera1: bool = False,
-) -> Tuple[np.float32, np.float32, bool]:
+) -> Generator[SwitchRequest, Dict[int, int], Tuple[np.float32, np.float32, bool]]:
     """Execute one Gen 9 battle turn. Mutates `state` in place.
 
     Returns (reward0, reward1, done). reward1 = -reward0 (zero-sum shaped).
@@ -1455,7 +1516,9 @@ def step_battle_gen9(
         item_id = int(item_id)
         if item_id <= 0:
             return
-        from pokepy.data.item_aliases import ITEM_GOLD_BERRY_INTERNAL as _ITEM_GOLD_BERRY_INTERNAL
+        from pokepy.data.item_aliases import (
+            ITEM_GOLD_BERRY_INTERNAL as _ITEM_GOLD_BERRY_INTERNAL,
+        )
 
         is_berry = item_id == _ITEM_GOLD_BERRY_INTERNAL
         item_is_berry = getattr(game_data, "item_is_berry", None)
@@ -1480,6 +1543,9 @@ def step_battle_gen9(
         hook(*args)
         if prev_item > 0 and int(battle[poff + 6]) == 0:
             _record_consumed_berry(poff, prev_item)
+            # Consuming an item (berry/gem/herb/sash/balloon/booster) emits an
+            # `-enditem` message in Showdown, revealing it to the opponent.
+            _mark_item_revealed(poff)
 
     def _apply_harvest(pokemon_offset: int) -> None:
         poff = int(pokemon_offset)
@@ -1529,7 +1595,108 @@ def step_battle_gen9(
                 return True
         return False
 
-    def _mark_stats_raised_this_turn(pokemon_offset: int, before: tuple[int, int]) -> None:
+    # ------------------------------------------------------------------
+    # Fog-of-war reveal tracking (partial observability). The obs adapter
+    # masks an opponent's item/ability until it has been "revealed" the way
+    # Showdown surfaces it (an `-item`/`-ability`/`[from] ...` protocol
+    # message). We detect those reveals by observing that an ability/item
+    # actually produced an effect, which is exactly when Showdown announces
+    # it; conditional abilities (Protosynthesis with no sun, an unused Flash
+    # Fire) therefore stay hidden until they fire. `team_*` arrays track
+    # side-0 mons (seen by side 1); `opp_*` track side-1 mons (seen by side 0).
+    def _reveal_slot_for_offset(pokemon_offset: int):
+        poff = int(pokemon_offset)
+        if poff < OFF_SIDE1:
+            slot = (poff - OFF_SIDE0) // POKEMON_SIZE
+            return slot, state.team_abilities_revealed, state.team_items_revealed
+        slot = (poff - OFF_SIDE1) // POKEMON_SIZE
+        return slot, state.opp_abilities_revealed, state.opp_items_revealed
+
+    def _mark_ability_revealed(pokemon_offset: int) -> None:
+        slot, abil_arr, _ = _reveal_slot_for_offset(pokemon_offset)
+        if 0 <= slot < 6:
+            abil_arr[slot] = True
+
+    def _mark_item_revealed(pokemon_offset: int) -> None:
+        slot, _, item_arr = _reveal_slot_for_offset(pokemon_offset)
+        if 0 <= slot < 6:
+            item_arr[slot] = True
+
+    def _ability_reveal_signature(pokemon_offset: int) -> tuple:
+        # Observable per-Pokemon state an ability could change on activation:
+        # boost stages, current ability id (Trace), HP (absorb/Regenerator),
+        # status, and the paradox(0x6010)/booster(0x1000)/flash-fire(0x200)
+        # flag bits.
+        poff = int(pokemon_offset)
+        return (
+            int(battle[poff + 13]),
+            int(battle[poff + 14]) & 0x0FFF,
+            int(battle[poff + 5]),
+            int(battle[poff + 1]),
+            int(battle[poff + 12]),
+            int(battle[poff + 15]) & 0x7210,
+        )
+
+    # Aliases so the reveal wrappers below can call the originals without the
+    # file-wide rename of `fx.apply_contact_*` recursing back into them.
+    _fx_apply_contact_damage = fx.apply_contact_damage
+    _fx_apply_contact_status_ability = fx.apply_contact_status_ability
+    _fx_apply_life_orb_recoil = fx.apply_life_orb_recoil
+
+    def _apply_life_orb_recoil_tracked(*args, **kwargs) -> None:
+        # (battle, user_off, dmg, hit, move_id). Life Orb recoil reveals the
+        # holder's item via `[from] item: Life Orb`. Skip simulation copies.
+        sim = args[0]
+        if sim is not battle:
+            _fx_apply_life_orb_recoil(*args, **kwargs)
+            return
+        uoff = int(args[1])
+        before_hp = int(sim[uoff + 1])
+        _fx_apply_life_orb_recoil(*args, **kwargs)
+        if int(sim[uoff + 1]) < before_hp:
+            _mark_item_revealed(uoff)
+
+    def _apply_contact_damage_tracked(*args, **kwargs) -> None:
+        # (battle, move_id, atk_off, def_off, hit, ...). Rough Skin / Iron Barbs
+        # (defender ability) and Rocky Helmet (defender item) chip the attacker
+        # on contact; whichever chipped is revealed. Skip reveal when called on
+        # a simulation copy rather than the real battle array.
+        sim = args[0]
+        if sim is not battle:
+            _fx_apply_contact_damage(*args, **kwargs)
+            return
+        aoff = int(args[2])
+        doff = int(args[3])
+        before_hp = int(sim[aoff + 1])
+        _fx_apply_contact_damage(*args, **kwargs)
+        if int(sim[aoff + 1]) < before_hp:
+            if int(sim[doff + 5]) in (ABILITY_ROUGH_SKIN, ABILITY_IRON_BARBS):
+                _mark_ability_revealed(doff)
+            if int(sim[doff + 6]) == ITEM_ROCKY_HELMET:
+                _mark_item_revealed(doff)
+
+    def _apply_contact_status_ability_tracked(*args, **kwargs) -> None:
+        # (battle, move_id, atk_off, def_off, ...). Defender's Static / Flame
+        # Body / Poison Point / Effect Spore statuses the attacker (reveals the
+        # defender); the attacker's Poison Touch statuses the defender (reveals
+        # the attacker). Skip reveal on simulation copies.
+        sim = args[0]
+        if sim is not battle:
+            _fx_apply_contact_status_ability(*args, **kwargs)
+            return
+        aoff = int(args[2])
+        doff = int(args[3])
+        before_a = int(sim[aoff + 12])
+        before_d = int(sim[doff + 12])
+        _fx_apply_contact_status_ability(*args, **kwargs)
+        if int(sim[aoff + 12]) != before_a:
+            _mark_ability_revealed(doff)
+        if int(sim[doff + 12]) != before_d:
+            _mark_ability_revealed(aoff)
+
+    def _mark_stats_raised_this_turn(
+        pokemon_offset: int, before: tuple[int, int]
+    ) -> None:
         nonlocal stats_raised_this_turn0, stats_raised_this_turn1
         poff = int(pokemon_offset)
         after = _snapshot_boost_stages(poff)
@@ -1540,7 +1707,9 @@ def step_battle_gen9(
         else:
             stats_raised_this_turn1 = True
 
-    def _mark_stats_lowered_this_turn(pokemon_offset: int, before: tuple[int, int]) -> None:
+    def _mark_stats_lowered_this_turn(
+        pokemon_offset: int, before: tuple[int, int]
+    ) -> None:
         nonlocal stats_lowered_this_turn0, stats_lowered_this_turn1
         poff = int(pokemon_offset)
         after = _snapshot_boost_stages(poff)
@@ -1622,6 +1791,36 @@ def step_battle_gen9(
         )
         _reset_move_used_mask_for_offset(state, pokemon_offset)
 
+    def _reveal_switch_in_abilities(
+        switcher_offset: int,
+        opponent_offset: int,
+        sw_sig_before: tuple,
+        opp_boosts_before: tuple,
+        field_before: tuple,
+    ) -> None:
+        field_after = (
+            int(battle[OFF_FIELD + F_WEATHER]),
+            int(battle[OFF_FIELD + F_TERRAIN]),
+        )
+        sw_sig_after = _ability_reveal_signature(switcher_offset)
+        opp_boosts_after = _snapshot_boost_stages(opponent_offset)
+        # The switcher's ability announced if it changed the field or its own
+        # observable state, or dropped the opponent's Attack (Intimidate).
+        if (
+            field_after != field_before
+            or sw_sig_after != sw_sig_before
+            or _boosts_were_lowered(opp_boosts_before, opp_boosts_after)
+        ):
+            _mark_ability_revealed(switcher_offset)
+        # Trace copies and announces the opponent's ability (the switcher's
+        # ability id changes to match the opponent's).
+        if sw_sig_after[2] != sw_sig_before[2]:
+            _mark_ability_revealed(opponent_offset)
+        # Defiant / Competitive / Guard Dog: the opponent raised its own stats
+        # reacting to Intimidate, which reveals the opponent's ability.
+        if _boosts_were_raised(opp_boosts_before, opp_boosts_after):
+            _mark_ability_revealed(opponent_offset)
+
     def _apply_switch_in_ability_tracked(
         switcher_offset: int,
         opponent_offset: int,
@@ -1629,6 +1828,11 @@ def step_battle_gen9(
     ) -> None:
         before_switcher = _snapshot_boost_stages(switcher_offset)
         before_opponent = _snapshot_boost_stages(opponent_offset)
+        _rev_sw_sig = _ability_reveal_signature(switcher_offset)
+        _rev_field = (
+            int(battle[OFF_FIELD + F_WEATHER]),
+            int(battle[OFF_FIELD + F_TERRAIN]),
+        )
         fx.apply_switch_in_ability(
             battle,
             switcher_offset,
@@ -1640,6 +1844,14 @@ def step_battle_gen9(
         _mark_stats_raised_this_turn(opponent_offset, before_opponent)
         _mark_stats_lowered_this_turn(switcher_offset, before_switcher)
         _mark_stats_lowered_this_turn(opponent_offset, before_opponent)
+        if did_switch:
+            _reveal_switch_in_abilities(
+                switcher_offset,
+                opponent_offset,
+                _rev_sw_sig,
+                before_opponent,
+                _rev_field,
+            )
         _apply_white_herb_if_ready(switcher_offset)
         if int(opponent_offset) != int(switcher_offset):
             _apply_white_herb_if_ready(opponent_offset)
@@ -1651,6 +1863,11 @@ def step_battle_gen9(
     ) -> None:
         before_switcher = _snapshot_boost_stages(switcher_offset)
         before_opponent = _snapshot_boost_stages(opponent_offset)
+        _rev_sw_sig = _ability_reveal_signature(switcher_offset)
+        _rev_field = (
+            int(battle[OFF_FIELD + F_WEATHER]),
+            int(battle[OFF_FIELD + F_TERRAIN]),
+        )
         fx.apply_switch_in_ability_with_trace_reaction(
             battle,
             switcher_offset,
@@ -1662,6 +1879,14 @@ def step_battle_gen9(
         _mark_stats_raised_this_turn(opponent_offset, before_opponent)
         _mark_stats_lowered_this_turn(switcher_offset, before_switcher)
         _mark_stats_lowered_this_turn(opponent_offset, before_opponent)
+        if did_switch:
+            _reveal_switch_in_abilities(
+                switcher_offset,
+                opponent_offset,
+                _rev_sw_sig,
+                before_opponent,
+                _rev_field,
+            )
         _apply_white_herb_if_ready(switcher_offset)
         if int(opponent_offset) != int(switcher_offset):
             _apply_white_herb_if_ready(opponent_offset)
@@ -1679,10 +1904,16 @@ def step_battle_gen9(
     ) -> None:
         _MOVE_STOCKPILE = 254
         before_user_speed = _active_live_speed(user_offset)
-        before_target_speed = None if int(target_offset) == int(user_offset) else _active_live_speed(target_offset)
+        before_target_speed = (
+            None
+            if int(target_offset) == int(user_offset)
+            else _active_live_speed(target_offset)
+        )
         if int(move_id) == _MOVE_STOCKPILE:
             stockpile_state_off = OFF_MOVES + (
-                M_STOCKPILE_STATE_0 if int(user_offset) < OFF_SIDE1 else M_STOCKPILE_STATE_1
+                M_STOCKPILE_STATE_0
+                if int(user_offset) < OFF_SIDE1
+                else M_STOCKPILE_STATE_1
             )
             stockpile_state = int(battle[stockpile_state_off]) & 0xFFFF
             stockpile_layers = get_stockpile_layers(stockpile_state)
@@ -1706,7 +1937,9 @@ def step_battle_gen9(
             )
             after_def = extract_boost(int(battle[int(user_offset) + 13]), 4)
             after_spd = extract_boost(int(battle[int(user_offset) + 13]), 12)
-            stockpile_state = set_stockpile_layers(stockpile_state, stockpile_layers + 1)
+            stockpile_state = set_stockpile_layers(
+                stockpile_state, stockpile_layers + 1
+            )
             if before_def != after_def:
                 stockpile_state = set_stockpile_def_count(
                     stockpile_state,
@@ -1727,7 +1960,9 @@ def step_battle_gen9(
                 _apply_white_herb_if_ready(target_offset)
             _mark_move_phase_residual_speed_refresh(user_offset, before_user_speed)
             if int(target_offset) != int(user_offset):
-                _mark_move_phase_residual_speed_refresh(target_offset, before_target_speed)
+                _mark_move_phase_residual_speed_refresh(
+                    target_offset, before_target_speed
+                )
             return
 
         before_user = _snapshot_boost_stages(user_offset)
@@ -1789,6 +2024,9 @@ def step_battle_gen9(
         move_flags: int,
     ) -> None:
         before_speed = _active_live_speed(target_offset)
+        _rev_t_sig = _ability_reveal_signature(target_offset)
+        _rev_u_hp = int(battle[int(user_offset) + 1])
+        _rev_u_status = int(battle[int(user_offset) + 12])
         fx.apply_immediate_defender_ability_state_changes(
             battle,
             user_offset,
@@ -1799,6 +2037,15 @@ def step_battle_gen9(
             move_category,
             move_flags,
         )
+        # The defender's ability (Rough Skin / Static / Flame Body / Weak Armor
+        # / Justified / an absorb or Flash Fire, etc.) fired if it changed the
+        # target's observable state or affected the attacker — Showdown shows it.
+        if (
+            _ability_reveal_signature(target_offset) != _rev_t_sig
+            or int(battle[int(user_offset) + 1]) != _rev_u_hp
+            or int(battle[int(user_offset) + 12]) != _rev_u_status
+        ):
+            _mark_ability_revealed(target_offset)
         _mark_move_phase_residual_speed_refresh(target_offset, before_speed)
 
     def _apply_knock_off_from_move_tracked(
@@ -1810,6 +2057,7 @@ def step_battle_gen9(
         source_alive: bool | None = None,
     ) -> None:
         before_speed = _active_live_speed(target_offset)
+        _rev_had_item = int(battle[int(target_offset) + 6]) > 0
         fx.apply_knock_off_from_move(
             battle,
             move_id,
@@ -1820,6 +2068,9 @@ def step_battle_gen9(
             user_offset=user_offset,
             source_alive=source_alive,
         )
+        # Knock Off reveals (and removes) the target's item via `-enditem`.
+        if _rev_had_item and int(battle[int(target_offset) + 6]) <= 0:
+            _mark_item_revealed(target_offset)
         _mark_move_phase_residual_speed_refresh(target_offset, before_speed)
 
     def _apply_trick_from_move_tracked(
@@ -1837,6 +2088,10 @@ def step_battle_gen9(
             target_offset,
             hit,
         )
+        # Trick / Switcheroo swaps items and reveals both via `-item` messages.
+        if swapped:
+            _mark_item_revealed(user_offset)
+            _mark_item_revealed(target_offset)
         _mark_move_phase_residual_speed_refresh(user_offset, before_user_speed)
         _mark_move_phase_residual_speed_refresh(target_offset, before_target_speed)
         return bool(swapped)
@@ -1852,11 +2107,15 @@ def step_battle_gen9(
         if side == 0:
             if not _on_try_selfboost0:
                 return False
-            _apply_stat_changes_from_move_tracked(move_id0, user_offset, target_offset, True)
+            _apply_stat_changes_from_move_tracked(
+                move_id0, user_offset, target_offset, True
+            )
             return True
         if not _on_try_selfboost1:
             return False
-        _apply_stat_changes_from_move_tracked(move_id1, user_offset, target_offset, True)
+        _apply_stat_changes_from_move_tracked(
+            move_id1, user_offset, target_offset, True
+        )
         return True
 
     _SCREEN_SKIP_REFLECT = 0x1
@@ -1893,9 +2152,13 @@ def step_battle_gen9(
         if user_item != ITEM_LIGHT_CLAY:
             return
         if side == 0:
-            state.screen_skip_decrement0 = np.int8(int(state.screen_skip_decrement0) | skip_bit)
+            state.screen_skip_decrement0 = np.int8(
+                int(state.screen_skip_decrement0) | skip_bit
+            )
         else:
-            state.screen_skip_decrement1 = np.int8(int(state.screen_skip_decrement1) | skip_bit)
+            state.screen_skip_decrement1 = np.int8(
+                int(state.screen_skip_decrement1) | skip_bit
+            )
 
     def _decrement_screens_tracked() -> None:
         from pokepy.core.constants import (
@@ -1913,7 +2176,11 @@ def step_battle_gen9(
 
         for side in (0, 1):
             screens_offset = OFF_FIELD + (F_SCREENS_0 if side == 0 else F_SCREENS_1)
-            skip_mask = int(state.screen_skip_decrement0 if side == 0 else state.screen_skip_decrement1)
+            skip_mask = int(
+                state.screen_skip_decrement0
+                if side == 0
+                else state.screen_skip_decrement1
+            )
             screens = int(battle[screens_offset]) & 0xFFFF
             new_screens = screens
             for shift, mask, skip_bit in (
@@ -1955,8 +2222,12 @@ def step_battle_gen9(
         if int(battle[OFF_FIELD + F_TERRAIN]) == TERRAIN_GRASSY:
             return
         battle[OFF_FIELD + F_TERRAIN] = TERRAIN_GRASSY
-        battle[OFF_META + M_TERRAIN_TURNS] = 8 if int(battle[source_off + 6]) == ITEM_TERRAIN_EXTENDER else 5
-        from pokepy.effects.abilities import apply_terrain_seed_item as _apply_terrain_seed_item
+        battle[OFF_META + M_TERRAIN_TURNS] = (
+            8 if int(battle[source_off + 6]) == ITEM_TERRAIN_EXTENDER else 5
+        )
+        from pokepy.effects.abilities import (
+            apply_terrain_seed_item as _apply_terrain_seed_item,
+        )
 
         _apply_terrain_seed_item(battle, p0_off)
         _apply_terrain_seed_item(battle, p1_off)
@@ -1965,14 +2236,19 @@ def step_battle_gen9(
         _active_slot = int(_active_slot)
         _target_slot = max(0, min(5, int(_action) - 4))
         _target_off = _side_base + _target_slot * POKEMON_SIZE
-        _target_alive = (int(battle[_target_off + 1]) > 0) and ((int(battle[_target_off + 15]) & 1) == 0)
+        _target_alive = (int(battle[_target_off + 1]) > 0) and (
+            (int(battle[_target_off + 15]) & 1) == 0
+        )
         if int(_action) >= 4 and _target_alive and _target_slot != _active_slot:
             return _target_slot
         for _slot in range(6):
             if _slot == _active_slot:
                 continue
             _slot_off = _side_base + _slot * POKEMON_SIZE
-            if int(battle[_slot_off + 1]) > 0 and (int(battle[_slot_off + 15]) & 1) == 0:
+            if (
+                int(battle[_slot_off + 1]) > 0
+                and (int(battle[_slot_off + 15]) & 1) == 0
+            ):
                 return _slot
         return _active_slot
 
@@ -2042,7 +2318,9 @@ def step_battle_gen9(
     # ------------------------------------------------------------------
     # Voluntary switches (priority -6)
     # ------------------------------------------------------------------
-    can_switch0 = is_switch and _is_valid_switch_target(battle, OFF_SIDE0, switch_target, active0)
+    can_switch0 = is_switch and _is_valid_switch_target(
+        battle, OFF_SIDE0, switch_target, active0
+    )
     can_switch1 = opp_is_switch and _is_valid_switch_target(
         battle, OFF_SIDE1, opp_switch_target, active1
     )
@@ -2216,8 +2494,12 @@ def step_battle_gen9(
         _switch_survived = p0_alive_si if can_switch0 else p1_alive_si
         if _switch_survived:
             _incoming_off = p0_off if can_switch0 else p1_off
-            _incoming_resume_speed = _postswitch_action_speed0 if can_switch0 else _postswitch_action_speed1
-            _foe_resume_speed = _postswitch_action_speed1 if can_switch0 else _postswitch_action_speed0
+            _incoming_resume_speed = (
+                _postswitch_action_speed0 if can_switch0 else _postswitch_action_speed1
+            )
+            _foe_resume_speed = (
+                _postswitch_action_speed1 if can_switch0 else _postswitch_action_speed0
+            )
             if _incoming_resume_speed == _foe_resume_speed:
                 for _ in range(3):
                     gen5_prng.random(0, 2)
@@ -2239,7 +2521,9 @@ def step_battle_gen9(
         battle[OFF_FIELD + (F_DISABLE_TURNS_0 if s == 0 else F_DISABLE_TURNS_1)] = 0
         battle[OFF_FIELD + (F_YAWN_TURNS_0 if s == 0 else F_YAWN_TURNS_1)] = 0
         battle[OFF_FIELD + (F_DESTINY_BOND_0 if s == 0 else F_DESTINY_BOND_1)] = 0
-        battle[OFF_FIELD + (F_EXTENDED_VOLATILE_0 if s == 0 else F_EXTENDED_VOLATILE_1)] = 0
+        battle[
+            OFF_FIELD + (F_EXTENDED_VOLATILE_0 if s == 0 else F_EXTENDED_VOLATILE_1)
+        ] = 0
         battle[OFF_FIELD + (F_PERISH_COUNT_0 if s == 0 else F_PERISH_COUNT_1)] = 0
     if (
         can_switch0
@@ -2283,8 +2567,12 @@ def step_battle_gen9(
     if not opp_is_switch:
         _, forced_struggle1 = get_battle_move_mask(state, 1, game_data)
 
-    must_struggle0 = (not is_switch) and (move_pp0 <= 0 or total_pp0 <= 0 or forced_struggle0)
-    must_struggle1 = (not opp_is_switch) and (move_pp1 <= 0 or total_pp1 <= 0 or forced_struggle1)
+    must_struggle0 = (not is_switch) and (
+        move_pp0 <= 0 or total_pp0 <= 0 or forced_struggle0
+    )
+    must_struggle1 = (not opp_is_switch) and (
+        move_pp1 <= 0 or total_pp1 <= 0 or forced_struggle1
+    )
 
     move_id0 = MOVE_STRUGGLE if must_struggle0 else raw_move_id0
     move_id1 = MOVE_STRUGGLE if must_struggle1 else raw_move_id1
@@ -2303,8 +2591,12 @@ def step_battle_gen9(
     locked_turns0_pre = int(battle[OFF_MOVES + M_LOCKED_TURNS_0])
     locked_move1_pre = int(battle[OFF_MOVES + M_LOCKED_MOVE_1])
     locked_turns1_pre = int(battle[OFF_MOVES + M_LOCKED_TURNS_1])
-    is_locked_turn0 = (not is_switch) and locked_move0_pre >= 0 and locked_turns0_pre > 0
-    is_locked_turn1 = (not opp_is_switch) and locked_move1_pre >= 0 and locked_turns1_pre > 0
+    is_locked_turn0 = (
+        (not is_switch) and locked_move0_pre >= 0 and locked_turns0_pre > 0
+    )
+    is_locked_turn1 = (
+        (not opp_is_switch) and locked_move1_pre >= 0 and locked_turns1_pre > 0
+    )
     if is_locked_turn0:
         move_id0 = locked_move0_pre
         must_struggle0 = False
@@ -2331,18 +2623,20 @@ def step_battle_gen9(
     # every move attempt (even if the move later fails in BeforeMove).
     active_move_actions0_live = int(battle[OFF_MOVES + M_ACTIVE_MOVE_ACTIONS_0])
     active_move_actions1_live = int(battle[OFF_MOVES + M_ACTIVE_MOVE_ACTIONS_1])
-    active_move_actions0_pre = active_move_actions0_live & ACTIVE_MOVE_ACTIONS_COUNT_MASK
-    active_move_actions1_pre = active_move_actions1_live & ACTIVE_MOVE_ACTIONS_COUNT_MASK
+    active_move_actions0_pre = (
+        active_move_actions0_live & ACTIVE_MOVE_ACTIONS_COUNT_MASK
+    )
+    active_move_actions1_pre = (
+        active_move_actions1_live & ACTIVE_MOVE_ACTIONS_COUNT_MASK
+    )
     if not is_switch:
         battle[OFF_MOVES + M_ACTIVE_MOVE_ACTIONS_0] = (
-            (active_move_actions0_live & ACTIVE_MOVE_ACTIONS_SEMI_INVUL)
-            | (active_move_actions0_pre + 1)
-        )
+            active_move_actions0_live & ACTIVE_MOVE_ACTIONS_SEMI_INVUL
+        ) | (active_move_actions0_pre + 1)
     if not opp_is_switch:
         battle[OFF_MOVES + M_ACTIVE_MOVE_ACTIONS_1] = (
-            (active_move_actions1_live & ACTIVE_MOVE_ACTIONS_SEMI_INVUL)
-            | (active_move_actions1_pre + 1)
-        )
+            active_move_actions1_live & ACTIVE_MOVE_ACTIONS_SEMI_INVUL
+        ) | (active_move_actions1_pre + 1)
 
     # ------------------------------------------------------------------
     # Sleep Talk substitution (Showdown data/moves.ts:17513 sleeptalk).
@@ -2529,7 +2823,7 @@ def step_battle_gen9(
     #   - User actually used a move this turn (not a switch)
     # Pokepy used to consume Custap even for +1 moves (Quick Attack, Aqua
     # Jet, etc.), wrongly losing the berry with no benefit.
-    _ITEM_CUSTAP_BERRY = 86
+    _ITEM_CUSTAP_BERRY = 210
     _ABILITY_GLUTTONY = 82
     # Custap is a berry — Unnerve on the OPPOSING active mon blocks the eat
     # via Showdown's `runEvent('TryEatItem')` path (data/abilities.ts:5185
@@ -2538,9 +2832,17 @@ def step_battle_gen9(
     _ABILITY_UNNERVE_LOCAL = 127
     _ABILITY_AS_ONE_GLAS_LOCAL = 266
     _ABILITY_AS_ONE_SPEC_LOCAL = 267
-    _UNNERVE_ABS = (_ABILITY_UNNERVE_LOCAL, _ABILITY_AS_ONE_GLAS_LOCAL, _ABILITY_AS_ONE_SPEC_LOCAL)
-    p1_unnerves_p0 = int(battle[p1_off + 5]) in _UNNERVE_ABS and int(battle[p1_off + 1]) > 0
-    p0_unnerves_p1 = int(battle[p0_off + 5]) in _UNNERVE_ABS and int(battle[p0_off + 1]) > 0
+    _UNNERVE_ABS = (
+        _ABILITY_UNNERVE_LOCAL,
+        _ABILITY_AS_ONE_GLAS_LOCAL,
+        _ABILITY_AS_ONE_SPEC_LOCAL,
+    )
+    p1_unnerves_p0 = (
+        int(battle[p1_off + 5]) in _UNNERVE_ABS and int(battle[p1_off + 1]) > 0
+    )
+    p0_unnerves_p1 = (
+        int(battle[p0_off + 5]) in _UNNERVE_ABS and int(battle[p0_off + 1]) > 0
+    )
     if not is_switch and base_priority0 <= 0:
         hp0_c = int(battle[p0_off + 1])
         max0_c = int(battle[p0_off + 2])
@@ -2613,17 +2915,27 @@ def step_battle_gen9(
 
     action_priority0 = 0 if is_switch else priority0
     action_priority1 = 0 if opp_is_switch else priority1
-    action_speed0 = _action_speed_from_effective(pre_switch_p0_speed if is_switch else p0_speed)
-    action_speed1 = _action_speed_from_effective(pre_switch_p1_speed if opp_is_switch else p1_speed)
+    action_speed0 = _action_speed_from_effective(
+        pre_switch_p0_speed if is_switch else p0_speed
+    )
+    action_speed1 = _action_speed_from_effective(
+        pre_switch_p1_speed if opp_is_switch else p1_speed
+    )
     # Cached action speeds must track any mid-turn runSwitch that completes
     # before the later move acts. Showdown reuses `pokemon.speed` inside the
     # move action's post-hit Update sorts, so a first-mover U-turn / phaze
     # should refresh the cache for the second mover, while same-move self
     # boosts (Rapid Spin) must not.
-    current_action_speed0 = _postswitch_action_speed0 if has_switch_action else action_speed0
-    current_action_speed1 = _postswitch_action_speed1 if has_switch_action else action_speed1
+    current_action_speed0 = (
+        _postswitch_action_speed0 if has_switch_action else action_speed0
+    )
+    current_action_speed1 = (
+        _postswitch_action_speed1 if has_switch_action else action_speed1
+    )
     priorities_tied = action_priority0 == action_priority1
-    queue_sort_tied = (not has_switch_action) and priorities_tied and (action_speed0 == action_speed1)
+    queue_sort_tied = (
+        (not has_switch_action) and priorities_tied and (action_speed0 == action_speed1)
+    )
 
     def _refresh_current_action_speeds() -> None:
         nonlocal current_action_speed0, current_action_speed1
@@ -2715,9 +3027,13 @@ def step_battle_gen9(
     is_sub0 = effect0 == EFFECT_SUBSTITUTE
     is_sub1 = effect1 == EFFECT_SUBSTITUTE
     if side0_first and is_sub0 and not is_switch:
-        fx.apply_substitute_from_move(battle, move_id0, 0, p0_off, game_data, move_effects)
+        fx.apply_substitute_from_move(
+            battle, move_id0, 0, p0_off, game_data, move_effects
+        )
     if (not side0_first) and is_sub1 and not opp_is_switch:
-        fx.apply_substitute_from_move(battle, move_id1, 1, p1_off, game_data, move_effects)
+        fx.apply_substitute_from_move(
+            battle, move_id1, 1, p1_off, game_data, move_effects
+        )
 
     is_taunt0 = move_id0 == MOVE_TAUNT
     is_taunt1 = move_id1 == MOVE_TAUNT
@@ -2782,7 +3098,10 @@ def step_battle_gen9(
     # Air Lock / Cloud Nine on either active mon suppresses weather effects.
     _ab0_chg = int(battle[p0_off + 5])
     _ab1_chg = int(battle[p1_off + 5])
-    _weather_supp = _ab0_chg in (76, 13) or _ab1_chg in (76, 13)  # AIR_LOCK=76, CLOUD_NINE=13
+    _weather_supp = _ab0_chg in (76, 13) or _ab1_chg in (
+        76,
+        13,
+    )  # AIR_LOCK=76, CLOUD_NINE=13
     _item0_chg = int(battle[p0_off + 6])
     _item1_chg = int(battle[p1_off + 6])
     if not _weather_supp:
@@ -2798,9 +3117,17 @@ def step_battle_gen9(
             and _item1_chg != _UMB_CHG
         ):
             is_two_turn1 = False
-        if move_id0 == MOVE_ELECTRO_SHOT and cur_weather == WEATHER_RAIN and _item0_chg != _UMB_CHG:
+        if (
+            move_id0 == MOVE_ELECTRO_SHOT
+            and cur_weather == WEATHER_RAIN
+            and _item0_chg != _UMB_CHG
+        ):
             is_two_turn0 = False
-        if move_id1 == MOVE_ELECTRO_SHOT and cur_weather == WEATHER_RAIN and _item1_chg != _UMB_CHG:
+        if (
+            move_id1 == MOVE_ELECTRO_SHOT
+            and cur_weather == WEATHER_RAIN
+            and _item1_chg != _UMB_CHG
+        ):
             is_two_turn1 = False
     was_charging0 = int(battle[OFF_META + M_CHARGING_0]) >= 0
     was_charging1 = int(battle[OFF_META + M_CHARGING_1]) >= 0
@@ -2833,10 +3160,18 @@ def step_battle_gen9(
         MOVE_METEOR_BEAM,
         MOVE_ELECTRO_SHOT,
     )
-    _on_try_selfboost0 = int(move_id0) in _ON_TRY_MOVE_SELFBOOST_MOVES and not is_strike_turn0
-    _on_try_selfboost1 = int(move_id1) in _ON_TRY_MOVE_SELFBOOST_MOVES and not is_strike_turn1
-    _skip_strike_turn_selfboost0 = int(move_id0) in _ON_TRY_MOVE_SELFBOOST_MOVES and is_strike_turn0
-    _skip_strike_turn_selfboost1 = int(move_id1) in _ON_TRY_MOVE_SELFBOOST_MOVES and is_strike_turn1
+    _on_try_selfboost0 = (
+        int(move_id0) in _ON_TRY_MOVE_SELFBOOST_MOVES and not is_strike_turn0
+    )
+    _on_try_selfboost1 = (
+        int(move_id1) in _ON_TRY_MOVE_SELFBOOST_MOVES and not is_strike_turn1
+    )
+    _skip_strike_turn_selfboost0 = (
+        int(move_id0) in _ON_TRY_MOVE_SELFBOOST_MOVES and is_strike_turn0
+    )
+    _skip_strike_turn_selfboost1 = (
+        int(move_id1) in _ON_TRY_MOVE_SELFBOOST_MOVES and is_strike_turn1
+    )
 
     # Semi-invulnerability is only granted by Fly / Dig / Dive / Bounce /
     # Shadow Force / Phantom Force — NOT by charge moves like Solar Beam /
@@ -2863,29 +3198,35 @@ def step_battle_gen9(
     # striker keeps it long enough for the earlier foe move to miss.
     if is_charge_turn0 and _chg0_is_semi_invul and side0_first:
         battle[OFF_MOVES + M_ACTIVE_MOVE_ACTIONS_0] = (
-            int(battle[OFF_MOVES + M_ACTIVE_MOVE_ACTIONS_0]) | ACTIVE_MOVE_ACTIONS_SEMI_INVUL
+            int(battle[OFF_MOVES + M_ACTIVE_MOVE_ACTIONS_0])
+            | ACTIVE_MOVE_ACTIONS_SEMI_INVUL
         )
     elif is_strike_turn0 and _chg0_is_semi_invul:
         if side0_first:
             battle[OFF_MOVES + M_ACTIVE_MOVE_ACTIONS_0] = (
-                int(battle[OFF_MOVES + M_ACTIVE_MOVE_ACTIONS_0]) & ~ACTIVE_MOVE_ACTIONS_SEMI_INVUL
+                int(battle[OFF_MOVES + M_ACTIVE_MOVE_ACTIONS_0])
+                & ~ACTIVE_MOVE_ACTIONS_SEMI_INVUL
             )
         else:
             battle[OFF_MOVES + M_ACTIVE_MOVE_ACTIONS_0] = (
-                int(battle[OFF_MOVES + M_ACTIVE_MOVE_ACTIONS_0]) | ACTIVE_MOVE_ACTIONS_SEMI_INVUL
+                int(battle[OFF_MOVES + M_ACTIVE_MOVE_ACTIONS_0])
+                | ACTIVE_MOVE_ACTIONS_SEMI_INVUL
             )
     if is_charge_turn1 and _chg1_is_semi_invul and (not side0_first):
         battle[OFF_MOVES + M_ACTIVE_MOVE_ACTIONS_1] = (
-            int(battle[OFF_MOVES + M_ACTIVE_MOVE_ACTIONS_1]) | ACTIVE_MOVE_ACTIONS_SEMI_INVUL
+            int(battle[OFF_MOVES + M_ACTIVE_MOVE_ACTIONS_1])
+            | ACTIVE_MOVE_ACTIONS_SEMI_INVUL
         )
     elif is_strike_turn1 and _chg1_is_semi_invul:
         if not side0_first:
             battle[OFF_MOVES + M_ACTIVE_MOVE_ACTIONS_1] = (
-                int(battle[OFF_MOVES + M_ACTIVE_MOVE_ACTIONS_1]) & ~ACTIVE_MOVE_ACTIONS_SEMI_INVUL
+                int(battle[OFF_MOVES + M_ACTIVE_MOVE_ACTIONS_1])
+                & ~ACTIVE_MOVE_ACTIONS_SEMI_INVUL
             )
         else:
             battle[OFF_MOVES + M_ACTIVE_MOVE_ACTIONS_1] = (
-                int(battle[OFF_MOVES + M_ACTIVE_MOVE_ACTIONS_1]) | ACTIVE_MOVE_ACTIONS_SEMI_INVUL
+                int(battle[OFF_MOVES + M_ACTIVE_MOVE_ACTIONS_1])
+                | ACTIVE_MOVE_ACTIONS_SEMI_INVUL
             )
 
     used_protect0 = False
@@ -2915,8 +3256,16 @@ def step_battle_gen9(
     priority0_blocked = is_psychic_terrain and (priority_bracket0 > 0) and t1_grounded
     priority1_blocked = is_psychic_terrain and (priority_bracket1 > 0) and t0_grounded
 
-    blocks_priority1 = t1_ab in (ABILITY_DAZZLING, ABILITY_QUEENLY_MAJESTY, ABILITY_ARMOR_TAIL)
-    blocks_priority0 = t0_ab in (ABILITY_DAZZLING, ABILITY_QUEENLY_MAJESTY, ABILITY_ARMOR_TAIL)
+    blocks_priority1 = t1_ab in (
+        ABILITY_DAZZLING,
+        ABILITY_QUEENLY_MAJESTY,
+        ABILITY_ARMOR_TAIL,
+    )
+    blocks_priority0 = t0_ab in (
+        ABILITY_DAZZLING,
+        ABILITY_QUEENLY_MAJESTY,
+        ABILITY_ARMOR_TAIL,
+    )
     dazzling_blocked0 = blocks_priority1 and priority_bracket0 > 0 and not is_switch
     dazzling_blocked1 = blocks_priority0 and priority_bracket1 > 0 and not opp_is_switch
 
@@ -2931,7 +3280,7 @@ def step_battle_gen9(
     # this strip, Rocky Helmet, Rough Skin, Iron Barbs, Static, Flame Body,
     # Poison Point, Effect Spore, Tangling Hair, Gooey, Perish Body,
     # Pickpocket, Cursed Body, Mummy, etc. all wrongly trigger.
-    _ITEM_PUNCHING_GLOVE = 749
+    _ITEM_PUNCHING_GLOVE = 1884
     # ABILITY_LONG_REACH is 203 (constants.py). Earlier revisions of this
     # file accidentally used 271 (which is actually Anger Shell), making
     # Anger Shell holders skip contact and Long Reach holders still make
@@ -2943,9 +3292,13 @@ def step_battle_gen9(
     p1_ab = int(battle[p1_off + 5])
     p0_item_pg = int(battle[p0_off + 6])
     p1_item_pg = int(battle[p1_off + 6])
-    if (is_punch0 and p0_item_pg == _ITEM_PUNCHING_GLOVE) or p0_ab == _ABILITY_LONG_REACH:
+    if (
+        is_punch0 and p0_item_pg == _ITEM_PUNCHING_GLOVE
+    ) or p0_ab == _ABILITY_LONG_REACH:
         is_contact0 = False
-    if (is_punch1 and p1_item_pg == _ITEM_PUNCHING_GLOVE) or p1_ab == _ABILITY_LONG_REACH:
+    if (
+        is_punch1 and p1_item_pg == _ITEM_PUNCHING_GLOVE
+    ) or p1_ab == _ABILITY_LONG_REACH:
         is_contact1 = False
     unseen_fist0 = (p0_ab == ABILITY_UNSEEN_FIST) and is_contact0
     unseen_fist1 = (p1_ab == ABILITY_UNSEEN_FIST) and is_contact1
@@ -2957,6 +3310,7 @@ def step_battle_gen9(
 
     move0_respects_protect_early = (move0_flags & _FLAG_PROTECT_EARLY) != 0
     move1_respects_protect_early = (move1_flags & _FLAG_PROTECT_EARLY) != 0
+
     def _recompute_p0_skip() -> bool:
         return (
             is_switch
@@ -2996,20 +3350,34 @@ def step_battle_gen9(
 
         pr1_cur = int(battle[OFF_FIELD + F_PROTECT_1])
         pr0_cur = int(battle[OFF_FIELD + F_PROTECT_0])
-        qg1_active = (get_protect_active(pr1_cur) > 0) and (get_protect_type(pr1_cur) == PROTECT_QUICK_GUARD)
-        qg0_active = (get_protect_active(pr0_cur) > 0) and (get_protect_type(pr0_cur) == PROTECT_QUICK_GUARD)
+        qg1_active = (get_protect_active(pr1_cur) > 0) and (
+            get_protect_type(pr1_cur) == PROTECT_QUICK_GUARD
+        )
+        qg0_active = (get_protect_active(pr0_cur) > 0) and (
+            get_protect_type(pr0_cur) == PROTECT_QUICK_GUARD
+        )
         quick_guard1_blocked = qg1_active and (priority_bracket0 > 0)
         quick_guard0_blocked = qg0_active and (priority_bracket1 > 0)
 
         target0_protected = fx.check_protected(battle, 1)
         target1_protected = fx.check_protected(battle, 0)
-        target0_protected = target0_protected and not unseen_fist0 and move0_respects_protect_early
-        target1_protected = target1_protected and not unseen_fist1 and move1_respects_protect_early
         target0_protected = (
-            target0_protected or priority0_blocked or quick_guard1_blocked or dazzling_blocked0
+            target0_protected and not unseen_fist0 and move0_respects_protect_early
         )
         target1_protected = (
-            target1_protected or priority1_blocked or quick_guard0_blocked or dazzling_blocked1
+            target1_protected and not unseen_fist1 and move1_respects_protect_early
+        )
+        target0_protected = (
+            target0_protected
+            or priority0_blocked
+            or quick_guard1_blocked
+            or dazzling_blocked0
+        )
+        target1_protected = (
+            target1_protected
+            or priority1_blocked
+            or quick_guard0_blocked
+            or dazzling_blocked1
         )
         target0_bypasses_protect = target0_protected
         target1_bypasses_protect = target1_protected
@@ -3025,7 +3393,9 @@ def step_battle_gen9(
     # before a faster opponent attacks earlier in the same turn.
     from pokepy.core.constants import EXT_VOL_LIBERO_USED as _EVLIBERO
 
-    def _maybe_apply_protean_libero(side_idx: int, mid: int, is_sw: bool, is_strike: bool) -> None:
+    def _maybe_apply_protean_libero(
+        side_idx: int, mid: int, is_sw: bool, is_strike: bool
+    ) -> None:
         side_base = OFF_SIDE0 if side_idx == 0 else OFF_SIDE1
         act = int(battle[OFF_META + (M_ACTIVE0 if side_idx == 0 else M_ACTIVE1)])
         poff = side_base + act * POKEMON_SIZE
@@ -3040,7 +3410,9 @@ def step_battle_gen9(
             return
         if mid in (MOVE_STRUGGLE, MOVE_FUTURE_SIGHT, MOVE_DOOM_DESIRE):
             return
-        ev_off = OFF_FIELD + (F_EXTENDED_VOLATILE_0 if side_idx == 0 else F_EXTENDED_VOLATILE_1)
+        ev_off = OFF_FIELD + (
+            F_EXTENDED_VOLATILE_0 if side_idx == 0 else F_EXTENDED_VOLATILE_1
+        )
         ev_cur = int(battle[ev_off]) & 0xFFFF
         if (ev_cur & _EVLIBERO) != 0:
             return
@@ -3091,7 +3463,12 @@ def step_battle_gen9(
             has_assault_vest = int(battle[poff + 6]) == ITEM_ASSAULT_VEST
             is_taunted = get_taunt_turns(int(battle[vol_off])) > 0
             is_tera = (int(battle[poff + 15]) & 0x8) != 0
-            if int(battle[poff + 1]) >= int(battle[poff + 2]) or has_assault_vest or is_taunted or is_tera:
+            if (
+                int(battle[poff + 1]) >= int(battle[poff + 2])
+                or has_assault_vest
+                or is_taunted
+                or is_tera
+            ):
                 return
             _strip_flying(poff)
             roost_applied0 = True
@@ -3104,7 +3481,12 @@ def step_battle_gen9(
         has_assault_vest = int(battle[poff + 6]) == ITEM_ASSAULT_VEST
         is_taunted = get_taunt_turns(int(battle[vol_off])) > 0
         is_tera = (int(battle[poff + 15]) & 0x8) != 0
-        if int(battle[poff + 1]) >= int(battle[poff + 2]) or has_assault_vest or is_taunted or is_tera:
+        if (
+            int(battle[poff + 1]) >= int(battle[poff + 2])
+            or has_assault_vest
+            or is_taunted
+            or is_tera
+        ):
             return
         _strip_flying(poff)
         roost_applied1 = True
@@ -3153,19 +3535,21 @@ def step_battle_gen9(
         tera_used = (flags & 0x8) != 0
         if not tera_used:
             return int(battle[p_off + 4])
-        meta_off = OFF_META + (M_TERA_ORIG_TYPES_0 if side_idx == 0 else M_TERA_ORIG_TYPES_1)
+        meta_off = OFF_META + (
+            M_TERA_ORIG_TYPES_0 if side_idx == 0 else M_TERA_ORIG_TYPES_1
+        )
         orig = int(battle[meta_off])
         return orig if orig != 0 else int(battle[p_off + 4])
 
     _types0_for_hf = _orig_types_for_active(0, p0_off)
     _types1_for_hf = _orig_types_for_active(1, p1_off)
-    _hoopa_unbound0 = (
-        int(battle[p0_off + 0]) == _SPECIES_HOOPA
-        and (((_types0_for_hf & 0xFF) == TYPE_DARK) or (((_types0_for_hf >> 8) & 0xFF) == TYPE_DARK))
+    _hoopa_unbound0 = int(battle[p0_off + 0]) == _SPECIES_HOOPA and (
+        ((_types0_for_hf & 0xFF) == TYPE_DARK)
+        or (((_types0_for_hf >> 8) & 0xFF) == TYPE_DARK)
     )
-    _hoopa_unbound1 = (
-        int(battle[p1_off + 0]) == _SPECIES_HOOPA
-        and (((_types1_for_hf & 0xFF) == TYPE_DARK) or (((_types1_for_hf >> 8) & 0xFF) == TYPE_DARK))
+    _hoopa_unbound1 = int(battle[p1_off + 0]) == _SPECIES_HOOPA and (
+        ((_types1_for_hf & 0xFF) == TYPE_DARK)
+        or (((_types1_for_hf >> 8) & 0xFF) == TYPE_DARK)
     )
     hyperspace_fury_fail0 = move_id0 == _MOVE_HYPERSPACE_FURY and not _hoopa_unbound0
     hyperspace_fury_fail1 = move_id1 == _MOVE_HYPERSPACE_FURY and not _hoopa_unbound1
@@ -3181,7 +3565,9 @@ def step_battle_gen9(
 
     fs_current = int(battle[OFF_META + M_FUTURE_SIGHT])
     delayed_ready0 = is_delayed0 and not is_switch and ((fs_current >> 12) & 0xF) == 0
-    delayed_ready1 = is_delayed1 and not opp_is_switch and ((fs_current >> 4) & 0xF) == 0
+    delayed_ready1 = (
+        is_delayed1 and not opp_is_switch and ((fs_current >> 4) & 0xF) == 0
+    )
 
     # Prankster vs Dark
     target1_is_dark = (t1_t1 == TYPE_DARK) or (t1_t2 == TYPE_DARK)
@@ -3205,19 +3591,21 @@ def step_battle_gen9(
     target1_kind = int(game_data.move_target[move_id1])
     move0_targets_foe_mon = target0_kind in (0, 1, 2, 4, 5, 6, 8, 11, 12)
     move1_targets_foe_mon = target1_kind in (0, 1, 2, 4, 5, 6, 8, 11, 12)
-    move0_can_change_foe_item = (
-        int(move_effects.effect_type[move_id0]) == EFFECT_KNOCK_OFF
-        or int(move_id0) in (MOVE_TRICK, MOVE_SWITCHEROO)
+    move0_can_change_foe_item = int(
+        move_effects.effect_type[move_id0]
+    ) == EFFECT_KNOCK_OFF or int(move_id0) in (MOVE_TRICK, MOVE_SWITCHEROO)
+    move1_can_change_foe_item = int(
+        move_effects.effect_type[move_id1]
+    ) == EFFECT_KNOCK_OFF or int(move_id1) in (MOVE_TRICK, MOVE_SWITCHEROO)
+    move0_no_target = (
+        (not is_delayed0)
+        and move0_targets_foe_mon
+        and (int(battle[p1_off + 1]) <= 0 or (int(battle[p1_off + 15]) & 0x1) != 0)
     )
-    move1_can_change_foe_item = (
-        int(move_effects.effect_type[move_id1]) == EFFECT_KNOCK_OFF
-        or int(move_id1) in (MOVE_TRICK, MOVE_SWITCHEROO)
-    )
-    move0_no_target = (not is_delayed0) and move0_targets_foe_mon and (
-        int(battle[p1_off + 1]) <= 0 or (int(battle[p1_off + 15]) & 0x1) != 0
-    )
-    move1_no_target = (not is_delayed1) and move1_targets_foe_mon and (
-        int(battle[p0_off + 1]) <= 0 or (int(battle[p0_off + 15]) & 0x1) != 0
+    move1_no_target = (
+        (not is_delayed1)
+        and move1_targets_foe_mon
+        and (int(battle[p0_off + 1]) <= 0 or (int(battle[p0_off + 15]) & 0x1) != 0)
     )
     prankster_fail0 = (
         (p0_ab == ABILITY_PRANKSTER)
@@ -3481,7 +3869,9 @@ def step_battle_gen9(
     _lockedmove_prerolled = {0: None, 1: None}  # side -> rolled duration or None
     _LOCKEDMOVE_CONFUSION_PENDING = 10_000
 
-    def _roll_pending_lockedmove_confusion(side: int, user_off: int, *, apply: bool = False) -> None:
+    def _roll_pending_lockedmove_confusion(
+        side: int, user_off: int, *, apply: bool = False
+    ) -> None:
         """Roll fatigue-confusion duration after Showdown's post-hit Update."""
         if _lockedmove_prerolled.get(side) != _LOCKEDMOVE_CONFUSION_PENDING:
             return
@@ -3708,7 +4098,9 @@ def step_battle_gen9(
         Deliberately excludes post-accuracy status failures such as Safeguard,
         Misty Terrain, Purifying Salt, or an already-statused target.
         """
-        from pokepy.effects.ability_suppression import effective_ability as _effective_ability_pre
+        from pokepy.effects.ability_suppression import (
+            effective_ability as _effective_ability_pre,
+        )
 
         if target_kind not in _STATUS_TARGET_FOE_MON:
             return False
@@ -3788,21 +4180,36 @@ def step_battle_gen9(
         target1_kind,
         prankster_fail1,
     )
+
     def _status_accuracy_preroll_needed(side_idx: int) -> bool:
         if side_idx == 0:
-            if not _move0_is_status_pre or p0_skip or _field_or_self0 or _pre_accuracy_block0:
+            if (
+                not _move0_is_status_pre
+                or p0_skip
+                or _field_or_self0
+                or _pre_accuracy_block0
+            ):
                 return False
             if _acc0_bypass_pre:
                 return False
             user_types = int(battle[p0_off + 4]) & 0xFFFF
-            user_is_poison = (user_types & 0xFF) == TYPE_POISON or ((user_types >> 8) & 0xFF) == TYPE_POISON
+            user_is_poison = (user_types & 0xFF) == TYPE_POISON or (
+                (user_types >> 8) & 0xFF
+            ) == TYPE_POISON
             return not (move_id0 == _MOVE_TOXIC_PRE and user_is_poison)
-        if not _move1_is_status_pre or p1_skip or _field_or_self1 or _pre_accuracy_block1:
+        if (
+            not _move1_is_status_pre
+            or p1_skip
+            or _field_or_self1
+            or _pre_accuracy_block1
+        ):
             return False
         if _acc1_bypass_pre:
             return False
         user_types = int(battle[p1_off + 4]) & 0xFFFF
-        user_is_poison = (user_types & 0xFF) == TYPE_POISON or ((user_types >> 8) & 0xFF) == TYPE_POISON
+        user_is_poison = (user_types & 0xFF) == TYPE_POISON or (
+            (user_types >> 8) & 0xFF
+        ) == TYPE_POISON
         return not (move_id1 == _MOVE_TOXIC_PRE and user_is_poison)
 
     def _status_move_hits_pre(side_idx: int, prerolled_acc: "int | None") -> bool:
@@ -3810,7 +4217,9 @@ def step_battle_gen9(
             if _pre_accuracy_block0:
                 return False
             user_types = int(battle[p0_off + 4]) & 0xFFFF
-            user_is_poison = (user_types & 0xFF) == TYPE_POISON or ((user_types >> 8) & 0xFF) == TYPE_POISON
+            user_is_poison = (user_types & 0xFF) == TYPE_POISON or (
+                (user_types >> 8) & 0xFF
+            ) == TYPE_POISON
             return (
                 (move_id0 == _MOVE_TOXIC_PRE and user_is_poison)
                 or _acc0_bypass_pre
@@ -3819,12 +4228,15 @@ def step_battle_gen9(
         if _pre_accuracy_block1:
             return False
         user_types = int(battle[p1_off + 4]) & 0xFFFF
-        user_is_poison = (user_types & 0xFF) == TYPE_POISON or ((user_types >> 8) & 0xFF) == TYPE_POISON
+        user_is_poison = (user_types & 0xFF) == TYPE_POISON or (
+            (user_types >> 8) & 0xFF
+        ) == TYPE_POISON
         return (
             (move_id1 == _MOVE_TOXIC_PRE and user_is_poison)
             or _acc1_bypass_pre
             or (prerolled_acc is not None and prerolled_acc < _acc1_pre)
         )
+
     _prerolled_status_acc0: "int | None" = None
     _prerolled_status_acc1: "int | None" = None
 
@@ -3943,12 +4355,16 @@ def step_battle_gen9(
             sample_idx = int(gen5_prng.random(_sleep_talk_n0))
             move_id0 = int(_sleep_talk_cands0[sample_idx])
             base_priority0 = int(game_data.move_priority[move_id0])
-            priority0 = fx.get_effective_priority(battle, move_id0, base_priority0, p0_off, gen5_prng)
+            priority0 = fx.get_effective_priority(
+                battle, move_id0, base_priority0, p0_off, gen5_prng
+            )
             priority_bracket0 = int(_math_priority.floor(float(priority0)))
             move0_flags = int(game_data.move_flags[move_id0])
             is_punch0 = (move0_flags & FLAG_PUNCH) != 0
             is_contact0 = (move0_flags & FLAG_CONTACT) != 0
-            if (is_punch0 and p0_item_pg == _ITEM_PUNCHING_GLOVE) or p0_ab == ABILITY_LONG_REACH:
+            if (
+                is_punch0 and p0_item_pg == _ITEM_PUNCHING_GLOVE
+            ) or p0_ab == ABILITY_LONG_REACH:
                 is_contact0 = False
             unseen_fist0 = (p0_ab == ABILITY_UNSEEN_FIST) and is_contact0
             move0_respects_protect_early = (move0_flags & _FLAG_PROTECT_EARLY) != 0
@@ -3961,12 +4377,16 @@ def step_battle_gen9(
             _acc0_bypass_pre = _acc0_pre == 0 or _acc0_pre > 100
             target0_kind = int(game_data.move_target[move_id0])
             move0_targets_foe_mon = target0_kind in (0, 1, 2, 4, 5, 6, 8, 11, 12)
-            move0_can_change_foe_item = (
-                int(move_effects.effect_type[move_id0]) == EFFECT_KNOCK_OFF
-                or int(move_id0) in (MOVE_TRICK, MOVE_SWITCHEROO)
-            )
-            move0_no_target = (move_id0 not in (MOVE_FUTURE_SIGHT, MOVE_DOOM_DESIRE)) and move0_targets_foe_mon and (
-                int(battle[p1_off + 1]) <= 0 or (int(battle[p1_off + 15]) & 0x1) != 0
+            move0_can_change_foe_item = int(
+                move_effects.effect_type[move_id0]
+            ) == EFFECT_KNOCK_OFF or int(move_id0) in (MOVE_TRICK, MOVE_SWITCHEROO)
+            move0_no_target = (
+                (move_id0 not in (MOVE_FUTURE_SIGHT, MOVE_DOOM_DESIRE))
+                and move0_targets_foe_mon
+                and (
+                    int(battle[p1_off + 1]) <= 0
+                    or (int(battle[p1_off + 15]) & 0x1) != 0
+                )
             )
             prankster_fail0 = (
                 (p0_ab == ABILITY_PRANKSTER)
@@ -3974,7 +4394,9 @@ def step_battle_gen9(
                 and move0_targets_foe_mon
                 and target1_is_dark
             )
-            last_resort_fail0 = _last_resort_fails_for_slot(state, 0, move_user_slot0, move_id0)
+            last_resort_fail0 = _last_resort_fails_for_slot(
+                state, 0, move_user_slot0, move_id0
+            )
             pre_damage_fail0 = (
                 first_turn_fail0
                 or hyperspace_fury_fail0
@@ -3995,12 +4417,16 @@ def step_battle_gen9(
             sample_idx = int(gen5_prng.random(_sleep_talk_n1))
             move_id1 = int(_sleep_talk_cands1[sample_idx])
             base_priority1 = int(game_data.move_priority[move_id1])
-            priority1 = fx.get_effective_priority(battle, move_id1, base_priority1, p1_off, gen5_prng)
+            priority1 = fx.get_effective_priority(
+                battle, move_id1, base_priority1, p1_off, gen5_prng
+            )
             priority_bracket1 = int(_math_priority.floor(float(priority1)))
             move1_flags = int(game_data.move_flags[move_id1])
             is_punch1 = (move1_flags & FLAG_PUNCH) != 0
             is_contact1 = (move1_flags & FLAG_CONTACT) != 0
-            if (is_punch1 and p1_item_pg == _ITEM_PUNCHING_GLOVE) or p1_ab == ABILITY_LONG_REACH:
+            if (
+                is_punch1 and p1_item_pg == _ITEM_PUNCHING_GLOVE
+            ) or p1_ab == ABILITY_LONG_REACH:
                 is_contact1 = False
             unseen_fist1 = (p1_ab == ABILITY_UNSEEN_FIST) and is_contact1
             move1_respects_protect_early = (move1_flags & _FLAG_PROTECT_EARLY) != 0
@@ -4013,12 +4439,16 @@ def step_battle_gen9(
             _acc1_bypass_pre = _acc1_pre == 0 or _acc1_pre > 100
             target1_kind = int(game_data.move_target[move_id1])
             move1_targets_foe_mon = target1_kind in (0, 1, 2, 4, 5, 6, 8, 11, 12)
-            move1_can_change_foe_item = (
-                int(move_effects.effect_type[move_id1]) == EFFECT_KNOCK_OFF
-                or int(move_id1) in (MOVE_TRICK, MOVE_SWITCHEROO)
-            )
-            move1_no_target = (move_id1 not in (MOVE_FUTURE_SIGHT, MOVE_DOOM_DESIRE)) and move1_targets_foe_mon and (
-                int(battle[p0_off + 1]) <= 0 or (int(battle[p0_off + 15]) & 0x1) != 0
+            move1_can_change_foe_item = int(
+                move_effects.effect_type[move_id1]
+            ) == EFFECT_KNOCK_OFF or int(move_id1) in (MOVE_TRICK, MOVE_SWITCHEROO)
+            move1_no_target = (
+                (move_id1 not in (MOVE_FUTURE_SIGHT, MOVE_DOOM_DESIRE))
+                and move1_targets_foe_mon
+                and (
+                    int(battle[p0_off + 1]) <= 0
+                    or (int(battle[p0_off + 15]) & 0x1) != 0
+                )
             )
             prankster_fail1 = (
                 (p1_ab == ABILITY_PRANKSTER)
@@ -4026,7 +4456,9 @@ def step_battle_gen9(
                 and move1_targets_foe_mon
                 and target0_is_dark
             )
-            last_resort_fail1 = _last_resort_fails_for_slot(state, 1, move_user_slot1, move_id1)
+            last_resort_fail1 = _last_resort_fails_for_slot(
+                state, 1, move_user_slot1, move_id1
+            )
             pre_damage_fail1 = (
                 first_turn_fail1
                 or hyperspace_fury_fail1
@@ -4165,13 +4597,17 @@ def step_battle_gen9(
         """
         nonlocal _status_early_applied0, _status_early_applied1
 
-        def _target_has_non_bypassed_sub(user_off: int, target_off: int, move_id: int) -> bool:
+        def _target_has_non_bypassed_sub(
+            user_off: int, target_off: int, move_id: int
+        ) -> bool:
             move_flags_local = int(game_data.move_flags[int(move_id)])
             is_sound_local = (move_flags_local & FLAG_SOUND) != 0
             is_infiltrator_local = int(battle[int(user_off) + 5]) == ABILITY_INFILTRATOR
             if is_sound_local or is_infiltrator_local:
                 return False
-            sub_off = OFF_FIELD + (F_SUBSTITUTE_1 if int(target_off) >= OFF_SIDE1 else F_SUBSTITUTE_0)
+            sub_off = OFF_FIELD + (
+                F_SUBSTITUTE_1 if int(target_off) >= OFF_SIDE1 else F_SUBSTITUTE_0
+            )
             return int(battle[sub_off]) > 0
 
         if inflicter_side == 0:
@@ -4241,11 +4677,15 @@ def step_battle_gen9(
             return
         if int(battle[target_off + 1]) <= 0:
             return
-        move_flags_local = int(game_data.move_flags[move_id0 if inflicter_side == 0 else move_id1])
+        move_flags_local = int(
+            game_data.move_flags[move_id0 if inflicter_side == 0 else move_id1]
+        )
         is_sound_local = (move_flags_local & FLAG_SOUND) != 0
         is_infiltrator_local = int(battle[user_off + 5]) == ABILITY_INFILTRATOR
         if not is_sound_local and not is_infiltrator_local:
-            sub_off = OFF_FIELD + (F_SUBSTITUTE_1 if int(target_off) >= OFF_SIDE1 else F_SUBSTITUTE_0)
+            sub_off = OFF_FIELD + (
+                F_SUBSTITUTE_1 if int(target_off) >= OFF_SIDE1 else F_SUBSTITUTE_0
+            )
             if int(battle[sub_off]) > 0:
                 return
         from pokepy.effects.status_apply import _try_apply_status
@@ -4357,11 +4797,19 @@ def step_battle_gen9(
         if not meta.get("contact_status_consumed"):
             return False
         before_status = get_status(int(battle[atk_off + 12]))
-        before_ext = int(
-            battle[
-                OFF_FIELD + (F_EXTENDED_VOLATILE_0 if atk_off < OFF_SIDE1 else F_EXTENDED_VOLATILE_1)
-            ]
-        ) & 0xFFFF
+        before_ext = (
+            int(
+                battle[
+                    OFF_FIELD
+                    + (
+                        F_EXTENDED_VOLATILE_0
+                        if atk_off < OFF_SIDE1
+                        else F_EXTENDED_VOLATILE_1
+                    )
+                ]
+            )
+            & 0xFFFF
+        )
         status_applied = fx.apply_resolved_contact_status_ability(
             battle,
             atk_off,
@@ -4372,11 +4820,19 @@ def step_battle_gen9(
             resolved_status_field=meta.get("contact_status_packed"),
             apply_attract=bool(meta.get("contact_status_apply_attract")),
         )
-        after_ext = int(
-            battle[
-                OFF_FIELD + (F_EXTENDED_VOLATILE_0 if atk_off < OFF_SIDE1 else F_EXTENDED_VOLATILE_1)
-            ]
-        ) & 0xFFFF
+        after_ext = (
+            int(
+                battle[
+                    OFF_FIELD
+                    + (
+                        F_EXTENDED_VOLATILE_0
+                        if atk_off < OFF_SIDE1
+                        else F_EXTENDED_VOLATILE_1
+                    )
+                ]
+            )
+            & 0xFFFF
+        )
         if status_applied and get_status(int(battle[atk_off + 12])) != before_status:
             _run_immediate_status_berry_updates(atk_off)
         return status_applied or after_ext != before_ext
@@ -4516,7 +4972,8 @@ def step_battle_gen9(
             if (
                 _get_throat_chop_turns_sc(_vol_word) > 0
                 and int(current_move_id) >= 0
-                and (int(game_data.move_flags[int(current_move_id)]) & _FLAG_SOUND_SC) != 0
+                and (int(game_data.move_flags[int(current_move_id)]) & _FLAG_SOUND_SC)
+                != 0
             ):
                 _throat_chop_block = True
 
@@ -4579,14 +5036,22 @@ def step_battle_gen9(
     # continuation has already resolved. Ordinary self-switch pivots still run
     # that late Update bucket after the slower move and residual.
     _inline_item_switch_rewrote_active = False
-    _prerolled_contact0 = []  # prerolled Flame Body / Static / Poison Touch rolls for first mover
-    _prerolled_contact1 = []  # prerolled contact rolls for second mover (empty = use live roll)
+    _prerolled_contact0 = (
+        []
+    )  # prerolled Flame Body / Static / Poison Touch rolls for first mover
+    _prerolled_contact1 = (
+        []
+    )  # prerolled contact rolls for second mover (empty = use live roll)
     _prerolled_toxic_chain0 = None
     _prerolled_toxic_chain1 = None
     _pivot_toxic_chain_handled0 = False
     _pivot_toxic_chain_handled1 = False
-    _move0_stat_preapplied = False  # set True when first mover's self-boosts applied early
-    _move1_stat_preapplied = False  # set True when second mover's self-boosts applied early
+    _move0_stat_preapplied = (
+        False  # set True when first mover's self-boosts applied early
+    )
+    _move1_stat_preapplied = (
+        False  # set True when second mover's self-boosts applied early
+    )
     _move0_successful_self_boost_status = False
     _move1_successful_self_boost_status = False
     _MOVE_PARTING_SHOT_INLINE = 575
@@ -4601,7 +5066,10 @@ def step_battle_gen9(
             if _slot == _active_slot:
                 continue
             _slot_off = _side_base + _slot * POKEMON_SIZE
-            if int(battle[_slot_off + 1]) > 0 and (int(battle[_slot_off + 15]) & 0x1) == 0:
+            if (
+                int(battle[_slot_off + 1]) > 0
+                and (int(battle[_slot_off + 15]) & 0x1) == 0
+            ):
                 return True
         return False
 
@@ -4637,20 +5105,14 @@ def step_battle_gen9(
         switched = False
         while True:
             current_active = int(battle[OFF_META + active_meta])
-            if holder_side == 0 and resolve_mid_turn_switch0 is not None:
-                switch_action = int(resolve_mid_turn_switch0(state))
-                new_active = _resolve_switch_target_from_action(
-                    OFF_SIDE0,
-                    current_active,
-                    switch_action,
-                )
-            else:
-                new_active = fx.auto_switch(
-                    battle,
-                    side_base,
-                    current_active,
-                    True,
-                )
+            _switch_req = SwitchRequest((holder_side,))
+            _choices = yield _switch_req
+            _new_slot = int(_choices[holder_side])
+            new_active = _resolve_switch_target_from_action(
+                side_base,
+                current_active,
+                _new_slot + 4,
+            )
             if new_active == current_active:
                 break
 
@@ -4705,7 +5167,9 @@ def step_battle_gen9(
             if int(battle[opponent_off + 1]) > 0:
                 _consume_switch_request_resume_tie_frames(
                     switcher_speed,
-                    _action_speed_from_effective(fx.get_effective_speed(battle, opponent_off)),
+                    _action_speed_from_effective(
+                        fx.get_effective_speed(battle, opponent_off)
+                    ),
                     True,
                     gen5_prng,
                 )
@@ -4813,7 +5277,7 @@ def step_battle_gen9(
             target_offset=_target_off,
             phase="drain",
         )
-        fx.apply_contact_damage(
+        _apply_contact_damage_tracked(
             _sim,
             _move_id,
             _user_off,
@@ -4886,7 +5350,9 @@ def step_battle_gen9(
             return 0
         if _target_had_sub:
             return min(int(_raw_damage), int(_sub_hp_before))
-        return min(int(_raw_damage), max(0, int(_target_hp_before) - int(_target_hp_after)))
+        return min(
+            int(_raw_damage), max(0, int(_target_hp_before) - int(_target_hp_after))
+        )
 
     def _project_target_hp_after_hit(
         _user_off,
@@ -4933,12 +5399,9 @@ def step_battle_gen9(
         )
         _target_max_hp = int(battle[_target_off + 2])
         _damage_through = _raw_damage
-        if (
-            ((_target_flags & 0x40) != 0)
-            and (
-                _target_ability == ABILITY_DISGUISE
-                or (_target_ability == ABILITY_ICE_FACE and _cat == CAT_PHYSICAL)
-            )
+        if ((_target_flags & 0x40) != 0) and (
+            _target_ability == ABILITY_DISGUISE
+            or (_target_ability == ABILITY_ICE_FACE and _cat == CAT_PHYSICAL)
         ):
             _damage_through = max(1, _target_max_hp // 8)
         _new_hp = max(0, _target_hp_before - _damage_through)
@@ -5009,7 +5472,9 @@ def step_battle_gen9(
 
     _CRASH_DAMAGE_MOVES_PRE = (26, 136, 853, 916)
 
-    def _apply_crash_damage_on_move_fail(_sim, _user_off, _move_id, _did_hit, _move_attempted):
+    def _apply_crash_damage_on_move_fail(
+        _sim, _user_off, _move_id, _did_hit, _move_attempted
+    ):
         if int(_move_id) not in _CRASH_DAMAGE_MOVES_PRE:
             return
         if (not _move_attempted) or _did_hit:
@@ -5020,7 +5485,9 @@ def step_battle_gen9(
             return
         _max_hp_crash = int(_sim[int(_user_off) + 2])
         _crash_cost = max(1, _max_hp_crash // 2)
-        _sim[int(_user_off) + 1] = np.int16(max(0, int(_sim[int(_user_off) + 1]) - _crash_cost))
+        _sim[int(_user_off) + 1] = np.int16(
+            max(0, int(_sim[int(_user_off) + 1]) - _crash_cost)
+        )
 
     def _project_user_hp_after_own_postmove(
         _user_off,
@@ -5061,7 +5528,7 @@ def step_battle_gen9(
             target_offset=_target_off,
             phase="drain",
         )
-        fx.apply_contact_damage(
+        _apply_contact_damage_tracked(
             _sim,
             _move_id,
             _user_off,
@@ -5092,7 +5559,7 @@ def step_battle_gen9(
         )
         if not include_after_move_secondary:
             return int(_sim[int(_user_off) + 1])
-        fx.apply_life_orb_recoil(
+        _apply_life_orb_recoil_tracked(
             _sim,
             _user_off,
             _raw_damage,
@@ -5278,9 +5745,19 @@ def step_battle_gen9(
                 _sleep_talk_consume_sample(0)
             if not (_self_hit0 or _p0_immobile_pre or _sleep_talk_try_failed0):
                 _rest_try_failed0 = _rest_try_fails(0)
-            if not (_self_hit0 or _p0_immobile_pre or _sleep_talk_try_failed0 or _rest_try_failed0):
+            if not (
+                _self_hit0
+                or _p0_immobile_pre
+                or _sleep_talk_try_failed0
+                or _rest_try_failed0
+            ):
                 _resolve_protect_after_before_move(0)
-            if not (_self_hit0 or _p0_immobile_pre or _sleep_talk_try_failed0 or _rest_try_failed0):
+            if not (
+                _self_hit0
+                or _p0_immobile_pre
+                or _sleep_talk_try_failed0
+                or _rest_try_failed0
+            ):
                 _apply_roost_type_strip(0)
             if not (
                 _self_hit0
@@ -5294,16 +5771,31 @@ def step_battle_gen9(
                 0,
                 p0_off,
                 p1_off,
-                _self_hit0 or _p0_immobile_pre or _sleep_talk_try_failed0 or _rest_try_failed0 or move0_no_target,
+                _self_hit0
+                or _p0_immobile_pre
+                or _sleep_talk_try_failed0
+                or _rest_try_failed0
+                or move0_no_target,
             ):
                 _move0_stat_preapplied = True
             if _status_accuracy_preroll_needed(0) and not (
-                _self_hit0 or _p0_immobile_pre or _sleep_talk_try_failed0 or _rest_try_failed0
+                _self_hit0
+                or _p0_immobile_pre
+                or _sleep_talk_try_failed0
+                or _rest_try_failed0
             ):
                 _prerolled_status_acc0 = int(gen5_prng.random(100))
-            damage0 = 0 if (
-                _self_hit0 or _p0_immobile_pre or _sleep_talk_try_failed0 or _rest_try_failed0 or move0_no_target
-            ) else _calc_p0()
+            damage0 = (
+                0
+                if (
+                    _self_hit0
+                    or _p0_immobile_pre
+                    or _sleep_talk_try_failed0
+                    or _rest_try_failed0
+                    or move0_no_target
+                )
+                else _calc_p0()
+            )
             if (
                 _self_hit0
                 or _p0_immobile_pre
@@ -5360,8 +5852,15 @@ def step_battle_gen9(
             damage0 = 0
         if move1_targets_foe_mon and not is_delayed1 and int(battle[p0_off + 1]) <= 0:
             move1_no_target = True
-        _first_attacker_flinches_target = bool((prerolled_move0 or {}).get("flinch_lands"))
-        if cat0 == CAT_STATUS and not _p0_immobile_pre and not _self_hit0 and not is_switch:
+        _first_attacker_flinches_target = bool(
+            (prerolled_move0 or {}).get("flinch_lands")
+        )
+        if (
+            cat0 == CAT_STATUS
+            and not _p0_immobile_pre
+            and not _self_hit0
+            and not is_switch
+        ):
             _preset_screen_if_status(move_id0, 0)
             _status_hit0_pre = _status_move_hits_pre(0, _prerolled_status_acc0)
             # Pre-apply the first mover's primary self-boosts (Coil, Calm
@@ -5384,7 +5883,8 @@ def step_battle_gen9(
                 _move0_stat_preapplied = True
                 _move0_successful_self_boost_status = (
                     _eff0_pre == _EFFECT_STAT_CHANGE_EARLY
-                    and (int(battle[p0_off + 13]), int(battle[p0_off + 14])) != _boosts0_before
+                    and (int(battle[p0_off + 13]), int(battle[p0_off + 14]))
+                    != _boosts0_before
                 )
             if (
                 _eff0_pre == EFFECT_SWITCH
@@ -5395,8 +5895,14 @@ def step_battle_gen9(
                 and not prankster_fail0
                 and not _move0_canceled_pre
             ):
-                _tgt0_boosts_before = (int(battle[p1_off + 13]), int(battle[p1_off + 14]))
-                _usr0_boosts_before = (int(battle[p0_off + 13]), int(battle[p0_off + 14]))
+                _tgt0_boosts_before = (
+                    int(battle[p1_off + 13]),
+                    int(battle[p1_off + 14]),
+                )
+                _usr0_boosts_before = (
+                    int(battle[p0_off + 13]),
+                    int(battle[p0_off + 14]),
+                )
                 _apply_stat_changes_from_move_tracked(
                     move_id0,
                     p0_off,
@@ -5405,9 +5911,12 @@ def step_battle_gen9(
                 )
                 _move0_stat_preapplied = True
                 _partingshot0_pre_success = (
-                    (int(battle[p1_off + 13]), int(battle[p1_off + 14])) != _tgt0_boosts_before
-                    or (int(battle[p0_off + 13]), int(battle[p0_off + 14])) != _usr0_boosts_before
-                )
+                    int(battle[p1_off + 13]),
+                    int(battle[p1_off + 14]),
+                ) != _tgt0_boosts_before or (
+                    int(battle[p0_off + 13]),
+                    int(battle[p0_off + 14]),
+                ) != _usr0_boosts_before
             # Pre-apply the first mover's primary status effect (Thunder
             # Wave, Toxic, Will-O-Wisp, Spore, etc.) so the second mover's
             # onBeforeMove sees the new status. Showdown resolves primary
@@ -5459,11 +5968,13 @@ def step_battle_gen9(
             and not _self_hit0
             and cat0 != CAT_STATUS
         ):
-            _sc0_arr, _st0_dmg, _sc0_dmg, _selfboost0_like = fx.get_live_move_stat_change_spec(
-                battle,
-                move_id0,
-                move_effects,
-                p0_off,
+            _sc0_arr, _st0_dmg, _sc0_dmg, _selfboost0_like = (
+                fx.get_live_move_stat_change_spec(
+                    battle,
+                    move_id0,
+                    move_effects,
+                    p0_off,
+                )
             )
             _has_any_sc0 = any(int(_sc0_arr[i]) != 0 for i in range(7))
             _selfboost0_attempted = _selfboost0_like and bool(target1_protected)
@@ -5536,7 +6047,12 @@ def step_battle_gen9(
                     prerolled_roll=(prerolled_move0 or {}).get("stat_change"),
                 )
                 _move0_stat_preapplied = True
-        if side1_survives and not opp_is_switch and not _first_attacker_flinches_target and not _self_hit1:
+        if (
+            side1_survives
+            and not opp_is_switch
+            and not _first_attacker_flinches_target
+            and not _self_hit1
+        ):
             if (
                 speeds_tied
                 and not is_switch
@@ -5620,9 +6136,9 @@ def step_battle_gen9(
             # we must temporarily mirror the damage application on the
             # second attacker's HP slot. Restore after the calc so the
             # real damage pipeline below applies damage0 cleanly.
-                # If Sturdy / Focus Sash saved side1, clamp to 1 HP (not 0)
-                # so Endeavor and other HP-dependent moves read the correct
-                # post-survival HP value.
+            # If Sturdy / Focus Sash saved side1, clamp to 1 HP (not 0)
+            # so Endeavor and other HP-dependent moves read the correct
+            # post-survival HP value.
             _saved_hp1 = int(battle[p1_off + 1])
             battle[p1_off + 1] = np.int16(
                 _project_target_hp_after_hit(
@@ -5749,8 +6265,7 @@ def step_battle_gen9(
             if _eject_pack_ready0 and _target1_eject_button_cancels_pivot0:
                 _eject_pack_blocked0 = True
             _pivot_is_eject_pack0 = (
-                _eject_pack_ready0
-                and not _target1_eject_button_cancels_pivot0
+                _eject_pack_ready0 and not _target1_eject_button_cancels_pivot0
             )
             _ABILITY_SUCTION_CUPS_INLINE = 21
             _ABILITY_GUARD_DOG_INLINE = 275
@@ -5762,27 +6277,22 @@ def step_battle_gen9(
                 and not _p0_immobile_pre
                 and not _self_hit0
                 and cat0 != CAT_STATUS
-                and p0_ab not in (_ABILITY_SUCTION_CUPS_INLINE, _ABILITY_GUARD_DOG_INLINE)
+                and p0_ab
+                not in (_ABILITY_SUCTION_CUPS_INLINE, _ABILITY_GUARD_DOG_INLINE)
             )
             if _target1_red_card_overrides_pivot0:
                 _pivot_selfswitch_canceled_0 = True
             _is_pivot_0 = (
-                (
-                    int(move_effects.effect_type[move_id0]) == EFFECT_SWITCH
-                    and not is_switch
-                    and not _p0_immobile_pre
-                    and not _self_hit0
-                    and (damage0 > 0 or cat0 == CAT_STATUS)
-                    and (
-                        move_id0 != _MOVE_PARTING_SHOT_INLINE
-                        or _partingshot0_pre_success
-                    )
-                    and _has_pivot_bench(OFF_SIDE0, active0)
-                    and not _target1_eject_button_cancels_pivot0
-                    and not _target1_red_card_overrides_pivot0
-                )
-                or (_pivot_is_eject_pack0 and not _target1_red_card_overrides_pivot0)
-            )
+                int(move_effects.effect_type[move_id0]) == EFFECT_SWITCH
+                and not is_switch
+                and not _p0_immobile_pre
+                and not _self_hit0
+                and (damage0 > 0 or cat0 == CAT_STATUS)
+                and (move_id0 != _MOVE_PARTING_SHOT_INLINE or _partingshot0_pre_success)
+                and _has_pivot_bench(OFF_SIDE0, active0)
+                and not _target1_eject_button_cancels_pivot0
+                and not _target1_red_card_overrides_pivot0
+            ) or (_pivot_is_eject_pack0 and not _target1_red_card_overrides_pivot0)
             if _is_pivot_0:
                 _pivot_user_off = OFF_SIDE0 + active0 * POKEMON_SIZE
                 _pivot_user_hp_before_postmove = int(battle[_pivot_user_off + 1])
@@ -5795,7 +6305,7 @@ def step_battle_gen9(
                 # the real state, then re-save.
                 battle[p1_off + 1] = _saved_hp1
                 if _pivot_user_alive and damage0 > 0:
-                    fx.apply_contact_damage(
+                    _apply_contact_damage_tracked(
                         battle,
                         move_id0,
                         _pivot_user_off,
@@ -5805,7 +6315,7 @@ def step_battle_gen9(
                         move_effects,
                         num_hits=int(_meta0.get("num_hits", 1)),
                     )
-                    fx.apply_contact_status_ability(
+                    _apply_contact_status_ability_tracked(
                         battle,
                         move_id0,
                         _pivot_user_off,
@@ -5817,14 +6327,16 @@ def step_battle_gen9(
                         prerolled_rolls=_prerolled_contact0,
                     )
                     if _prerolled_toxic_chain0 is None:
-                        _pivot_toxic_chain_handled0 = fx.apply_toxic_chain_on_damaging_hit(
-                            battle,
-                            _pivot_user_off,
-                            p1_off,
-                            True,
-                            int(damage0),
-                            game_data,
-                            gen5_prng,
+                        _pivot_toxic_chain_handled0 = (
+                            fx.apply_toxic_chain_on_damaging_hit(
+                                battle,
+                                _pivot_user_off,
+                                p1_off,
+                                True,
+                                int(damage0),
+                                game_data,
+                                gen5_prng,
+                            )
                         )
                 # Re-apply temporary damage for variable-BP calc below.
                 _saved_hp1 = int(battle[p1_off + 1])
@@ -5875,20 +6387,14 @@ def step_battle_gen9(
                     # If the pivoter faints (for example to Life Orb), the
                     # slower foe move sees no target and the replacement is
                     # requested only after upkeep.
-                    if resolve_mid_turn_switch0 is not None:
-                        _pivot_action0 = int(resolve_mid_turn_switch0(state))
-                        _new_active0_pivot = _resolve_switch_target_from_action(
-                            OFF_SIDE0,
-                            active0,
-                            _pivot_action0,
-                        )
-                    else:
-                        _new_active0_pivot = fx.auto_switch(
-                            battle,
-                            OFF_SIDE0,
-                            active0,
-                            True,
-                        )
+                    _switch_req = SwitchRequest((0,))
+                    _choices = yield _switch_req
+                    _new_slot = int(_choices[0])
+                    _new_active0_pivot = _resolve_switch_target_from_action(
+                        OFF_SIDE0,
+                        active0,
+                        _new_slot + 4,
+                    )
                     if _new_active0_pivot != active0:
                         _pending_switch_slot_condition0_pivot = int(
                             battle[OFF_FIELD + F_DESTINY_BOND_0]
@@ -5919,7 +6425,9 @@ def step_battle_gen9(
                             _pending_switch_slot_condition0_pivot,
                         )
                         if (
-                            is_pending_wish_sentinel(_pending_switch_slot_condition0_pivot)
+                            is_pending_wish_sentinel(
+                                _pending_switch_slot_condition0_pivot
+                            )
                             and not _pivot_consumed_pending0
                         ):
                             battle[OFF_FIELD + F_DESTINY_BOND_0] = np.int16(
@@ -5965,7 +6473,11 @@ def step_battle_gen9(
                     _mid_turn_pivot_target_hp0 = int(battle[p0_off + 1])
                     _refresh_current_action_speeds()
                     _mid_turn_pivot_0 = True
-                    if move1_targets_foe_mon and not is_delayed1 and int(battle[p0_off + 1]) <= 0:
+                    if (
+                        move1_targets_foe_mon
+                        and not is_delayed1
+                        and int(battle[p0_off + 1]) <= 0
+                    ):
                         # If the pivot replacement dies to switch-in hazards,
                         # the slower foe-targeted move finds no live target in
                         # Showdown and consumes no move PRNG.
@@ -5994,7 +6506,9 @@ def step_battle_gen9(
                 )
             )
             if _knock_off_source_alive0:
-                _inline_knock_removed_focus_sash1 = int(battle[p1_off + 6]) == ITEM_FOCUS_SASH
+                _inline_knock_removed_focus_sash1 = (
+                    int(battle[p1_off + 6]) == ITEM_FOCUS_SASH
+                )
                 _inline_knock_saved_item1 = int(battle[p1_off + 6])
                 _inline_knock_saved_target1 = int(p1_off)
                 _apply_knock_off_from_move_tracked(
@@ -6069,7 +6583,9 @@ def step_battle_gen9(
                     _p1_eject_button_cancels = True
                     _move1_canceled_pre = True
                     _eject_pack_blocked1 = True
-                    _saved_hp1 = int(_p1_hp_after_eject_pack) + int(_mirrored_damage0_on_p1)
+                    _saved_hp1 = int(_p1_hp_after_eject_pack) + int(
+                        _mirrored_damage0_on_p1
+                    )
             if (
                 move1_targets_foe_mon
                 and not move1_no_target
@@ -6119,37 +6635,41 @@ def step_battle_gen9(
                 _preapplied_after_move_secondary_hp_delta0 = 0
                 _projected_after_move_secondary_hp_delta0 = 0
                 _hp0_before_after_move_secondary_pre = None
-                if int(battle[p0_off + 6]) in (ITEM_LIFE_ORB, 438) or move1_can_change_foe_item:
-                    _hp0_before_after_move_secondary_pre = _project_user_hp_after_own_postmove(
-                        p0_off,
-                        p1_off,
-                        move_id0,
-                        damage0,
-                        _actual_dmg0,
-                        not _self_hit0 and damage0 > 0,
-                        int(_meta0.get("num_hits", 1)),
-                        hp0_pre_dmg,
-                        include_after_move_secondary=False,
-                        move_attempted=not (
-                            is_switch
-                            or _self_hit0
-                            or _p0_immobile_pre
-                            or _sleep_talk_try_failed0
-                            or _rest_try_failed0
-                            or move0_no_target
-                            or prankster_fail0
-                            or _move0_canceled_pre
-                        ),
-                        restore_target_item=_inline_knock_saved_item1,
-                        restore_target_item_off=_inline_knock_saved_target1,
+                if (
+                    int(battle[p0_off + 6]) in (ITEM_LIFE_ORB, 438)
+                    or move1_can_change_foe_item
+                ):
+                    _hp0_before_after_move_secondary_pre = (
+                        _project_user_hp_after_own_postmove(
+                            p0_off,
+                            p1_off,
+                            move_id0,
+                            damage0,
+                            _actual_dmg0,
+                            not _self_hit0 and damage0 > 0,
+                            int(_meta0.get("num_hits", 1)),
+                            hp0_pre_dmg,
+                            include_after_move_secondary=False,
+                            move_attempted=not (
+                                is_switch
+                                or _self_hit0
+                                or _p0_immobile_pre
+                                or _sleep_talk_try_failed0
+                                or _rest_try_failed0
+                                or move0_no_target
+                                or prankster_fail0
+                                or _move0_canceled_pre
+                            ),
+                            restore_target_item=_inline_knock_saved_item1,
+                            restore_target_item_off=_inline_knock_saved_target1,
+                        )
                     )
-                    _projected_after_move_secondary_hp_delta0 = (
-                        int(_hp0_after_postmove_pre)
-                        - int(_hp0_before_after_move_secondary_pre)
-                    )
+                    _projected_after_move_secondary_hp_delta0 = int(
+                        _hp0_after_postmove_pre
+                    ) - int(_hp0_before_after_move_secondary_pre)
                 if move1_can_change_foe_item:
-                    _preapplied_after_move_secondary_hp_delta0 = (
-                        int(_projected_after_move_secondary_hp_delta0)
+                    _preapplied_after_move_secondary_hp_delta0 = int(
+                        _projected_after_move_secondary_hp_delta0
                     )
                 if _hp0_after_postmove_pre <= 0 and not is_delayed1:
                     move1_no_target = True
@@ -6227,7 +6747,9 @@ def step_battle_gen9(
                     # and the dragged-out source skips afterMoveSecondarySelf.
                     _skip_after_move_secondary_hp_effects0 = True
                     _mid_turn_pivot_saved_hp0 = int(battle[_red_card_user0_off + 1])
-                    _mid_turn_pivot_saved_status0 = int(battle[_red_card_user0_off + 12])
+                    _mid_turn_pivot_saved_status0 = int(
+                        battle[_red_card_user0_off + 12]
+                    )
                     active0 = _post_active0_item
                     p0_off = OFF_SIDE0 + active0 * POKEMON_SIZE
                     target1_off = p0_off
@@ -6237,7 +6759,11 @@ def step_battle_gen9(
                     _preapplied_after_move_secondary_hp_delta0 = 0
                     _refresh_current_action_speeds()
                     _mid_turn_pivot_0 = True
-                    if move1_targets_foe_mon and not is_delayed1 and int(battle[p0_off + 1]) <= 0:
+                    if (
+                        move1_targets_foe_mon
+                        and not is_delayed1
+                        and int(battle[p0_off + 1]) <= 0
+                    ):
                         move1_no_target = True
                 else:
                     battle[_red_card_user0_off + 1] = np.int16(_saved_live_user0_hp)
@@ -6285,9 +6811,19 @@ def step_battle_gen9(
                     _sleep_talk_consume_sample(1)
                 if not (_self_hit1 or _p1_immobile_pre or _sleep_talk_try_failed1):
                     _rest_try_failed1 = _rest_try_fails(1)
-                if not (_self_hit1 or _p1_immobile_pre or _sleep_talk_try_failed1 or _rest_try_failed1):
+                if not (
+                    _self_hit1
+                    or _p1_immobile_pre
+                    or _sleep_talk_try_failed1
+                    or _rest_try_failed1
+                ):
                     _resolve_protect_after_before_move(1)
-                if not (_self_hit1 or _p1_immobile_pre or _sleep_talk_try_failed1 or _rest_try_failed1):
+                if not (
+                    _self_hit1
+                    or _p1_immobile_pre
+                    or _sleep_talk_try_failed1
+                    or _rest_try_failed1
+                ):
                     _apply_roost_type_strip(1)
                 if not (
                     _self_hit1
@@ -6296,7 +6832,9 @@ def step_battle_gen9(
                     or _rest_try_failed1
                     or pre_damage_fail1
                 ):
-                    _maybe_apply_protean_libero(1, move_id1, opp_is_switch, is_strike_turn1)
+                    _maybe_apply_protean_libero(
+                        1, move_id1, opp_is_switch, is_strike_turn1
+                    )
                 if _maybe_preapply_on_try_move_selfboost(
                     1,
                     p1_off,
@@ -6323,9 +6861,19 @@ def step_battle_gen9(
                     # formula runs, so full-HP checks (Multiscale, Shadow
                     # Shield, etc.) must see the chipped target.
                     battle[p0_off + 1] = np.int16(_hp0_after_postmove_pre)
-                damage1 = 0 if (
-                    _self_hit1 or _p1_immobile_pre or _sleep_talk_try_failed1 or _rest_try_failed1 or move1_no_target
-                ) else _calc_p1(user_hurt_by_target_this_turn=(_mirrored_damage0_on_p1 > 0))
+                damage1 = (
+                    0
+                    if (
+                        _self_hit1
+                        or _p1_immobile_pre
+                        or _sleep_talk_try_failed1
+                        or _rest_try_failed1
+                        or move1_no_target
+                    )
+                    else _calc_p1(
+                        user_hurt_by_target_this_turn=(_mirrored_damage0_on_p1 > 0)
+                    )
+                )
                 battle[p0_off + 1] = np.int16(_saved_target_hp0)
                 battle[p1_off + 1] = _saved_hp1
                 if not (
@@ -6428,9 +6976,19 @@ def step_battle_gen9(
                 _sleep_talk_consume_sample(1)
             if not (_self_hit1 or _p1_immobile_pre or _sleep_talk_try_failed1):
                 _rest_try_failed1 = _rest_try_fails(1)
-            if not (_self_hit1 or _p1_immobile_pre or _sleep_talk_try_failed1 or _rest_try_failed1):
+            if not (
+                _self_hit1
+                or _p1_immobile_pre
+                or _sleep_talk_try_failed1
+                or _rest_try_failed1
+            ):
                 _resolve_protect_after_before_move(1)
-            if not (_self_hit1 or _p1_immobile_pre or _sleep_talk_try_failed1 or _rest_try_failed1):
+            if not (
+                _self_hit1
+                or _p1_immobile_pre
+                or _sleep_talk_try_failed1
+                or _rest_try_failed1
+            ):
                 _apply_roost_type_strip(1)
             if not (
                 _self_hit1
@@ -6444,16 +7002,31 @@ def step_battle_gen9(
                 1,
                 p1_off,
                 p0_off,
-                _self_hit1 or _p1_immobile_pre or _sleep_talk_try_failed1 or _rest_try_failed1 or move1_no_target,
+                _self_hit1
+                or _p1_immobile_pre
+                or _sleep_talk_try_failed1
+                or _rest_try_failed1
+                or move1_no_target,
             ):
                 _move1_stat_preapplied = True
             if _status_accuracy_preroll_needed(1) and not (
-                _self_hit1 or _p1_immobile_pre or _sleep_talk_try_failed1 or _rest_try_failed1
+                _self_hit1
+                or _p1_immobile_pre
+                or _sleep_talk_try_failed1
+                or _rest_try_failed1
             ):
                 _prerolled_status_acc1 = int(gen5_prng.random(100))
-            damage1 = 0 if (
-                _self_hit1 or _p1_immobile_pre or _sleep_talk_try_failed1 or _rest_try_failed1 or move1_no_target
-            ) else _calc_p1()
+            damage1 = (
+                0
+                if (
+                    _self_hit1
+                    or _p1_immobile_pre
+                    or _sleep_talk_try_failed1
+                    or _rest_try_failed1
+                    or move1_no_target
+                )
+                else _calc_p1()
+            )
             if not (
                 move1_no_target
                 or _self_hit1
@@ -6498,8 +7071,15 @@ def step_battle_gen9(
             damage1 = 0
         if move0_targets_foe_mon and not is_delayed0 and int(battle[p1_off + 1]) <= 0:
             move0_no_target = True
-        _first_attacker_flinches_target = bool((prerolled_move1 or {}).get("flinch_lands"))
-        if cat1 == CAT_STATUS and not _p1_immobile_pre and not _self_hit1 and not opp_is_switch:
+        _first_attacker_flinches_target = bool(
+            (prerolled_move1 or {}).get("flinch_lands")
+        )
+        if (
+            cat1 == CAT_STATUS
+            and not _p1_immobile_pre
+            and not _self_hit1
+            and not opp_is_switch
+        ):
             _preset_screen_if_status(move_id1, 1)
             _status_hit1_pre = _status_move_hits_pre(1, _prerolled_status_acc1)
             # Symmetric pre-apply: side1 first mover's primary self-boosts.
@@ -6517,7 +7097,8 @@ def step_battle_gen9(
                 _move1_stat_preapplied = True
                 _move1_successful_self_boost_status = (
                     _eff1_pre == _EFFECT_STAT_CHANGE_EARLY1
-                    and (int(battle[p1_off + 13]), int(battle[p1_off + 14])) != _boosts1_before
+                    and (int(battle[p1_off + 13]), int(battle[p1_off + 14]))
+                    != _boosts1_before
                 )
             if (
                 _eff1_pre == EFFECT_SWITCH
@@ -6528,8 +7109,14 @@ def step_battle_gen9(
                 and not prankster_fail1
                 and not _move1_canceled_pre
             ):
-                _tgt1_boosts_before = (int(battle[p0_off + 13]), int(battle[p0_off + 14]))
-                _usr1_boosts_before = (int(battle[p1_off + 13]), int(battle[p1_off + 14]))
+                _tgt1_boosts_before = (
+                    int(battle[p0_off + 13]),
+                    int(battle[p0_off + 14]),
+                )
+                _usr1_boosts_before = (
+                    int(battle[p1_off + 13]),
+                    int(battle[p1_off + 14]),
+                )
                 _apply_stat_changes_from_move_tracked(
                     move_id1,
                     p1_off,
@@ -6538,9 +7125,12 @@ def step_battle_gen9(
                 )
                 _move1_stat_preapplied = True
                 _partingshot1_pre_success = (
-                    (int(battle[p0_off + 13]), int(battle[p0_off + 14])) != _tgt1_boosts_before
-                    or (int(battle[p1_off + 13]), int(battle[p1_off + 14])) != _usr1_boosts_before
-                )
+                    int(battle[p0_off + 13]),
+                    int(battle[p0_off + 14]),
+                ) != _tgt1_boosts_before or (
+                    int(battle[p1_off + 13]),
+                    int(battle[p1_off + 14]),
+                ) != _usr1_boosts_before
             # Symmetric pre-apply: side1 first mover's primary status effect.
             _EFFECT_STATUS_EARLY1 = 2
             _sleep_talk_handles_status1 = _sleep_talk_pending_slp0
@@ -6578,11 +7168,13 @@ def step_battle_gen9(
             and not _self_hit1
             and cat1 != CAT_STATUS
         ):
-            _sc1_arr, _st1_dmg, _sc1_dmg, _selfboost1_like = fx.get_live_move_stat_change_spec(
-                battle,
-                move_id1,
-                move_effects,
-                p1_off,
+            _sc1_arr, _st1_dmg, _sc1_dmg, _selfboost1_like = (
+                fx.get_live_move_stat_change_spec(
+                    battle,
+                    move_id1,
+                    move_effects,
+                    p1_off,
+                )
             )
             _has_any_sc1 = any(int(_sc1_arr[i]) != 0 for i in range(7))
             _selfboost1_attempted = _selfboost1_like and bool(target0_protected)
@@ -6652,7 +7244,12 @@ def step_battle_gen9(
                     prerolled_roll=(prerolled_move1 or {}).get("stat_change"),
                 )
                 _move1_stat_preapplied = True
-        if side0_survives and not is_switch and not _first_attacker_flinches_target and not _self_hit0:
+        if (
+            side0_survives
+            and not is_switch
+            and not _first_attacker_flinches_target
+            and not _self_hit0
+        ):
             if (
                 speeds_tied
                 and not opp_is_switch
@@ -6834,8 +7431,7 @@ def step_battle_gen9(
             if _eject_pack_ready1 and _target0_eject_button_cancels_pivot1:
                 _eject_pack_blocked1 = True
             _pivot_is_eject_pack1 = (
-                _eject_pack_ready1
-                and not _target0_eject_button_cancels_pivot1
+                _eject_pack_ready1 and not _target0_eject_button_cancels_pivot1
             )
             _ABILITY_SUCTION_CUPS_INLINE = 21
             _ABILITY_GUARD_DOG_INLINE = 275
@@ -6847,34 +7443,29 @@ def step_battle_gen9(
                 and not _p1_immobile_pre
                 and not _self_hit1
                 and cat1 != CAT_STATUS
-                and p1_ab not in (_ABILITY_SUCTION_CUPS_INLINE, _ABILITY_GUARD_DOG_INLINE)
+                and p1_ab
+                not in (_ABILITY_SUCTION_CUPS_INLINE, _ABILITY_GUARD_DOG_INLINE)
             )
             if _target0_red_card_overrides_pivot1:
                 _pivot_selfswitch_canceled_1 = True
             _is_pivot_1 = (
-                (
-                    int(move_effects.effect_type[move_id1]) == EFFECT_SWITCH
-                    and not opp_is_switch
-                    and not _p1_immobile_pre
-                    and not _self_hit1
-                    and (damage1 > 0 or cat1 == CAT_STATUS)
-                    and (
-                        move_id1 != _MOVE_PARTING_SHOT_INLINE
-                        or _partingshot1_pre_success
-                    )
-                    and _has_pivot_bench(OFF_SIDE1, active1)
-                    and not _target0_eject_button_cancels_pivot1
-                    and not _target0_red_card_overrides_pivot1
-                )
-                or (_pivot_is_eject_pack1 and not _target0_red_card_overrides_pivot1)
-            )
+                int(move_effects.effect_type[move_id1]) == EFFECT_SWITCH
+                and not opp_is_switch
+                and not _p1_immobile_pre
+                and not _self_hit1
+                and (damage1 > 0 or cat1 == CAT_STATUS)
+                and (move_id1 != _MOVE_PARTING_SHOT_INLINE or _partingshot1_pre_success)
+                and _has_pivot_bench(OFF_SIDE1, active1)
+                and not _target0_eject_button_cancels_pivot1
+                and not _target0_red_card_overrides_pivot1
+            ) or (_pivot_is_eject_pack1 and not _target0_red_card_overrides_pivot1)
             if _is_pivot_1:
                 _pivot_user_off = OFF_SIDE1 + active1 * POKEMON_SIZE
                 _pivot_user_hp_before_postmove = int(battle[_pivot_user_off + 1])
                 _pivot_user_alive = int(battle[_pivot_user_off + 1]) > 0
                 battle[p0_off + 1] = _saved_hp0
                 if _pivot_user_alive and damage1 > 0:
-                    fx.apply_contact_damage(
+                    _apply_contact_damage_tracked(
                         battle,
                         move_id1,
                         _pivot_user_off,
@@ -6884,7 +7475,7 @@ def step_battle_gen9(
                         move_effects,
                         num_hits=int(_meta1.get("num_hits", 1)),
                     )
-                    fx.apply_contact_status_ability(
+                    _apply_contact_status_ability_tracked(
                         battle,
                         move_id1,
                         _pivot_user_off,
@@ -6896,14 +7487,16 @@ def step_battle_gen9(
                         prerolled_rolls=_prerolled_contact1,
                     )
                     if _prerolled_toxic_chain1 is None:
-                        _pivot_toxic_chain_handled1 = fx.apply_toxic_chain_on_damaging_hit(
-                            battle,
-                            _pivot_user_off,
-                            p0_off,
-                            True,
-                            int(damage1),
-                            game_data,
-                            gen5_prng,
+                        _pivot_toxic_chain_handled1 = (
+                            fx.apply_toxic_chain_on_damaging_hit(
+                                battle,
+                                _pivot_user_off,
+                                p0_off,
+                                True,
+                                int(damage1),
+                                game_data,
+                                gen5_prng,
+                            )
                         )
                 _saved_hp0 = int(battle[p0_off + 1])
                 battle[p0_off + 1] = max(0, _saved_hp0 - int(damage1))
@@ -6947,11 +7540,13 @@ def step_battle_gen9(
                 if _pivot_is_eject_pack1 and _pivot_user_alive:
                     battle[_pivot_user_off + 6] = 0
                 if _pivot_user_alive:
-                    _new_active1_pivot = fx.auto_switch(
-                        battle,
+                    _switch_req = SwitchRequest((1,))
+                    _choices = yield _switch_req
+                    _new_slot = int(_choices[1])
+                    _new_active1_pivot = _resolve_switch_target_from_action(
                         OFF_SIDE1,
                         active1,
-                        True,
+                        _new_slot + 4,
                     )
                     if _new_active1_pivot != active1:
                         _pending_switch_slot_condition1_pivot = int(
@@ -6982,7 +7577,9 @@ def step_battle_gen9(
                             _pending_switch_slot_condition1_pivot,
                         )
                         if (
-                            is_pending_wish_sentinel(_pending_switch_slot_condition1_pivot)
+                            is_pending_wish_sentinel(
+                                _pending_switch_slot_condition1_pivot
+                            )
                             and not _pivot_consumed_pending1
                         ):
                             battle[OFF_FIELD + F_DESTINY_BOND_1] = np.int16(
@@ -7026,7 +7623,11 @@ def step_battle_gen9(
                         _mid_turn_pivot_target_hp1 = int(battle[p1_off + 1])
                         _refresh_current_action_speeds()
                         _mid_turn_pivot_1 = True
-                        if move0_targets_foe_mon and not is_delayed0 and int(battle[p1_off + 1]) <= 0:
+                        if (
+                            move0_targets_foe_mon
+                            and not is_delayed0
+                            and int(battle[p1_off + 1]) <= 0
+                        ):
                             # Mirror the side-0 pivot case above: a replacement
                             # that dies to hazards leaves the slower foe-targeted
                             # move with `[notarget]` and zero PRNG in Showdown.
@@ -7053,7 +7654,9 @@ def step_battle_gen9(
                 )
             )
             if _knock_off_source_alive1:
-                _inline_knock_removed_focus_sash0 = int(battle[p0_off + 6]) == ITEM_FOCUS_SASH
+                _inline_knock_removed_focus_sash0 = (
+                    int(battle[p0_off + 6]) == ITEM_FOCUS_SASH
+                )
                 _inline_knock_saved_item0 = int(battle[p0_off + 6])
                 _inline_knock_saved_target0 = int(p0_off)
                 _apply_knock_off_from_move_tracked(
@@ -7117,7 +7720,9 @@ def step_battle_gen9(
                     _inline_item_switch_rewrote_active = True
                     _move0_canceled_pre = True
                     _eject_pack_blocked0 = True
-                    _saved_hp0 = int(_p0_hp_after_eject_pack) + int(_mirrored_damage1_on_p0)
+                    _saved_hp0 = int(_p0_hp_after_eject_pack) + int(
+                        _mirrored_damage1_on_p0
+                    )
             if (
                 move0_targets_foe_mon
                 and not move0_no_target
@@ -7163,37 +7768,41 @@ def step_battle_gen9(
                 _preapplied_after_move_secondary_hp_delta1 = 0
                 _projected_after_move_secondary_hp_delta1 = 0
                 _hp1_before_after_move_secondary_pre = None
-                if int(battle[p1_off + 6]) in (ITEM_LIFE_ORB, 438) or move0_can_change_foe_item:
-                    _hp1_before_after_move_secondary_pre = _project_user_hp_after_own_postmove(
-                        p1_off,
-                        p0_off,
-                        move_id1,
-                        damage1,
-                        _actual_dmg1,
-                        not _self_hit1 and damage1 > 0,
-                        int(_meta1.get("num_hits", 1)),
-                        hp1_pre_dmg,
-                        include_after_move_secondary=False,
-                        move_attempted=not (
-                            opp_is_switch
-                            or _self_hit1
-                            or _p1_immobile_pre
-                            or _sleep_talk_try_failed1
-                            or _rest_try_failed1
-                            or move1_no_target
-                            or prankster_fail1
-                            or _move1_canceled_pre
-                        ),
-                        restore_target_item=_inline_knock_saved_item0,
-                        restore_target_item_off=_inline_knock_saved_target0,
+                if (
+                    int(battle[p1_off + 6]) in (ITEM_LIFE_ORB, 438)
+                    or move0_can_change_foe_item
+                ):
+                    _hp1_before_after_move_secondary_pre = (
+                        _project_user_hp_after_own_postmove(
+                            p1_off,
+                            p0_off,
+                            move_id1,
+                            damage1,
+                            _actual_dmg1,
+                            not _self_hit1 and damage1 > 0,
+                            int(_meta1.get("num_hits", 1)),
+                            hp1_pre_dmg,
+                            include_after_move_secondary=False,
+                            move_attempted=not (
+                                opp_is_switch
+                                or _self_hit1
+                                or _p1_immobile_pre
+                                or _sleep_talk_try_failed1
+                                or _rest_try_failed1
+                                or move1_no_target
+                                or prankster_fail1
+                                or _move1_canceled_pre
+                            ),
+                            restore_target_item=_inline_knock_saved_item0,
+                            restore_target_item_off=_inline_knock_saved_target0,
+                        )
                     )
-                    _projected_after_move_secondary_hp_delta1 = (
-                        int(_hp1_after_postmove_pre)
-                        - int(_hp1_before_after_move_secondary_pre)
-                    )
+                    _projected_after_move_secondary_hp_delta1 = int(
+                        _hp1_after_postmove_pre
+                    ) - int(_hp1_before_after_move_secondary_pre)
                 if move0_can_change_foe_item:
-                    _preapplied_after_move_secondary_hp_delta1 = (
-                        int(_projected_after_move_secondary_hp_delta1)
+                    _preapplied_after_move_secondary_hp_delta1 = int(
+                        _projected_after_move_secondary_hp_delta1
                     )
                 if _hp1_after_postmove_pre <= 0 and not is_delayed0:
                     move0_no_target = True
@@ -7271,7 +7880,9 @@ def step_battle_gen9(
                     # the dragged source skips afterMoveSecondarySelf hooks.
                     _skip_after_move_secondary_hp_effects1 = True
                     _mid_turn_pivot_saved_hp1 = int(battle[_red_card_user1_off + 1])
-                    _mid_turn_pivot_saved_status1 = int(battle[_red_card_user1_off + 12])
+                    _mid_turn_pivot_saved_status1 = int(
+                        battle[_red_card_user1_off + 12]
+                    )
                     active1 = _post_active1_item
                     p1_off = OFF_SIDE1 + active1 * POKEMON_SIZE
                     target0_off = p1_off
@@ -7281,7 +7892,11 @@ def step_battle_gen9(
                     _preapplied_after_move_secondary_hp_delta1 = 0
                     _refresh_current_action_speeds()
                     _mid_turn_pivot_1 = True
-                    if move0_targets_foe_mon and not is_delayed0 and int(battle[p1_off + 1]) <= 0:
+                    if (
+                        move0_targets_foe_mon
+                        and not is_delayed0
+                        and int(battle[p1_off + 1]) <= 0
+                    ):
                         move0_no_target = True
                 else:
                     battle[_red_card_user1_off + 1] = np.int16(_saved_live_user1_hp)
@@ -7316,9 +7931,19 @@ def step_battle_gen9(
                     _sleep_talk_consume_sample(0)
                 if not (_self_hit0 or _p0_immobile_pre or _sleep_talk_try_failed0):
                     _rest_try_failed0 = _rest_try_fails(0)
-                if not (_self_hit0 or _p0_immobile_pre or _sleep_talk_try_failed0 or _rest_try_failed0):
+                if not (
+                    _self_hit0
+                    or _p0_immobile_pre
+                    or _sleep_talk_try_failed0
+                    or _rest_try_failed0
+                ):
                     _resolve_protect_after_before_move(0)
-                if not (_self_hit0 or _p0_immobile_pre or _sleep_talk_try_failed0 or _rest_try_failed0):
+                if not (
+                    _self_hit0
+                    or _p0_immobile_pre
+                    or _sleep_talk_try_failed0
+                    or _rest_try_failed0
+                ):
                     _apply_roost_type_strip(0)
                 if not (
                     _self_hit0
@@ -7350,16 +7975,29 @@ def step_battle_gen9(
                 _saved_target_hp1 = int(battle[p1_off + 1])
                 if _hp1_after_postmove_pre is not None:
                     battle[p1_off + 1] = np.int16(_hp1_after_postmove_pre)
-                damage0 = 0 if (
-                    _self_hit0 or _p0_immobile_pre or _sleep_talk_try_failed0 or _rest_try_failed0 or move0_no_target
-                ) else _calc_p0(user_hurt_by_target_this_turn=(_mirrored_damage1_on_p0 > 0))
+                damage0 = (
+                    0
+                    if (
+                        _self_hit0
+                        or _p0_immobile_pre
+                        or _sleep_talk_try_failed0
+                        or _rest_try_failed0
+                        or move0_no_target
+                    )
+                    else _calc_p0(
+                        user_hurt_by_target_this_turn=(_mirrored_damage1_on_p0 > 0)
+                    )
+                )
                 battle[p1_off + 1] = np.int16(_saved_target_hp1)
                 _target1_has_sub_pre = int(battle[OFF_FIELD + F_SUBSTITUTE_1]) > 0
                 _knock_off_source_alive0 = (
                     int(move_effects.effect_type[move_id0]) == EFFECT_KNOCK_OFF
                     and damage0 > 0
                     and not target0_protected
-                    and (not _target1_has_sub_pre or int(battle[p0_off + 5]) == ABILITY_INFILTRATOR)
+                    and (
+                        not _target1_has_sub_pre
+                        or int(battle[p0_off + 5]) == ABILITY_INFILTRATOR
+                    )
                     and _source_survives_damaging_hit_contact(
                         p0_off,
                         p1_off,
@@ -7372,7 +8010,9 @@ def step_battle_gen9(
                     )
                 )
                 if _knock_off_source_alive0:
-                    _inline_knock_removed_focus_sash1 = int(battle[p1_off + 6]) == ITEM_FOCUS_SASH
+                    _inline_knock_removed_focus_sash1 = (
+                        int(battle[p1_off + 6]) == ITEM_FOCUS_SASH
+                    )
                     _inline_knock_saved_item1 = int(battle[p1_off + 6])
                     _inline_knock_saved_target1 = int(p1_off)
                     _apply_knock_off_from_move_tracked(
@@ -7500,16 +8140,24 @@ def step_battle_gen9(
     # moved at higher priority (Fake Out +3, Extreme Speed +2, Prankster
     # status, etc.) or when forced into an earlier slot. side0_first=False
     # means P1 already moved by the time Sucker Punch resolves for P0.
-    if move_id0 == MOVE_SUCKER_PUNCH and (cat1 == CAT_STATUS or opp_is_switch or not side0_first):
+    if move_id0 == MOVE_SUCKER_PUNCH and (
+        cat1 == CAT_STATUS or opp_is_switch or not side0_first
+    ):
         damage0 = 0
-    if move_id1 == MOVE_SUCKER_PUNCH and (cat0 == CAT_STATUS or is_switch or side0_first):
+    if move_id1 == MOVE_SUCKER_PUNCH and (
+        cat0 == CAT_STATUS or is_switch or side0_first
+    ):
         damage1 = 0
     # Thunderclap (Raging Bolt) — identical onTry to Sucker Punch: fails if
     # target is using a Status move (except Me First) or has already moved.
     # Showdown data/moves.ts:thunderclap onTry.
-    if move_id0 == MOVE_THUNDERCLAP and (cat1 == CAT_STATUS or opp_is_switch or not side0_first):
+    if move_id0 == MOVE_THUNDERCLAP and (
+        cat1 == CAT_STATUS or opp_is_switch or not side0_first
+    ):
         damage0 = 0
-    if move_id1 == MOVE_THUNDERCLAP and (cat0 == CAT_STATUS or is_switch or side0_first):
+    if move_id1 == MOVE_THUNDERCLAP and (
+        cat0 == CAT_STATUS or is_switch or side0_first
+    ):
         damage1 = 0
 
     # Upper Hand (id 918) — Showdown data/moves.ts:upperhand onTry: fails
@@ -7542,7 +8190,9 @@ def step_battle_gen9(
     # abilities, but this later block historically re-read the raw ids and
     # could still apply Wonder Skin / No Guard / Damp / Good as Gold /
     # Magic Bounce after suppression.
-    from pokepy.effects.ability_suppression import effective_ability as _effective_ability_status
+    from pokepy.effects.ability_suppression import (
+        effective_ability as _effective_ability_status,
+    )
 
     p0_ab_status = _effective_ability_status(battle, p0_off, p1_off)
     p1_ab_status = _effective_ability_status(battle, p1_off, p0_off)
@@ -7581,7 +8231,9 @@ def step_battle_gen9(
     # while the user is still actually able to act. If the user fainted,
     # self-hit, or got stopped by onBeforeMove after the preroll window,
     # Showdown never reaches hitStepAccuracy and spends no frame here.
-    _side0_slow_move_kod = (not side0_first) and (move1_killed_target or _first_move_kos_p0)
+    _side0_slow_move_kod = (not side0_first) and (
+        move1_killed_target or _first_move_kos_p0
+    )
     _side1_slow_move_kod = side0_first and (move1_killed_target or _first_move_kos_p1)
     if _prerolled_status_acc0 is not None:
         acc_roll0 = _prerolled_status_acc0
@@ -7666,8 +8318,12 @@ def step_battle_gen9(
 
     _pw_cur = _effective_weather_pw(battle)
 
-    def _effective_runtime_move_type(move_id: int, user_off: int, target_off: int) -> int:
-        from pokepy.effects.ability_suppression import effective_ability as _effective_ability_mt
+    def _effective_runtime_move_type(
+        move_id: int, user_off: int, target_off: int
+    ) -> int:
+        from pokepy.effects.ability_suppression import (
+            effective_ability as _effective_ability_mt,
+        )
 
         _MOVE_RAGING_BULL_MT = 873
         _MOVE_REVELATION_DANCE_MT = 686
@@ -7744,11 +8400,16 @@ def step_battle_gen9(
             _user_ability in _ATE_ABILITIES_MT
             and _move_type == TYPE_NORMAL
             and int(game_data.move_base_power[move_id]) > 0
-            and move_id not in (
+            and move_id
+            not in (
                 MOVE_WEATHER_BALL,
                 MOVE_TERRAIN_PULSE,
                 _MOVE_TERA_BLAST_MT,
-                246, 719, 363, 686, 546,
+                246,
+                719,
+                363,
+                686,
+                546,
             )
         ):
             if _user_ability == _ABILITY_REFRIGERATE_MT:
@@ -7773,16 +8434,32 @@ def step_battle_gen9(
     _type1_pw = _effective_runtime_move_type(move_id1, user1_off, user0_off)
     _cat0_pw = int(game_data.move_category[move_id0])
     _cat1_pw = int(game_data.move_category[move_id1])
-    if _pw_cur == WEATHER_PRIMORDIAL_SEA and _type0_pw == TYPE_FIRE and _cat0_pw != CAT_STATUS:
+    if (
+        _pw_cur == WEATHER_PRIMORDIAL_SEA
+        and _type0_pw == TYPE_FIRE
+        and _cat0_pw != CAT_STATUS
+    ):
         hit0 = False
         damage0 = 0
-    if _pw_cur == WEATHER_PRIMORDIAL_SEA and _type1_pw == TYPE_FIRE and _cat1_pw != CAT_STATUS:
+    if (
+        _pw_cur == WEATHER_PRIMORDIAL_SEA
+        and _type1_pw == TYPE_FIRE
+        and _cat1_pw != CAT_STATUS
+    ):
         hit1 = False
         damage1 = 0
-    if _pw_cur == WEATHER_DESOLATE_LAND and _type0_pw == TYPE_WATER and _cat0_pw != CAT_STATUS:
+    if (
+        _pw_cur == WEATHER_DESOLATE_LAND
+        and _type0_pw == TYPE_WATER
+        and _cat0_pw != CAT_STATUS
+    ):
         hit0 = False
         damage0 = 0
-    if _pw_cur == WEATHER_DESOLATE_LAND and _type1_pw == TYPE_WATER and _cat1_pw != CAT_STATUS:
+    if (
+        _pw_cur == WEATHER_DESOLATE_LAND
+        and _type1_pw == TYPE_WATER
+        and _cat1_pw != CAT_STATUS
+    ):
         hit1 = False
         damage1 = 0
 
@@ -7827,7 +8504,9 @@ def step_battle_gen9(
     _DAMP_MOVES = (MOVE_EXPLOSION, MOVE_SELF_DESTRUCT, MOVE_MISTY_EXPLOSION)
     _ABILITY_DAMP_BG = 6
     _MB_SET_BG = (104, 163, 164)  # moldbreaker, turboblaze, teravolt
-    _damp_active = (p0_ab_status == _ABILITY_DAMP_BG) or (p1_ab_status == _ABILITY_DAMP_BG)
+    _damp_active = (p0_ab_status == _ABILITY_DAMP_BG) or (
+        p1_ab_status == _ABILITY_DAMP_BG
+    )
     if _damp_active and move_id0 in _DAMP_MOVES and p0_ab_status not in _MB_SET_BG:
         hit0 = False
         damage0 = 0
@@ -7885,14 +8564,22 @@ def step_battle_gen9(
     _ABILITY_MOLD_BREAKER_MB = 104
     _ABILITY_TERAVOLT_MB = 164
     _ABILITY_TURBOBLAZE_MB = 163
-    _MB_IGNORE_SET = (_ABILITY_MOLD_BREAKER_MB, _ABILITY_TERAVOLT_MB, _ABILITY_TURBOBLAZE_MB)
+    _MB_IGNORE_SET = (
+        _ABILITY_MOLD_BREAKER_MB,
+        _ABILITY_TERAVOLT_MB,
+        _ABILITY_TURBOBLAZE_MB,
+    )
     p0_ignores_ability_mb = p0_ab_status in _MB_IGNORE_SET
     p1_ignores_ability_mb = p1_ab_status in _MB_IGNORE_SET
     mb_redirect0_to_user = (
-        move0_is_status and p1_ab_status == ABILITY_MAGIC_BOUNCE and not p0_ignores_ability_mb
+        move0_is_status
+        and p1_ab_status == ABILITY_MAGIC_BOUNCE
+        and not p0_ignores_ability_mb
     )
     mb_redirect1_to_user = (
-        move1_is_status and p0_ab_status == ABILITY_MAGIC_BOUNCE and not p1_ignores_ability_mb
+        move1_is_status
+        and p0_ab_status == ABILITY_MAGIC_BOUNCE
+        and not p1_ignores_ability_mb
     )
 
     # ------------------------------------------------------------------
@@ -8090,7 +8777,13 @@ def step_battle_gen9(
         self_hit0 = _self_hit0
     else:
         self_hit0 = fx.check_confusion_self_hit(battle, 0, user0_off, gen5_prng)
-    if _conf_checked1 or opp_is_switch or is_immobile1 or prankster_fail1 or _skip_conf1_ko:
+    if (
+        _conf_checked1
+        or opp_is_switch
+        or is_immobile1
+        or prankster_fail1
+        or _skip_conf1_ko
+    ):
         self_hit1 = _self_hit1
     else:
         self_hit1 = fx.check_confusion_self_hit(battle, 1, user1_off, gen5_prng)
@@ -8174,7 +8867,9 @@ def step_battle_gen9(
     dmg1_thru_to_p0 = 0 if has_sub0_pre else damage1_after_flinch
     dmg0_thru_to_p1 = 0 if has_sub1_pre else damage0_after_flinch
 
-    def _apply_retaliation(damage_self, mid_self, cat_other, dmg_thru_to_self, user_off_self):
+    def _apply_retaliation(
+        damage_self, mid_self, cat_other, dmg_thru_to_self, user_off_self
+    ):
         d = damage_self
         if mid_self == MOVE_COUNTER:
             d = (
@@ -8308,10 +9003,18 @@ def step_battle_gen9(
     _skip_recoil_hp_effects0 = False
     _skip_recoil_hp_effects1 = False
     hp1_pre_for_move0 = hp1_pre
-    if (not side0_first) and (not _mid_turn_pivot_1) and (_hp1_after_postmove_pre is not None):
+    if (
+        (not side0_first)
+        and (not _mid_turn_pivot_1)
+        and (_hp1_after_postmove_pre is not None)
+    ):
         hp1_pre_for_move0 = int(_hp1_after_postmove_pre)
     hp0_pre_for_move1 = hp0_pre
-    if side0_first and (not _mid_turn_pivot_0) and (_hp0_after_postmove_pre is not None):
+    if (
+        side0_first
+        and (not _mid_turn_pivot_0)
+        and (_hp0_after_postmove_pre is not None)
+    ):
         hp0_pre_for_move1 = int(_hp0_after_postmove_pre)
     max_hp1 = int(battle[opp_max_hp_off])
     max_hp0 = int(battle[own_max_hp_off])
@@ -8493,10 +9196,14 @@ def step_battle_gen9(
     # point. Showdown still lets the move execute against the freshly switched
     # target, so don't treat that zero as "the slower attacker fainted".
     p0_move_ran = (
-        (not is_switch) and (side0_first or opp_is_switch or new_hp0 > 0) and not _move0_canceled_pre
+        (not is_switch)
+        and (side0_first or opp_is_switch or new_hp0 > 0)
+        and not _move0_canceled_pre
     )
     p1_move_ran = (
-        (not opp_is_switch) and ((not side0_first) or is_switch or new_hp1 > 0) and not _move1_canceled_pre
+        (not opp_is_switch)
+        and ((not side0_first) or is_switch or new_hp1 > 0)
+        and not _move1_canceled_pre
     )
     if not p0_move_ran:
         damage_through_to_p1 = 0
@@ -8510,7 +9217,8 @@ def step_battle_gen9(
             battle[OFF_META + M_CHARGING_0] = -1
             if _chg0_is_semi_invul:
                 battle[OFF_MOVES + M_ACTIVE_MOVE_ACTIONS_0] = (
-                    int(battle[OFF_MOVES + M_ACTIVE_MOVE_ACTIONS_0]) & ~ACTIVE_MOVE_ACTIONS_SEMI_INVUL
+                    int(battle[OFF_MOVES + M_ACTIVE_MOVE_ACTIONS_0])
+                    & ~ACTIVE_MOVE_ACTIONS_SEMI_INVUL
                 )
     if not p1_move_ran:
         damage_through_to_p0 = 0
@@ -8522,7 +9230,8 @@ def step_battle_gen9(
             battle[OFF_META + M_CHARGING_1] = -1
             if _chg1_is_semi_invul:
                 battle[OFF_MOVES + M_ACTIVE_MOVE_ACTIONS_1] = (
-                    int(battle[OFF_MOVES + M_ACTIVE_MOVE_ACTIONS_1]) & ~ACTIVE_MOVE_ACTIONS_SEMI_INVUL
+                    int(battle[OFF_MOVES + M_ACTIVE_MOVE_ACTIONS_1])
+                    & ~ACTIVE_MOVE_ACTIONS_SEMI_INVUL
                 )
 
     # Slower charge-turn users only become semi-invulnerable once their own
@@ -8531,19 +9240,29 @@ def step_battle_gen9(
     # Showdown for the rest of this turn.
     if is_charge_turn0 and _chg0_is_semi_invul and (not side0_first) and p0_move_ran:
         battle[OFF_MOVES + M_ACTIVE_MOVE_ACTIONS_0] = (
-            int(battle[OFF_MOVES + M_ACTIVE_MOVE_ACTIONS_0]) | ACTIVE_MOVE_ACTIONS_SEMI_INVUL
+            int(battle[OFF_MOVES + M_ACTIVE_MOVE_ACTIONS_0])
+            | ACTIVE_MOVE_ACTIONS_SEMI_INVUL
         )
     if is_charge_turn1 and _chg1_is_semi_invul and side0_first and p1_move_ran:
         battle[OFF_MOVES + M_ACTIVE_MOVE_ACTIONS_1] = (
-            int(battle[OFF_MOVES + M_ACTIVE_MOVE_ACTIONS_1]) | ACTIVE_MOVE_ACTIONS_SEMI_INVUL
+            int(battle[OFF_MOVES + M_ACTIVE_MOVE_ACTIONS_1])
+            | ACTIVE_MOVE_ACTIONS_SEMI_INVUL
         )
 
-    def _actual_hp_removed_from_hit(_raw_damage, _target_had_sub, _sub_hp_before, _target_hp_before, _target_hp_after):
+    def _actual_hp_removed_from_hit(
+        _raw_damage,
+        _target_had_sub,
+        _sub_hp_before,
+        _target_hp_before,
+        _target_hp_after,
+    ):
         if int(_raw_damage) <= 0:
             return 0
         if _target_had_sub:
             return min(int(_raw_damage), int(_sub_hp_before))
-        return min(int(_raw_damage), max(0, int(_target_hp_before) - int(_target_hp_after)))
+        return min(
+            int(_raw_damage), max(0, int(_target_hp_before) - int(_target_hp_after))
+        )
 
     def _project_user_hp_after_own_postmove(
         _user_off,
@@ -8584,7 +9303,7 @@ def step_battle_gen9(
             target_offset=_target_off,
             phase="drain",
         )
-        fx.apply_contact_damage(
+        _apply_contact_damage_tracked(
             _sim,
             _move_id,
             _user_off,
@@ -8615,7 +9334,7 @@ def step_battle_gen9(
         )
         if not include_after_move_secondary:
             return int(_sim[int(_user_off) + 1])
-        fx.apply_life_orb_recoil(
+        _apply_life_orb_recoil_tracked(
             _sim,
             _user_off,
             _raw_damage,
@@ -8670,7 +9389,7 @@ def step_battle_gen9(
             target_offset=_target_off,
             phase="drain",
         )
-        fx.apply_contact_damage(
+        _apply_contact_damage_tracked(
             _sim,
             _move_id,
             _user_off,
@@ -8906,9 +9625,8 @@ def step_battle_gen9(
             _skip_recoil_hp_effects0 = True
             if _projected_after_move_secondary_hp_delta0 != 0:
                 _skip_after_move_secondary_hp_effects0 = True
-        if (
-            _preapplied_after_move_secondary_hp_delta0 != 0
-            and int(final_hp0) == int(hp0_pre)
+        if _preapplied_after_move_secondary_hp_delta0 != 0 and int(final_hp0) == int(
+            hp0_pre
         ):
             # Only add the projected afterMoveSecondary delta when the final
             # HP is still on the turn-start baseline (for example the faster
@@ -8942,9 +9660,8 @@ def step_battle_gen9(
             _skip_recoil_hp_effects1 = True
             if _projected_after_move_secondary_hp_delta1 != 0:
                 _skip_after_move_secondary_hp_effects1 = True
-        if (
-            _preapplied_after_move_secondary_hp_delta1 != 0
-            and int(final_hp1) == int(hp1_pre)
+        if _preapplied_after_move_secondary_hp_delta1 != 0 and int(final_hp1) == int(
+            hp1_pre
         ):
             # Same guard as side0: if the slower move already subtracted from
             # the projected faster-mover HP snapshot, the projected
@@ -9014,7 +9731,9 @@ def step_battle_gen9(
 
     # Destiny Bond cascade
     destiny1 = int(battle[OFF_FIELD + F_DESTINY_BOND_1])
-    side1_fainted_from_dmg = (final_hp1 == 0) and (hp1_pre > 0) and (damage_through_to_p1 > 0)
+    side1_fainted_from_dmg = (
+        (final_hp1 == 0) and (hp1_pre > 0) and (damage_through_to_p1 > 0)
+    )
     if (
         destiny1 > 0
         and not is_pending_wish_sentinel(destiny1)
@@ -9023,7 +9742,9 @@ def step_battle_gen9(
         final_hp0 = 0
         battle[own_hp_off] = 0
     destiny0 = int(battle[OFF_FIELD + F_DESTINY_BOND_0])
-    side0_fainted_from_dmg = (final_hp0 == 0) and (hp0_pre > 0) and (damage_through_to_p0 > 0)
+    side0_fainted_from_dmg = (
+        (final_hp0 == 0) and (hp0_pre > 0) and (damage_through_to_p0 > 0)
+    )
     if (
         destiny0 > 0
         and not is_pending_wish_sentinel(destiny0)
@@ -9100,14 +9821,18 @@ def step_battle_gen9(
         battle[OFF_META + M_FUTURE_SIGHT] = fs_live
         battle[OFF_MOVES + M_FUTURE_MOVE_1] = move_id1
         battle[OFF_MOVES + M_FUTURE_SRC_1] = active1
-    _defer_absorb_on_p1 = (not side0_first)
+    _defer_absorb_on_p1 = not side0_first
     _defer_absorb_on_p0 = side0_first
     if not _defer_absorb_on_p1:
         fx.apply_absorb_ability_healing(battle, p1_off, move_type0, p0_move_executed)
     if not _defer_absorb_on_p0:
         fx.apply_absorb_ability_healing(battle, p0_off, move_type1, p1_move_executed)
-    fx.apply_weakness_policy(battle, p1_off, move_type0, hit0, damage0_after_flinch, move_id0)
-    fx.apply_weakness_policy(battle, p0_off, move_type1, hit1, damage1_after_flinch, move_id1)
+    fx.apply_weakness_policy(
+        battle, p1_off, move_type0, hit0, damage0_after_flinch, move_id0
+    )
+    fx.apply_weakness_policy(
+        battle, p0_off, move_type1, hit1, damage1_after_flinch, move_id1
+    )
 
     # Stamina
     if (p1_ab == ABILITY_STAMINA) and hit0 and damage0_after_flinch > 0:
@@ -9176,8 +9901,12 @@ def step_battle_gen9(
     # the actual mon" rather than "sub still exists now". That keeps single-
     # hit breaking blows blocked while still allowing later hits of a multi-
     # hit move to apply secondaries once damage reaches the target.
-    sub_absorbed_all0 = has_sub1 and int(damage_through_to_p1) <= 0 and not mb_redirect0_to_user
-    sub_absorbed_all1 = has_sub0 and int(damage_through_to_p0) <= 0 and not mb_redirect1_to_user
+    sub_absorbed_all0 = (
+        has_sub1 and int(damage_through_to_p1) <= 0 and not mb_redirect0_to_user
+    )
+    sub_absorbed_all1 = (
+        has_sub0 and int(damage_through_to_p0) <= 0 and not mb_redirect1_to_user
+    )
     sub_blocks_secondary0 = sub_absorbed_all0
     sub_blocks_secondary1 = sub_absorbed_all1
     hit0_thru_sub = hit0_alive and not sub_blocks_secondary0
@@ -9198,7 +9927,7 @@ def step_battle_gen9(
     )
     sheer_force0 = (p0_ab == ABILITY_SHEER_FORCE) and has_secondary0
     sheer_force1 = (p1_ab == ABILITY_SHEER_FORCE) and has_secondary1
-    ITEM_COVERT_CLOAK = 750
+    ITEM_COVERT_CLOAK = 1885
     covert_cloak1 = int(battle[target0_off + 6]) == ITEM_COVERT_CLOAK
     covert_cloak0 = int(battle[target1_off + 6]) == ITEM_COVERT_CLOAK
     hit0_secondary = hit0_thru_sub and not sheer_force0 and not covert_cloak1
@@ -9370,16 +10099,24 @@ def step_battle_gen9(
     # — i.e. immediately when a status condition is applied to the holder.
     # Pokepy used to fire them only at EOT residual which made the holder
     # take one extra turn of status damage. Fire here for both sides.
-    _run_item_hook_with_berry_tracking(fx.apply_lum_berry, p0_off, battle, p0_off, game_data)
-    _run_item_hook_with_berry_tracking(fx.apply_lum_berry, p1_off, battle, p1_off, game_data)
+    _run_item_hook_with_berry_tracking(
+        fx.apply_lum_berry, p0_off, battle, p0_off, game_data
+    )
+    _run_item_hook_with_berry_tracking(
+        fx.apply_lum_berry, p1_off, battle, p1_off, game_data
+    )
     _run_item_hook_with_berry_tracking(
         fx.apply_status_curing_berries, p0_off, battle, p0_off, game_data
     )
     _run_item_hook_with_berry_tracking(
         fx.apply_status_curing_berries, p1_off, battle, p1_off, game_data
     )
-    _run_item_hook_with_berry_tracking(fx.apply_persim_berry, p0_off, battle, p0_off, game_data)
-    _run_item_hook_with_berry_tracking(fx.apply_persim_berry, p1_off, battle, p1_off, game_data)
+    _run_item_hook_with_berry_tracking(
+        fx.apply_persim_berry, p0_off, battle, p0_off, game_data
+    )
+    _run_item_hook_with_berry_tracking(
+        fx.apply_persim_berry, p1_off, battle, p1_off, game_data
+    )
 
     # Thaw on hit by thawsTarget move (Scald etc.). Showdown runs this in
     # `onAfterMoveSecondary`, so Sheer Force / Covert Cloak (secondary
@@ -9408,9 +10145,13 @@ def step_battle_gen9(
         battle, move_id1, target_side1, target1_off, hit1_alive, game_data, move_effects
     )
     if p0_move_executed:
-        fx.apply_substitute_from_move(battle, move_id0, 0, user0_off, game_data, move_effects)
+        fx.apply_substitute_from_move(
+            battle, move_id0, 0, user0_off, game_data, move_effects
+        )
     if p1_move_executed:
-        fx.apply_substitute_from_move(battle, move_id1, 1, user1_off, game_data, move_effects)
+        fx.apply_substitute_from_move(
+            battle, move_id1, 1, user1_off, game_data, move_effects
+        )
     fx.apply_perish_song_from_move(battle, move_id0, hit0, user_side=0)
     fx.apply_perish_song_from_move(battle, move_id1, hit1, user_side=1)
     # Destiny Bond is applied early (lines ~512) for the user who moves
@@ -9431,10 +10172,18 @@ def step_battle_gen9(
     # Substitute both block it. Gate on hit_alive (post-protect) and on
     # sub_blocks_secondary (sub absorbs it).
     fx.apply_pain_split_from_move(
-        battle, move_id0, user0_off, target0_off, hit0_alive and not sub_blocks_secondary0
+        battle,
+        move_id0,
+        user0_off,
+        target0_off,
+        hit0_alive and not sub_blocks_secondary0,
     )
     fx.apply_pain_split_from_move(
-        battle, move_id1, user1_off, target1_off, hit1_alive and not sub_blocks_secondary1
+        battle,
+        move_id1,
+        user1_off,
+        target1_off,
+        hit1_alive and not sub_blocks_secondary1,
     )
 
     # Stat changes
@@ -9587,7 +10336,10 @@ def step_battle_gen9(
     # +1 atk +1 def -1 spe. Pokepy's move_effects table encodes the
     # non-Ghost stat changes unconditionally, so we must suppress the
     # stat-change pipeline for Ghost-type users to avoid double-booking.
-    from pokepy.core.constants import MOVE_CURSE as _MOVE_CURSE, TYPE_GHOST as _TYPE_GHOST
+    from pokepy.core.constants import (
+        MOVE_CURSE as _MOVE_CURSE,
+        TYPE_GHOST as _TYPE_GHOST,
+    )
 
     def _user_is_ghost(_uoff):
         types_packed = int(battle[_uoff + 4]) & 0xFFFF
@@ -9710,7 +10462,7 @@ def step_battle_gen9(
 
     # Eject Pack: if any stat stage was lowered this turn and the holder has
     # a bench mon available, trigger the forced switch / item consumption.
-    _ITEM_EJECT_PACK = 714
+    _ITEM_EJECT_PACK = 1119
     p0_eject_pack_switch = False
     if (
         int(battle[p0_off + 6]) == _ITEM_EJECT_PACK
@@ -9760,11 +10512,13 @@ def step_battle_gen9(
                 battle[p1_off + 6] = 0
                 while True:
                     active1_ep = int(battle[OFF_META + M_ACTIVE1])
-                    new1_ep = fx.auto_switch(
-                        battle,
+                    _switch_req = SwitchRequest((1,))
+                    _choices = yield _switch_req
+                    _new_slot = int(_choices[1])
+                    new1_ep = _resolve_switch_target_from_action(
                         OFF_SIDE1,
                         active1_ep,
-                        True,
+                        _new_slot + 4,
                     )
                     if new1_ep == active1_ep:
                         break
@@ -9811,10 +10565,14 @@ def step_battle_gen9(
                         OFF_SIDE0 + int(battle[OFF_META + M_ACTIVE0]) * POKEMON_SIZE,
                         gen5_prng,
                     )
-                    fx.apply_hazard_damage_on_switch(battle, new_p1_ep, OFF_FIELD + F_HAZARDS_1)
+                    fx.apply_hazard_damage_on_switch(
+                        battle, new_p1_ep, OFF_FIELD + F_HAZARDS_1
+                    )
                     _reset_toxic_counter_on_switch_in(battle, new_p1_ep)
                     if int(battle[new_p1_ep + 1]) > 0:
-                        _opp_target_off_ep = OFF_SIDE0 + int(battle[OFF_META + M_ACTIVE0]) * POKEMON_SIZE
+                        _opp_target_off_ep = (
+                            OFF_SIDE0 + int(battle[OFF_META + M_ACTIVE0]) * POKEMON_SIZE
+                        )
                         if int(battle[_opp_target_off_ep + 1]) > 0:
                             _apply_switch_in_ability_with_trace_reaction_tracked(
                                 new_p1_ep,
@@ -9822,7 +10580,9 @@ def step_battle_gen9(
                                 True,
                             )
                         else:
-                            _store_pending_opp_switch_in(new1_ep, _postswitch_p1_speed_ep)
+                            _store_pending_opp_switch_in(
+                                new1_ep, _postswitch_p1_speed_ep
+                            )
                         _run_switch_in_update_item_hooks(new_p1_ep)
                         break
                     p1_bench_alive_ep = 0
@@ -9830,7 +10590,10 @@ def step_battle_gen9(
                         if _i == new1_ep:
                             continue
                         _so = OFF_SIDE1 + _i * POKEMON_SIZE
-                        if int(battle[_so + 1]) > 0 and (int(battle[_so + 15]) & 1) == 0:
+                        if (
+                            int(battle[_so + 1]) > 0
+                            and (int(battle[_so + 15]) & 1) == 0
+                        ):
                             p1_bench_alive_ep += 1
                     if p1_bench_alive_ep == 0:
                         break
@@ -9900,8 +10663,12 @@ def step_battle_gen9(
             # Clear all the cured volatiles
             new_vol = vol & ~(0x7 << 4) & ~(0x7 << 7) & ~(0x7 << 11)
             new_ext = ext & ~EXT_VOL_ATTRACT & ~EXT_VOL_TORMENT & ~EXT_VOL_HEAL_BLOCK
-            battle[vol_off] = np.int16(new_vol if new_vol < 0x8000 else new_vol - 0x10000)
-            battle[ext_vol_off] = np.int16(new_ext if new_ext < 0x8000 else new_ext - 0x10000)
+            battle[vol_off] = np.int16(
+                new_vol if new_vol < 0x8000 else new_vol - 0x10000
+            )
+            battle[ext_vol_off] = np.int16(
+                new_ext if new_ext < 0x8000 else new_ext - 0x10000
+            )
             if disable_active:
                 battle[dis_off] = -1
                 battle[dis_turns_off] = 0
@@ -9915,7 +10682,10 @@ def step_battle_gen9(
     # (hp <= maxhp/2 fail + stat boost cap) handled similarly.
     from pokepy.core.bitpack import extract_boost as _cost_extract
 
-    for side_off, mid, did_hit in [(user0_off, move_id0, hit0), (user1_off, move_id1, hit1)]:
+    for side_off, mid, did_hit in [
+        (user0_off, move_id0, hit0),
+        (user1_off, move_id1, hit1),
+    ]:
         if not did_hit:
             continue
         if mid == 187:  # Belly Drum
@@ -9961,7 +10731,10 @@ def step_battle_gen9(
     # Showdown: items.ts throatspray onAfterMoveSecondarySelf checks move.flags.sound.
     from pokepy.core.constants import ITEM_THROAT_SPRAY
 
-    for u_off, mid, did_hit in [(user0_off, move_id0, hit0), (user1_off, move_id1, hit1)]:
+    for u_off, mid, did_hit in [
+        (user0_off, move_id0, hit0),
+        (user1_off, move_id1, hit1),
+    ]:
         if not did_hit:
             continue
         if int(battle[u_off + 6]) != ITEM_THROAT_SPRAY:
@@ -9981,7 +10754,7 @@ def step_battle_gen9(
     # "missed accuracy" with `attempted_move and not did_hit`. The pokepy
     # `_exec*` flags computed below for crash damage capture "user actually
     # tried to use the move", so reuse the same gating after they're built.
-    _ITEM_BLUNDER_POLICY = 716
+    _ITEM_BLUNDER_POLICY = 1121
     _OHKO_MOVES_BP = (28, 71, 81, 329)  # Fissure, Horn Drill, Guillotine, Sheer Cold
     # Note: _exec0 / _exec1 / target0_protected / target1_protected /
     # is_immobile* / prankster_fail* are computed in the crash-damage block
@@ -10305,8 +11078,12 @@ def step_battle_gen9(
         hit1 and damage1_after_flinch > 0,
     )
 
-    fx.apply_team_heal_status(battle, move_id0, OFF_SIDE0, hit0, game_data, move_effects)
-    fx.apply_team_heal_status(battle, move_id1, OFF_SIDE1, hit1, game_data, move_effects)
+    fx.apply_team_heal_status(
+        battle, move_id0, OFF_SIDE0, hit0, game_data, move_effects
+    )
+    fx.apply_team_heal_status(
+        battle, move_id1, OFF_SIDE1, hit1, game_data, move_effects
+    )
 
     # Showdown ordering (sim/battle-actions.ts useMove + spreadMoveHit):
     #   1. spreadDamage (inline) applies damage AND drain heal (gen5+ at
@@ -10378,15 +11155,24 @@ def step_battle_gen9(
             # (for example via Giga Drain / Drain Punch / Draining Kiss),
             # the slower move's recoil/drain base must be recomputed from that
             # live pre-hit HP instead of the turn-start snapshot.
-            dmg_dealt1 = min(damage1_after_flinch, max(0, _hp0_before_move1 - final_hp0))
-    elif (not side0_first) and (not has_sub1) and damage0_after_flinch > 0 and dmg_dealt0 > 0:
+            dmg_dealt1 = min(
+                damage1_after_flinch, max(0, _hp0_before_move1 - final_hp0)
+            )
+    elif (
+        (not side0_first)
+        and (not has_sub1)
+        and damage0_after_flinch > 0
+        and dmg_dealt0 > 0
+    ):
         if _mid_turn_pivot_1:
             _hp1_before_move0 = max(0, int(_mid_turn_pivot_target_hp1 or 0))
         else:
             _hp1_before_move0 = max(0, int(hp1_pre_for_move0))
         dmg_dealt0 = min(dmg_dealt0, _hp1_before_move0)
         if _hp1_before_move0 > hp1_pre:
-            dmg_dealt0 = min(damage0_after_flinch, max(0, _hp1_before_move0 - final_hp1))
+            dmg_dealt0 = min(
+                damage0_after_flinch, max(0, _hp1_before_move0 - final_hp1)
+            )
     # Phase 1 — drain heal (part of spreadDamage in Showdown).
     # Showdown applies drain inline during each move's resolution, so the
     # first mover's drain fires when its HP = hp_pre (before the opponent's
@@ -10486,7 +11272,9 @@ def step_battle_gen9(
         # inline heal itself. The slower move, however, must damage the
         # first mover from the HP that Showdown has at the start of that
         # slower move, including any preapplied Life Orb / recoil effects.
-        battle[user0_off + 1] = np.int16(max(0, int(_hp0_postmove_baseline) - _actual_hp_removed_to_p0))
+        battle[user0_off + 1] = np.int16(
+            max(0, int(_hp0_postmove_baseline) - _actual_hp_removed_to_p0)
+        )
         # Side 1 drain (second mover): normal, post-damage HP.
         fx.apply_recoil_drain_from_move(
             battle,
@@ -10573,7 +11361,9 @@ def step_battle_gen9(
                 0,
                 int(_hp1_postmove_baseline) - int(_hp1_after_slower_hit),
             )
-        battle[user1_off + 1] = np.int16(max(0, int(_hp1_postmove_baseline) - _actual_hp_removed_to_p1))
+        battle[user1_off + 1] = np.int16(
+            max(0, int(_hp1_postmove_baseline) - _actual_hp_removed_to_p1)
+        )
         # Side 0 drain (second mover): normal.
         fx.apply_recoil_drain_from_move(
             battle,
@@ -10642,7 +11432,10 @@ def step_battle_gen9(
     # wasn't protected. The simplest available signal is `not target_protected`
     # combined with `not is_immobile`. Use the local flags computed earlier.
     _exec0 = (
-        (not is_switch) and (not is_immobile0) and (not prankster_fail0) and (not target0_protected)
+        (not is_switch)
+        and (not is_immobile0)
+        and (not prankster_fail0)
+        and (not target0_protected)
     )
     _exec1 = (
         (not opp_is_switch)
@@ -10705,7 +11498,7 @@ def step_battle_gen9(
     ):
         battle[_inline_knock_saved_target0 + 6] = np.int16(_inline_knock_saved_item0)
     if not _mid_turn_pivot_0 and not _skip_contact_damage_effects0:
-        fx.apply_contact_damage(
+        _apply_contact_damage_tracked(
             battle,
             move_id0,
             user0_off,
@@ -10716,7 +11509,7 @@ def step_battle_gen9(
             num_hits=int(_meta0.get("num_hits", 1)),
         )
     if not _mid_turn_pivot_1 and not _skip_contact_damage_effects1:
-        fx.apply_contact_damage(
+        _apply_contact_damage_tracked(
             battle,
             move_id1,
             user1_off,
@@ -10736,7 +11529,7 @@ def step_battle_gen9(
                 _apply_resolved_contact_status(0)
         else:
             _use_prerolled_0 = _prerolled_contact0 if side0_first else []
-            fx.apply_contact_status_ability(
+            _apply_contact_status_ability_tracked(
                 battle,
                 move_id0,
                 user0_off,
@@ -10753,7 +11546,7 @@ def step_battle_gen9(
                 _apply_resolved_contact_status(1)
         else:
             _use_prerolled_1 = _prerolled_contact1 if not side0_first else []
-            fx.apply_contact_status_ability(
+            _apply_contact_status_ability_tracked(
                 battle,
                 move_id1,
                 user1_off,
@@ -10812,21 +11605,29 @@ def step_battle_gen9(
     # Sticky Barb). Previously pokepy called it after Life Orb which meant
     # a Life-Orb-KO'd user skipped Knock Off's takeItem (the apply_knock_off
     # gate is `source.hp > 0`).
-    _knock_target0_off = _inline_knock_saved_target1 if _inline_knock_saved_target1 >= 0 else target0_off
-    _knock_target1_off = _inline_knock_saved_target0 if _inline_knock_saved_target0 >= 0 else target1_off
+    _knock_target0_off = (
+        _inline_knock_saved_target1 if _inline_knock_saved_target1 >= 0 else target0_off
+    )
+    _knock_target1_off = (
+        _inline_knock_saved_target0 if _inline_knock_saved_target0 >= 0 else target1_off
+    )
     _apply_knock_off_from_move_tracked(
         move_id0,
         _knock_target0_off,
         hit0_thru_sub and not target0_protected,
         user_offset=user0_off,
-        source_alive=_knock_off_source_alive0 if _inline_knock_saved_target1 >= 0 else None,
+        source_alive=(
+            _knock_off_source_alive0 if _inline_knock_saved_target1 >= 0 else None
+        ),
     )
     _apply_knock_off_from_move_tracked(
         move_id1,
         _knock_target1_off,
         hit1_thru_sub and not target1_protected,
         user_offset=user1_off,
-        source_alive=_knock_off_source_alive1 if _inline_knock_saved_target0 >= 0 else None,
+        source_alive=(
+            _knock_off_source_alive1 if _inline_knock_saved_target0 >= 0 else None
+        ),
     )
 
     # Showdown's trailing `hitStepMoveHitLoop` / `runMove` `eachEvent('Update')`
@@ -10852,7 +11653,10 @@ def step_battle_gen9(
         # active's Start handlers run again.
         if current_action_speed0 == current_action_speed1:
             _sst.each_event_update([current_action_speed0, current_action_speed1])
-        if _ng_restart_from_p0 and int(battle[p1_off + 6]) != _ITEM_ABILITY_SHIELD_NG_END:
+        if (
+            _ng_restart_from_p0
+            and int(battle[p1_off + 6]) != _ITEM_ABILITY_SHIELD_NG_END
+        ):
             fx.apply_switch_in_ability(
                 battle,
                 p1_off,
@@ -10860,7 +11664,10 @@ def step_battle_gen9(
                 True,
                 gen5_prng,
             )
-        if _ng_restart_from_p1 and int(battle[p0_off + 6]) != _ITEM_ABILITY_SHIELD_NG_END:
+        if (
+            _ng_restart_from_p1
+            and int(battle[p0_off + 6]) != _ITEM_ABILITY_SHIELD_NG_END
+        ):
             fx.apply_switch_in_ability(
                 battle,
                 p0_off,
@@ -10890,10 +11697,18 @@ def step_battle_gen9(
         damage1_after_flinch,
         game_data,
     )
-    _run_item_hook_with_berry_tracking(fx.apply_sitrus_berry, p0_off, battle, p0_off, game_data)
-    _run_item_hook_with_berry_tracking(fx.apply_sitrus_berry, p1_off, battle, p1_off, game_data)
-    _run_item_hook_with_berry_tracking(fx.apply_gold_berry, p0_off, battle, p0_off, game_data)
-    _run_item_hook_with_berry_tracking(fx.apply_gold_berry, p1_off, battle, p1_off, game_data)
+    _run_item_hook_with_berry_tracking(
+        fx.apply_sitrus_berry, p0_off, battle, p0_off, game_data
+    )
+    _run_item_hook_with_berry_tracking(
+        fx.apply_sitrus_berry, p1_off, battle, p1_off, game_data
+    )
+    _run_item_hook_with_berry_tracking(
+        fx.apply_gold_berry, p0_off, battle, p0_off, game_data
+    )
+    _run_item_hook_with_berry_tracking(
+        fx.apply_gold_berry, p1_off, battle, p1_off, game_data
+    )
     _run_item_hook_with_berry_tracking(
         fx.apply_stat_boosting_berries, p0_off, battle, p0_off, game_data
     )
@@ -11049,7 +11864,7 @@ def step_battle_gen9(
     # contact transfer, Throat Spray (Throat Spray is handled elsewhere in the
     # stat-change path).
     if not _skip_after_move_secondary_hp_effects0:
-        fx.apply_life_orb_recoil(
+        _apply_life_orb_recoil_tracked(
             battle,
             user0_off,
             damage0_after_flinch,
@@ -11059,7 +11874,7 @@ def step_battle_gen9(
             move_effects=move_effects,
         )
     if not _skip_after_move_secondary_hp_effects1:
-        fx.apply_life_orb_recoil(
+        _apply_life_orb_recoil_tracked(
             battle,
             user1_off,
             damage1_after_flinch,
@@ -11076,7 +11891,7 @@ def step_battle_gen9(
     # Force does NOT suppress (the suppression hook only zeroes secondary
     # effects, not totalDamage). Status moves contribute 0 totalDamage so the
     # `move.totalDamage` truthy check naturally gates this on damaging moves.
-    _ITEM_SHELL_BELL = 438
+    _ITEM_SHELL_BELL = 253
     for u_off, did_hit_sb, dmg_sb, skip_sb in (
         (user0_off, hit0, dmg_dealt0, _skip_after_move_secondary_hp_effects0),
         (user1_off, hit1, dmg_dealt1, _skip_after_move_secondary_hp_effects1),
@@ -11115,8 +11930,12 @@ def step_battle_gen9(
         battle[target_off + 6] = 0
         battle[user_off + 6] = ITEM_STICKY_BARB
 
-    _try_sticky_barb_transfer(user0_off, p1_off, hit0 and damage0_after_flinch > 0, move_id0)
-    _try_sticky_barb_transfer(user1_off, p0_off, hit1 and damage1_after_flinch > 0, move_id1)
+    _try_sticky_barb_transfer(
+        user0_off, p1_off, hit0 and damage0_after_flinch > 0, move_id0
+    )
+    _try_sticky_barb_transfer(
+        user1_off, p0_off, hit1 and damage1_after_flinch > 0, move_id1
+    )
     fx.apply_magician_from_move(
         battle,
         move_id0,
@@ -11277,8 +12096,12 @@ def step_battle_gen9(
     fx.apply_haze_from_move(battle, move_id1, hit1, move_effects)
     fx.apply_clear_smog_from_move(battle, move_id0, target0_off, hit0, move_effects)
     fx.apply_clear_smog_from_move(battle, move_id1, target1_off, hit1, move_effects)
-    fx.apply_psych_up_from_move(battle, move_id0, user0_off, target0_off, hit0, move_effects)
-    fx.apply_psych_up_from_move(battle, move_id1, user1_off, target1_off, hit1, move_effects)
+    fx.apply_psych_up_from_move(
+        battle, move_id0, user0_off, target0_off, hit0, move_effects
+    )
+    fx.apply_psych_up_from_move(
+        battle, move_id1, user1_off, target1_off, hit1, move_effects
+    )
     _apply_screen_from_move_tracked(move_id0, 0, hit0)
     _apply_screen_from_move_tracked(move_id1, 1, hit1)
 
@@ -11342,7 +12165,9 @@ def step_battle_gen9(
     if _phazed0:
         _sync_showdown_order_on_switch(side_order0, _post_active0)
         _reset_incoming_switch_state_tracked(_new_p0_pz)
-        _phazed0_pending_switch_slot_condition = int(battle[OFF_FIELD + F_DESTINY_BOND_0])
+        _phazed0_pending_switch_slot_condition = int(
+            battle[OFF_FIELD + F_DESTINY_BOND_0]
+        )
         if apply_pending_wish_on_switch_in(
             battle,
             0,
@@ -11357,7 +12182,9 @@ def step_battle_gen9(
         if hasattr(state, "hidden_opp_switches"):
             state.hidden_opp_switches.append(int(_post_active1))
         _reset_incoming_switch_state_tracked(_new_p1_pz)
-        _phazed1_pending_switch_slot_condition = int(battle[OFF_FIELD + F_DESTINY_BOND_1])
+        _phazed1_pending_switch_slot_condition = int(
+            battle[OFF_FIELD + F_DESTINY_BOND_1]
+        )
         if apply_pending_wish_on_switch_in(
             battle,
             1,
@@ -11427,10 +12254,14 @@ def step_battle_gen9(
                 _apply_switch_in_ability_tracked(_new_p0_pz, _new_p1_pz, True)
     elif _phazed1:
         if int(battle[_new_p1_pz + 1]) > 0:
-            _apply_switch_in_ability_with_trace_reaction_tracked(_new_p1_pz, _new_p0_pz, True)
+            _apply_switch_in_ability_with_trace_reaction_tracked(
+                _new_p1_pz, _new_p0_pz, True
+            )
     elif _phazed0:
         if int(battle[_new_p0_pz + 1]) > 0:
-            _apply_switch_in_ability_with_trace_reaction_tracked(_new_p0_pz, _new_p1_pz, True)
+            _apply_switch_in_ability_with_trace_reaction_tracked(
+                _new_p0_pz, _new_p1_pz, True
+            )
     # `runAction` then calls `eachEvent('SwitchIn')` on the current actives.
     if _phazed0 or _phazed1:
         _switchin_p0_speed = fx.get_effective_speed(battle, _new_p0_pz)
@@ -11609,7 +12440,9 @@ def step_battle_gen9(
             return
         battle[user_off + 15] = np.int16(int(battle[user_off + 15]) | FLAG_CHARGE)
 
-    def _consume_charge_post(user_off: int, mid: int, move_type: int, move_ran: bool) -> None:
+    def _consume_charge_post(
+        user_off: int, mid: int, move_type: int, move_ran: bool
+    ) -> None:
         if not move_ran or mid == MOVE_CHARGE or move_type != TYPE_ELECTRIC:
             return
         battle[user_off + 15] = np.int16(int(battle[user_off + 15]) & ~FLAG_CHARGE)
@@ -11667,8 +12500,12 @@ def step_battle_gen9(
 
     _hw0_has_switch = _bench_alive(OFF_SIDE0, user0_off)
     _hw1_has_switch = _bench_alive(OFF_SIDE1, user1_off)
-    _hw0_valid = (move_id0 not in (MOVE_HEALING_WISH, MOVE_LUNAR_DANCE)) or _hw0_has_switch
-    _hw1_valid = (move_id1 not in (MOVE_HEALING_WISH, MOVE_LUNAR_DANCE)) or _hw1_has_switch
+    _hw0_valid = (
+        move_id0 not in (MOVE_HEALING_WISH, MOVE_LUNAR_DANCE)
+    ) or _hw0_has_switch
+    _hw1_valid = (
+        move_id1 not in (MOVE_HEALING_WISH, MOVE_LUNAR_DANCE)
+    ) or _hw1_has_switch
 
     if _side0_executed and hit0 and _hw0_valid:
         if move_id0 == MOVE_HEALING_WISH:
@@ -11738,11 +12575,15 @@ def step_battle_gen9(
     # flows mutate the board. Snapshot the relevant opposing ability before
     # U-turn / Volt Switch / post-upkeep replacement logic can rewrite the
     # active slot.
-    pp_pressure_ability0 = int(battle[target0_off + 5]) if move0_targets_foe_mon else int(
-        battle[OFF_SIDE1 + active1 * POKEMON_SIZE + 5]
+    pp_pressure_ability0 = (
+        int(battle[target0_off + 5])
+        if move0_targets_foe_mon
+        else int(battle[OFF_SIDE1 + active1 * POKEMON_SIZE + 5])
     )
-    pp_pressure_ability1 = int(battle[target1_off + 5]) if move1_targets_foe_mon else int(
-        battle[OFF_SIDE0 + active0 * POKEMON_SIZE + 5]
+    pp_pressure_ability1 = (
+        int(battle[target1_off + 5])
+        if move1_targets_foe_mon
+        else int(battle[OFF_SIDE0 + active0 * POKEMON_SIZE + 5])
     )
 
     # Showdown's faint replacement timing: a fainted Pokemon's replacement
@@ -11766,7 +12607,9 @@ def step_battle_gen9(
         battle,
         OFF_SIDE1 + active1 * POKEMON_SIZE,
     )
-    effect0_is_switch = (int(move_effects.effect_type[move_id0]) == EFFECT_SWITCH) and not is_switch
+    effect0_is_switch = (
+        int(move_effects.effect_type[move_id0]) == EFFECT_SWITCH
+    ) and not is_switch
     effect1_is_switch = (
         int(move_effects.effect_type[move_id1]) == EFFECT_SWITCH
     ) and not opp_is_switch
@@ -11798,9 +12641,17 @@ def step_battle_gen9(
         should_uturn1 = False
     # If the opposing side has no surviving replacement after the KO that
     # just happened, Showdown ends the battle instead of executing selfSwitch.
-    if should_uturn0 and opp_fainted and not _bench_alive(OFF_SIDE1, OFF_SIDE1 + active1 * POKEMON_SIZE):
+    if (
+        should_uturn0
+        and opp_fainted
+        and not _bench_alive(OFF_SIDE1, OFF_SIDE1 + active1 * POKEMON_SIZE)
+    ):
         should_uturn0 = False
-    if should_uturn1 and p0_fainted and not _bench_alive(OFF_SIDE0, OFF_SIDE0 + active0 * POKEMON_SIZE):
+    if (
+        should_uturn1
+        and p0_fainted
+        and not _bench_alive(OFF_SIDE0, OFF_SIDE0 + active0 * POKEMON_SIZE)
+    ):
         should_uturn1 = False
 
     _late_self_switch_before_residual = False
@@ -11810,23 +12661,19 @@ def step_battle_gen9(
         fx.apply_regenerator_on_switch_out(battle, old_off, True)
         fx.apply_natural_cure_on_switch_out(battle, old_off, True)
         while True:
-            if resolve_mid_turn_switch0 is not None:
-                _pivot_action0 = int(resolve_mid_turn_switch0(state))
-                active0 = _resolve_switch_target_from_action(
-                    OFF_SIDE0,
-                    active0,
-                    _pivot_action0,
-                )
-            else:
-                active0 = fx.auto_switch(
-                    battle,
-                    OFF_SIDE0,
-                    active0,
-                    True,
-                )
+            _switch_req = SwitchRequest((0,))
+            _choices = yield _switch_req
+            _new_slot = int(_choices[0])
+            active0 = _resolve_switch_target_from_action(
+                OFF_SIDE0,
+                active0,
+                _new_slot + 4,
+            )
             battle[OFF_META + M_ACTIVE0] = active0
             _sync_showdown_order_on_switch(side_order0, active0)
-            _pending_switch_slot_condition0_ut = int(battle[OFF_FIELD + F_DESTINY_BOND_0])
+            _pending_switch_slot_condition0_ut = int(
+                battle[OFF_FIELD + F_DESTINY_BOND_0]
+            )
             _clear_side_switch_state_common(battle, 0)
             for off in (
                 F_VOLATILE_0,
@@ -11857,9 +12704,7 @@ def step_battle_gen9(
                     _pending_switch_slot_condition0_ut
                 )
             _opp_target_off_ut = OFF_SIDE1 + active1 * POKEMON_SIZE
-            _postswitch_p0_speed_ut = _get_switch_resume_action_speed(
-                battle, new_p0
-            )
+            _postswitch_p0_speed_ut = _get_switch_resume_action_speed(battle, new_p0)
             _postswitch_p1_speed_ut = _action_speed_from_effective(
                 fx.get_effective_speed(battle, _opp_target_off_ut)
             )
@@ -11902,15 +12747,19 @@ def step_battle_gen9(
         fx.apply_regenerator_on_switch_out(battle, old_off, True)
         fx.apply_natural_cure_on_switch_out(battle, old_off, True)
         while True:
-            active1 = fx.auto_switch(
-                battle,
+            _switch_req = SwitchRequest((1,))
+            _choices = yield _switch_req
+            _new_slot = int(_choices[1])
+            active1 = _resolve_switch_target_from_action(
                 OFF_SIDE1,
                 active1,
-                True,
+                _new_slot + 4,
             )
             battle[OFF_META + M_ACTIVE1] = active1
             _sync_showdown_order_on_switch(side_order1, active1)
-            _pending_switch_slot_condition1_ut = int(battle[OFF_FIELD + F_DESTINY_BOND_1])
+            _pending_switch_slot_condition1_ut = int(
+                battle[OFF_FIELD + F_DESTINY_BOND_1]
+            )
             _clear_side_switch_state_common(battle, 1)
             for off in (
                 F_VOLATILE_1,
@@ -11944,9 +12793,7 @@ def step_battle_gen9(
             _postswitch_p0_speed_ut = _action_speed_from_effective(
                 fx.get_effective_speed(battle, _opp_target_off)
             )
-            _postswitch_p1_speed_ut = _get_switch_resume_action_speed(
-                battle, new_p1
-            )
+            _postswitch_p1_speed_ut = _get_switch_resume_action_speed(battle, new_p1)
             if int(battle[_opp_target_off + 1]) > 0:
                 _consume_switch_request_resume_tie_frames(
                     _postswitch_p1_speed_ut,
@@ -12007,16 +12854,10 @@ def step_battle_gen9(
                 OFF_SIDE0 + int(battle[OFF_META + M_ACTIVE0]) * POKEMON_SIZE,
             )
         )
-        if resolve_mid_turn_switch0 is not None:
-            _forced_switch_action0 = int(resolve_mid_turn_switch0(state))
-        else:
-            _forced_switch_slot0 = fx.auto_switch(
-                battle,
-                OFF_SIDE0,
-                int(battle[OFF_META + M_ACTIVE0]),
-                True,
-            )
-            _forced_switch_action0 = int(_forced_switch_slot0) + 4
+        _switch_req = SwitchRequest((0,))
+        _choices = yield _switch_req
+        _new_slot = int(_choices[0])
+        _forced_switch_action0 = int(_new_slot) + 4
         step_forced_switch(
             state,
             _forced_switch_action0,
@@ -12041,17 +12882,32 @@ def step_battle_gen9(
     # active Pokemon's `DisableMove` handlers. Apply the lock here so the
     # residual cleanup sees the live volatile on the move's own turn.
     side0_could_move_pre_eot = not (
-        is_immobile0 or prankster_fail0 or self_hit0 or (side0_flinched and not side0_first)
+        is_immobile0
+        or prankster_fail0
+        or self_hit0
+        or (side0_flinched and not side0_first)
     )
     side1_could_move_pre_eot = not (
         is_immobile1 or prankster_fail1 or self_hit1 or (side1_flinched and side0_first)
     )
-    move_user_still_active0_pre_eot = int(battle[OFF_META + M_ACTIVE0]) == move_user_slot0
-    move_user_still_active1_pre_eot = int(battle[OFF_META + M_ACTIVE1]) == move_user_slot1
+    move_user_still_active0_pre_eot = (
+        int(battle[OFF_META + M_ACTIVE0]) == move_user_slot0
+    )
+    move_user_still_active1_pre_eot = (
+        int(battle[OFF_META + M_ACTIVE1]) == move_user_slot1
+    )
     item0_pre_eot = int(battle[user0_off + 6])
     item1_pre_eot = int(battle[user1_off + 6])
-    has_choice0_pre_eot = item0_pre_eot in (ITEM_CHOICE_BAND, ITEM_CHOICE_SPECS, ITEM_CHOICE_SCARF)
-    has_choice1_pre_eot = item1_pre_eot in (ITEM_CHOICE_BAND, ITEM_CHOICE_SPECS, ITEM_CHOICE_SCARF)
+    has_choice0_pre_eot = item0_pre_eot in (
+        ITEM_CHOICE_BAND,
+        ITEM_CHOICE_SPECS,
+        ITEM_CHOICE_SCARF,
+    )
+    has_choice1_pre_eot = item1_pre_eot in (
+        ITEM_CHOICE_BAND,
+        ITEM_CHOICE_SPECS,
+        ITEM_CHOICE_SCARF,
+    )
     if (
         has_choice0_pre_eot
         and (not is_switch)
@@ -12081,7 +12937,9 @@ def step_battle_gen9(
     # consumed the queued switch/runSwitch tie frames before the later move.
     # Leaving the normal Update chain enabled in those states spends extra
     # tied-speed frames before the next real action boundary.
-    _faint_instaswitch_pending = (p0_fainted or opp_fainted) and not battle_over_from_move
+    _faint_instaswitch_pending = (
+        p0_fainted or opp_fainted
+    ) and not battle_over_from_move
     _inline_switch_resume_pending = (
         p0_item_forced_switch
         or _p0_inline_item_switch_resolved
@@ -12112,10 +12970,16 @@ def step_battle_gen9(
     _move2_damage = damage0 if not side0_first else damage1
     _move2_target_kind = target1_kind if side0_first else target0_kind
     _move2_successful_self_boost = (
-        _move1_successful_self_boost_status if side0_first else _move0_successful_self_boost_status
+        _move1_successful_self_boost_status
+        if side0_first
+        else _move0_successful_self_boost_status
     )
     _move2_ran = p1_move_ran if side0_first else p0_move_ran
-    _move2_num_hits = int(_meta1.get("num_hits", 1)) if side0_first else int(_meta0.get("num_hits", 1))
+    _move2_num_hits = (
+        int(_meta1.get("num_hits", 1))
+        if side0_first
+        else int(_meta0.get("num_hits", 1))
+    )
     _move2_post_action_updates = _move_update_count(
         _move2_status,
         _move2_target_kind,
@@ -12156,7 +13020,9 @@ def step_battle_gen9(
         elif not _move2_phazed:
             if current_action_speed0 == current_action_speed1:
                 for _ in range(_move2_post_action_updates):
-                    _sst.each_event_update([current_action_speed0, current_action_speed1])
+                    _sst.each_event_update(
+                        [current_action_speed0, current_action_speed1]
+                    )
                 _move2_pre_residual_updates_consumed = True
             # `lockedmove.onEnd` runs during runMove's AfterMove phase, before
             # the later residual action can resolve Future Sight / Doom Desire.
@@ -12198,10 +13064,12 @@ def step_battle_gen9(
             # `field.clearWeather()`, which fires `eachEvent('WeatherChange')`
             # on the live active pair before the weather residual body is
             # skipped for the now-cleared weather state.
-            _sst.each_event_update([
-                _resid_action_speed0_pre,
-                _resid_action_speed1_pre,
-            ])
+            _sst.each_event_update(
+                [
+                    _resid_action_speed0_pre,
+                    _resid_action_speed1_pre,
+                ]
+            )
         _apply_booster_energy_update_tracked(p0_off)
         _apply_booster_energy_update_tracked(p1_off)
         # 1-2. Weather damage (sand/hail)
@@ -12297,14 +13165,18 @@ def step_battle_gen9(
                 # `futuremove` resolves through Showdown's `trySpreadMoveHit`,
                 # which consumes the same hit-loop and end-of-runMove Update
                 # frames as a normal successful single-hit move.
-                _sst.each_event_update([
-                    _resid_action_speed0_pre,
-                    _resid_action_speed1_pre,
-                ])
-                _sst.each_event_update([
-                    _resid_action_speed0_pre,
-                    _resid_action_speed1_pre,
-                ])
+                _sst.each_event_update(
+                    [
+                        _resid_action_speed0_pre,
+                        _resid_action_speed1_pre,
+                    ]
+                )
+                _sst.each_event_update(
+                    [
+                        _resid_action_speed0_pre,
+                        _resid_action_speed1_pre,
+                    ]
+                )
 
             fs = int(battle[OFF_META + M_FUTURE_SIGHT])
             fs_p0 = (fs >> 12) & 0xF
@@ -12318,7 +13190,10 @@ def step_battle_gen9(
                 # stored move (which targets side 0) consumes the first PRNG
                 # damage-roll bucket when both future hits land on the same upkeep.
                 types0 = int(battle[p0_off + 4])
-                if not (((types0 & 0xFF) == TYPE_DARK) or (((types0 >> 8) & 0xFF) == TYPE_DARK)):
+                if not (
+                    ((types0 & 0xFF) == TYPE_DARK)
+                    or (((types0 >> 8) & 0xFF) == TYPE_DARK)
+                ):
                     hp = int(battle[p0_off + 1])
                     if hp > 0:
                         fs_move1 = int(battle[OFF_MOVES + M_FUTURE_MOVE_1])
@@ -12331,13 +13206,20 @@ def step_battle_gen9(
                             int(battle[OFF_META + M_ACTIVE1]) == fs_src1
                             and int(battle[OFF_SIDE1 + fs_src1 * POKEMON_SIZE + 1]) > 0
                         )
-                        from pokepy.effects.ability_suppression import effective_ability as _effective_ability_fs1
+                        from pokepy.effects.ability_suppression import (
+                            effective_ability as _effective_ability_fs1,
+                        )
+
                         saved_active1 = int(battle[OFF_META + M_ACTIVE1])
                         fs_src1_off = OFF_SIDE1 + fs_src1 * POKEMON_SIZE
                         saved_active1_off = OFF_SIDE1 + saved_active1 * POKEMON_SIZE
                         saved_ability1 = int(battle[fs_src1_off + 5])
-                        field_atk_ability1 = _effective_ability_fs1(battle, saved_active1_off, p0_off)
-                        field_def_ability1 = _effective_ability_fs1(battle, p0_off, saved_active1_off)
+                        field_atk_ability1 = _effective_ability_fs1(
+                            battle, saved_active1_off, p0_off
+                        )
+                        field_def_ability1 = _effective_ability_fs1(
+                            battle, p0_off, saved_active1_off
+                        )
                         battle[OFF_META + M_ACTIVE1] = fs_src1
                         if not fs_src1_live:
                             # Match Showdown's off-field delayed-hit rule on side 1 too.
@@ -12376,7 +13258,10 @@ def step_battle_gen9(
                 # P0's stored future hit targets side 1, so it resolves after the
                 # side-0 target slot above when both queued hits expire together.
                 types1 = int(battle[p1_off + 4])
-                if not (((types1 & 0xFF) == TYPE_DARK) or (((types1 >> 8) & 0xFF) == TYPE_DARK)):
+                if not (
+                    ((types1 & 0xFF) == TYPE_DARK)
+                    or (((types1 >> 8) & 0xFF) == TYPE_DARK)
+                ):
                     hp = int(battle[p1_off + 1])
                     if hp > 0:
                         fs_move0 = int(battle[OFF_MOVES + M_FUTURE_MOVE_0])
@@ -12389,13 +13274,20 @@ def step_battle_gen9(
                             int(battle[OFF_META + M_ACTIVE0]) == fs_src0
                             and int(battle[OFF_SIDE0 + fs_src0 * POKEMON_SIZE + 1]) > 0
                         )
-                        from pokepy.effects.ability_suppression import effective_ability as _effective_ability_fs0
+                        from pokepy.effects.ability_suppression import (
+                            effective_ability as _effective_ability_fs0,
+                        )
+
                         saved_active0 = int(battle[OFF_META + M_ACTIVE0])
                         fs_src0_off = OFF_SIDE0 + fs_src0 * POKEMON_SIZE
                         saved_active0_off = OFF_SIDE0 + saved_active0 * POKEMON_SIZE
                         saved_ability0 = int(battle[fs_src0_off + 5])
-                        field_atk_ability0 = _effective_ability_fs0(battle, saved_active0_off, p1_off)
-                        field_def_ability0 = _effective_ability_fs0(battle, p1_off, saved_active0_off)
+                        field_atk_ability0 = _effective_ability_fs0(
+                            battle, saved_active0_off, p1_off
+                        )
+                        field_def_ability0 = _effective_ability_fs0(
+                            battle, p1_off, saved_active0_off
+                        )
                         battle[OFF_META + M_ACTIVE0] = fs_src0
                         if not fs_src0_live:
                             # Showdown resolves off-field Future Sight / Doom Desire
@@ -12480,10 +13372,14 @@ def step_battle_gen9(
             fx.apply_weather_healing(battle, p1_off, game_data)
             fx.apply_shed_skin_hydration(battle, p0_off, game_data, gen5_prng)
             fx.apply_shed_skin_hydration(battle, p1_off, game_data, gen5_prng)
-            fx.apply_leftovers_healing(battle, p0_off, game_data)
-            fx.apply_leftovers_healing(battle, p1_off, game_data)
-            fx.apply_black_sludge_effect(battle, p0_off, game_data)
-            fx.apply_black_sludge_effect(battle, p1_off, game_data)
+            for _lb_off in (p0_off, p1_off):
+                # Leftovers / Black Sludge reveal themselves via a `[from] item`
+                # heal/damage message whenever they change the holder's HP.
+                _lb_hp = int(battle[_lb_off + 1])
+                fx.apply_leftovers_healing(battle, _lb_off, game_data)
+                fx.apply_black_sludge_effect(battle, _lb_off, game_data)
+                if int(battle[_lb_off + 1]) != _lb_hp:
+                    _mark_item_revealed(_lb_off)
             fx.apply_grassy_terrain_healing(battle, p0_off, game_data)
             fx.apply_grassy_terrain_healing(battle, p1_off, game_data)
             # Solar Power damage is part of order 5 (onResidual on the ability).
@@ -12504,8 +13400,12 @@ def step_battle_gen9(
 
             # 9-10. Status damage (poison/toxic at 9, burn at 10) + freeze thaw.
             # Poison Heal is handled inside apply_end_of_turn_status_effects.
-            _p0_switched_in_this_turn = int(battle[OFF_META + M_ACTIVE0]) != _start_turn_active0
-            _p1_switched_in_this_turn = int(battle[OFF_META + M_ACTIVE1]) != _start_turn_active1
+            _p0_switched_in_this_turn = (
+                int(battle[OFF_META + M_ACTIVE0]) != _start_turn_active0
+            )
+            _p1_switched_in_this_turn = (
+                int(battle[OFF_META + M_ACTIVE1]) != _start_turn_active1
+            )
             fx.apply_end_of_turn_status_effects(
                 battle,
                 p0_off,
@@ -12671,11 +13571,13 @@ def step_battle_gen9(
                 fx.apply_regenerator_on_switch_out(battle, s_off, True)
                 fx.apply_natural_cure_on_switch_out(battle, s_off, True)
                 while True:
-                    active1 = fx.auto_switch(
-                        battle,
+                    _switch_req = SwitchRequest((1,))
+                    _choices = yield _switch_req
+                    _new_slot = int(_choices[1])
+                    active1 = _resolve_switch_target_from_action(
                         OFF_SIDE1,
                         active1,
-                        True,
+                        _new_slot + 4,
                     )
                     _pending_switch_slot_condition1_we = int(
                         battle[OFF_FIELD + F_DESTINY_BOND_1]
@@ -12719,7 +13621,9 @@ def step_battle_gen9(
                     _postswitch_p1_speed_we = _get_switch_resume_action_speed(
                         battle, new_p1_we
                     )
-                    fx.apply_hazard_damage_on_switch(battle, new_p1_we, OFF_FIELD + F_HAZARDS_1)
+                    fx.apply_hazard_damage_on_switch(
+                        battle, new_p1_we, OFF_FIELD + F_HAZARDS_1
+                    )
                     _reset_toxic_counter_on_switch_in(battle, new_p1_we)
                     # Showdown's runSwitch loop skips fainted mons (battle-actions.ts:187
                     # `if (!poke.hp) continue;`). Don't fire onSwitchIn if hazards KO'd it.
@@ -12730,7 +13634,9 @@ def step_battle_gen9(
                                 new_p1_we, _opp_target_off_we, True
                             )
                         else:
-                            _store_pending_opp_switch_in(active1, _postswitch_p1_speed_we)
+                            _store_pending_opp_switch_in(
+                                active1, _postswitch_p1_speed_we
+                            )
                         _consume_switch_request_resume_tie_frames(
                             _postswitch_p1_speed_we,
                             _postswitch_p0_speed_we,
@@ -12744,7 +13650,10 @@ def step_battle_gen9(
                         for i in range(6):
                             if i != active1:
                                 so = OFF_SIDE1 + i * POKEMON_SIZE
-                                if int(battle[so + 1]) > 0 and (int(battle[so + 15]) & 1) == 0:
+                                if (
+                                    int(battle[so + 1]) > 0
+                                    and (int(battle[so + 15]) & 1) == 0
+                                ):
                                     p1_bench_alive += 1
                         if p1_bench_alive == 0:
                             break
@@ -12790,7 +13699,12 @@ def step_battle_gen9(
     status_reward = (0.5 if gave_status else 0.0) - (0.5 if took_status else 0.0)
 
     reward0 = (
-        terminal_reward + damage_reward - damage_penalty + ko_reward - ko_penalty + status_reward
+        terminal_reward
+        + damage_reward
+        - damage_penalty
+        + ko_reward
+        - ko_penalty
+        + status_reward
     )
     reward1 = -reward0
 
@@ -12806,32 +13720,55 @@ def step_battle_gen9(
     # but Showdown marks specific non-direct moves such as Stealth Rock / Spikes
     # with `flags.mustpressure`, and those do pay the extra PP.
     _MOVE_FLAG_MUSTPRESSURE = 0x80000
-    move0_pressure_targets = move0_targets_foe_mon or ((move0_flags & _MOVE_FLAG_MUSTPRESSURE) != 0)
-    move1_pressure_targets = move1_targets_foe_mon or ((move1_flags & _MOVE_FLAG_MUSTPRESSURE) != 0)
+    move0_pressure_targets = move0_targets_foe_mon or (
+        (move0_flags & _MOVE_FLAG_MUSTPRESSURE) != 0
+    )
+    move1_pressure_targets = move1_targets_foe_mon or (
+        (move1_flags & _MOVE_FLAG_MUSTPRESSURE) != 0
+    )
     # Showdown only applies Pressure's EXTRA PP loss after target resolution;
     # `[notarget]` moves still spend their normal 1 PP, but they do not pay
     # the bonus Pressure drop because battle-actions.ts returns before the
     # pressureTargets loop when `target` is gone.
     _pressure0 = (
-        pp_pressure_ability0 == ABILITY_PRESSURE and move0_pressure_targets and not move0_no_target
+        pp_pressure_ability0 == ABILITY_PRESSURE
+        and move0_pressure_targets
+        and not move0_no_target
     )
     _pressure1 = (
-        pp_pressure_ability1 == ABILITY_PRESSURE and move1_pressure_targets and not move1_no_target
+        pp_pressure_ability1 == ABILITY_PRESSURE
+        and move1_pressure_targets
+        and not move1_no_target
     )
     pp_cost0 = -2 if _pressure0 else -1
     pp_cost1 = -2 if _pressure1 else -1
     side0_could_move = not (
-        is_immobile0 or prankster_fail0 or self_hit0 or (side0_flinched and not side0_first)
+        is_immobile0
+        or prankster_fail0
+        or self_hit0
+        or (side0_flinched and not side0_first)
     )
     side1_could_move = not (
         is_immobile1 or prankster_fail1 or self_hit1 or (side1_flinched and side0_first)
     )
-    if (not is_switch) and not must_struggle0 and side0_could_move and not is_strike_turn0 and not is_locked_turn0:
+    if (
+        (not is_switch)
+        and not must_struggle0
+        and side0_could_move
+        and not is_strike_turn0
+        and not is_locked_turn0
+    ):
         _mark_move_slot_used(state, 0, move_user_slot0, move_idx)
         state.team_pp[move_user_slot0, move_idx] = max(
             0, int(state.team_pp[move_user_slot0, move_idx]) + pp_cost0
         )
-    if (not opp_is_switch) and not must_struggle1 and side1_could_move and not is_strike_turn1 and not is_locked_turn1:
+    if (
+        (not opp_is_switch)
+        and not must_struggle1
+        and side1_could_move
+        and not is_strike_turn1
+        and not is_locked_turn1
+    ):
         _mark_move_slot_used(state, 1, move_user_slot1, opp_move_idx)
         state.opp_pp[move_user_slot1, opp_move_idx] = max(
             0, int(state.opp_pp[move_user_slot1, opp_move_idx]) + pp_cost1
@@ -12983,13 +13920,15 @@ def step_battle_gen9(
         battle[OFF_META + M_CHARGING_0] = -1
         if _chg0_is_semi_invul:
             battle[OFF_MOVES + M_ACTIVE_MOVE_ACTIONS_0] = (
-                int(battle[OFF_MOVES + M_ACTIVE_MOVE_ACTIONS_0]) & ~ACTIVE_MOVE_ACTIONS_SEMI_INVUL
+                int(battle[OFF_MOVES + M_ACTIVE_MOVE_ACTIONS_0])
+                & ~ACTIVE_MOVE_ACTIONS_SEMI_INVUL
             )
     if is_strike_turn1:
         battle[OFF_META + M_CHARGING_1] = -1
         if _chg1_is_semi_invul:
             battle[OFF_MOVES + M_ACTIVE_MOVE_ACTIONS_1] = (
-                int(battle[OFF_MOVES + M_ACTIVE_MOVE_ACTIONS_1]) & ~ACTIVE_MOVE_ACTIONS_SEMI_INVUL
+                int(battle[OFF_MOVES + M_ACTIVE_MOVE_ACTIONS_1])
+                & ~ACTIVE_MOVE_ACTIONS_SEMI_INVUL
             )
 
     # Snapshot the residual-handler item state BEFORE applying any KO
@@ -13073,6 +14012,7 @@ def step_battle_gen9(
         # extra synthetic residual post-action Update frame.
         _ko_p0_off = OFF_SIDE0 + active0 * POKEMON_SIZE
         _ko_p1_off = OFF_SIDE1 + active1 * POKEMON_SIZE
+
         def _ko_residual_action_speed(_p_off: int) -> int:
             if int(battle[_p_off + 1]) > 0:
                 return _action_speed_from_effective(
@@ -13129,7 +14069,15 @@ def step_battle_gen9(
     # post-action `eachEvent('Update')`, so keep it after the EOT accounting
     # above. The replacement still appears before the next turn starts and
     # does not take another residual tick on the predecessor's death turn.
-    if hp1_after_eot == 0 and not done:
+    p1_bench_alive_post = 0
+    for i in range(6):
+        if i == active1:
+            continue
+        slot_off = OFF_SIDE1 + i * POKEMON_SIZE
+        if int(battle[slot_off + 1]) > 0 and (int(battle[slot_off + 15]) & 1) == 0:
+            p1_bench_alive_post += 1
+    p1_needs_switch_post = hp1_after_eot == 0 and p1_bench_alive_post > 0 and not done
+    if hp1_after_eot == 0 and not done and not p1_needs_switch_post:
         while True:
             _use_hidden_opp_order = bool(getattr(state, "hidden_opp_switches", ()))
             if _use_hidden_opp_order:
@@ -13236,7 +14184,9 @@ def step_battle_gen9(
     # final terminal state after the full opponent switch loop finishes.
     alive0_final = _count_alive(battle, OFF_SIDE0)
     alive1_final = _count_alive(battle, OFF_SIDE1)
-    done_final = (alive0_final == 0) or (alive1_final == 0) or (int(state.turn) >= max_turns)
+    done_final = (
+        (alive0_final == 0) or (alive1_final == 0) or (int(state.turn) >= max_turns)
+    )
 
     if decisive_winner >= 0:
         winner_final = decisive_winner
@@ -13272,17 +14222,232 @@ def step_battle_gen9(
         or p0_def_ability_force_switch
         or p0_eject_pack_switch
     ) and (p0_bench_alive > 0)
-    if p0_needs_switch and not done:
-        state.phase = np.int8(Phase.FORCED_SWITCH)
+    if not done:
+        if p0_needs_switch and p1_needs_switch_post:
+            state.phase = np.int8(Phase.FORCED_SWITCH)
+            state.forced_switch_side = np.int8(2)
+        elif p0_needs_switch:
+            state.phase = np.int8(Phase.FORCED_SWITCH)
+            state.forced_switch_side = np.int8(0)
+        elif p1_needs_switch_post:
+            state.phase = np.int8(Phase.FORCED_SWITCH)
+            state.forced_switch_side = np.int8(1)
 
     state.turn = np.int16(int(state.turn) + 1)
     state.done = np.bool_(done)
     state.winner = np.int8(winner)
     return np.float32(reward0), np.float32(reward1), bool(done)
 
+
+def step_battle_gen9(
+    state: MultiFormatState,
+    action0: int,
+    action1: int,
+    game_data,
+    move_effects,
+    type_chart: np.ndarray,
+    gen5_prng,
+    resolve_mid_turn_switch0=None,
+    wants_tera0: bool = False,
+    wants_tera1: bool = False,
+) -> Tuple[np.float32, np.float32, bool]:
+    """Synchronous wrapper around :func:`step_battle_gen9_iter`."""
+    gen = step_battle_gen9_iter(
+        state,
+        action0,
+        action1,
+        game_data,
+        move_effects,
+        type_chart,
+        gen5_prng,
+        resolve_mid_turn_switch0=resolve_mid_turn_switch0,
+        wants_tera0=wants_tera0,
+        wants_tera1=wants_tera1,
+    )
+    try:
+        req = next(gen)
+        while True:
+            choices = resolve_switch_choices_sync(
+                state,
+                state.battle_state,
+                req,
+                side_order0=state.side_order0,
+                side_order1=state.side_order1,
+                resolve_mid_turn_switch0=resolve_mid_turn_switch0,
+            )
+            req = gen.send(choices)
+    except StopIteration as stop:
+        result = stop.value
+        forced_side = int(getattr(state, "forced_switch_side", -1))
+        if int(state.phase) == Phase.FORCED_SWITCH and forced_side in (1, 2):
+            active0 = int(state.battle_state[OFF_META + M_ACTIVE0])
+            active1 = int(state.battle_state[OFF_META + M_ACTIVE1])
+            _inline_post_faint_switch_side1(
+                state,
+                game_data,
+                gen5_prng,
+                active0,
+                active1,
+            )
+            if forced_side == 2:
+                state.forced_switch_side = np.int8(0)
+            else:
+                state.forced_switch_side = np.int8(-1)
+                state.phase = np.int8(Phase.BATTLE)
+        return result
+
+
+def _inline_post_faint_switch_side1(
+    state: MultiFormatState,
+    game_data,
+    gen5_prng,
+    active0: int,
+    active1: int,
+) -> int:
+    """Auto-switch side 1 after EOT faint (sync wrapper back-compat)."""
+    from pokepy import effects as fx  # type: ignore
+
+    battle = state.battle_state
+    side_order1 = state.side_order1
+
+    def _base_ability_for_offset(pokemon_offset: int) -> int:
+        poff = int(pokemon_offset)
+        if poff < OFF_SIDE1:
+            slot = (poff - OFF_SIDE0) // POKEMON_SIZE
+            return int(state.team_abilities[slot])
+        slot = (poff - OFF_SIDE1) // POKEMON_SIZE
+        return int(state.opp_abilities[slot])
+
+    def _reset_incoming_switch_state_tracked(pokemon_offset: int) -> None:
+        fx.reset_incoming_switch_state(
+            battle,
+            pokemon_offset,
+            game_data,
+            base_ability=_base_ability_for_offset(pokemon_offset),
+            state=state,
+        )
+        _reset_move_used_mask_for_offset(state, pokemon_offset)
+
+    def _sync_showdown_order_on_switch(order_arr, new_active_slot):
+        new_active_slot = int(new_active_slot)
+        idx = -1
+        for i in range(len(order_arr)):
+            if int(order_arr[i]) == new_active_slot:
+                idx = i
+                break
+        if idx <= 0:
+            return
+        old_front = int(order_arr[0])
+        order_arr[0] = np.int8(new_active_slot)
+        order_arr[idx] = np.int8(old_front)
+
+    def _run_switch_in_update_item_hooks(pokemon_offset: int) -> None:
+        def _run_untracked(hook, _pokemon_offset: int, *args) -> None:
+            hook(*args)
+
+        _run_switch_in_update_item_hooks_common(
+            battle,
+            pokemon_offset,
+            game_data,
+            _run_untracked,
+        )
+
+    def _action_speed_from_effective(eff_speed: int) -> int:
+        if int(battle[OFF_FIELD + F_TRICK_ROOM]) > 0:
+            return 10000 - int(eff_speed)
+        return int(eff_speed)
+
+    while True:
+        _use_hidden_opp_order = bool(getattr(state, "hidden_opp_switches", ()))
+        if _use_hidden_opp_order:
+            active1 = fx.auto_switch(
+                battle,
+                OFF_SIDE1,
+                active1,
+                True,
+                order=side_order1,
+            )
+        else:
+            active1 = fx.auto_switch(
+                battle,
+                OFF_SIDE1,
+                active1,
+                True,
+            )
+        _pending_switch_slot_condition1_post = int(battle[OFF_FIELD + F_DESTINY_BOND_1])
+        battle[OFF_META + M_ACTIVE1] = active1
+        _sync_showdown_order_on_switch(side_order1, active1)
+        _clear_side_switch_state_common(battle, 1)
+        for off in (
+            F_VOLATILE_1,
+            F_LEECH_SEED_1,
+            F_DISABLE_TURNS_1,
+            F_EXTENDED_VOLATILE_1,
+            F_DESTINY_BOND_1,
+            F_SUBSTITUTE_1,
+            F_YAWN_TURNS_1,
+            F_PERISH_COUNT_1,
+        ):
+            battle[OFF_FIELD + off] = 0
+        new_p1 = OFF_SIDE1 + active1 * POKEMON_SIZE
+        _reset_incoming_switch_state_tracked(new_p1)
+        _postswitch_consumed_pending1 = apply_pending_wish_on_switch_in(
+            battle,
+            1,
+            new_p1,
+            state,
+            game_data,
+            _pending_switch_slot_condition1_post,
+        )
+        if (
+            is_pending_wish_sentinel(_pending_switch_slot_condition1_post)
+            and not _postswitch_consumed_pending1
+        ):
+            battle[OFF_FIELD + F_DESTINY_BOND_1] = np.int16(
+                _pending_switch_slot_condition1_post
+            )
+        _postswitch_p0_speed = _action_speed_from_effective(
+            fx.get_effective_speed(battle, OFF_SIDE0 + active0 * POKEMON_SIZE)
+        )
+        _postswitch_p1_speed = _get_switch_resume_action_speed(battle, new_p1)
+        fx.apply_hazard_damage_on_switch(battle, new_p1, OFF_FIELD + F_HAZARDS_1)
+        _reset_toxic_counter_on_switch_in(battle, new_p1)
+        if int(battle[new_p1 + 1]) > 0:
+            _opp_target_off = OFF_SIDE0 + active0 * POKEMON_SIZE
+            if int(battle[_opp_target_off + 1]) > 0:
+                fx.apply_switch_in_ability_with_trace_reaction(
+                    battle,
+                    new_p1,
+                    _opp_target_off,
+                    True,
+                    gen5_prng=gen5_prng,
+                )
+            else:
+                state.pending_opp_switch_in_slot = np.int8(active1)
+                state.pending_opp_switch_action_speed = np.int16(_postswitch_p1_speed)
+            _consume_switch_request_resume_tie_frames(
+                _postswitch_p1_speed,
+                _postswitch_p0_speed,
+                int(battle[_opp_target_off + 1]) > 0,
+                gen5_prng,
+            )
+            _run_switch_in_update_item_hooks(new_p1)
+            break
+        p1_bench_alive = 0
+        for i in range(6):
+            if i != active1:
+                so = OFF_SIDE1 + i * POKEMON_SIZE
+                if int(battle[so + 1]) > 0 and (int(battle[so + 15]) & 1) == 0:
+                    p1_bench_alive += 1
+        if p1_bench_alive == 0:
+            break
+    return active1
+
+
 # =============================================================================
 # Forced switch handler
 # =============================================================================
+
 
 def step_forced_switch(
     state: MultiFormatState,
@@ -13293,16 +14458,43 @@ def step_forced_switch(
     type_chart: np.ndarray,
     gen5_prng,
 ) -> Tuple[np.float32, np.float32, bool]:
-    """Player 0 forced switch (after KO or U-turn). No turn passes.
+    """Forced switch after KO or pivot. No turn passes.
 
-    Faithful port of MultiFormatFastEnv._step_forced_switch (lines 5459-5562).
-    `side` is included for symmetry with future opponent forced switches; the
-    the Showdown reference source only handles player 0.
+    Handles side 0 (player) and side 1 (opponent) symmetrically.
     """
     from pokepy import effects as fx  # type: ignore
 
+    side = int(side)
     battle = state.battle_state
-    side_order0 = state.side_order0
+    side_base = OFF_SIDE0 if side == 0 else OFF_SIDE1
+    active_meta = M_ACTIVE0 if side == 0 else M_ACTIVE1
+    opp_active_meta = M_ACTIVE1 if side == 0 else M_ACTIVE0
+    side_order = state.side_order0 if side == 0 else state.side_order1
+    destiny_bond_off = F_DESTINY_BOND_0 if side == 0 else F_DESTINY_BOND_1
+    hazards_off = F_HAZARDS_0 if side == 0 else F_HAZARDS_1
+    clear_field_offs = (
+        (
+            F_VOLATILE_0,
+            F_LEECH_SEED_0,
+            F_DISABLE_TURNS_0,
+            F_EXTENDED_VOLATILE_0,
+            F_DESTINY_BOND_0,
+            F_SUBSTITUTE_0,
+            F_YAWN_TURNS_0,
+            F_PERISH_COUNT_0,
+        )
+        if side == 0
+        else (
+            F_VOLATILE_1,
+            F_LEECH_SEED_1,
+            F_DISABLE_TURNS_1,
+            F_EXTENDED_VOLATILE_1,
+            F_DESTINY_BOND_1,
+            F_SUBSTITUTE_1,
+            F_YAWN_TURNS_1,
+            F_PERISH_COUNT_1,
+        )
+    )
 
     def _clear_pending_opp_switch_in() -> None:
         state.pending_opp_switch_in_slot = np.int8(-1)
@@ -13349,51 +14541,39 @@ def step_forced_switch(
         old_front = int(order_arr[0])
         order_arr[0] = np.int8(new_active_slot)
         order_arr[idx] = np.int8(old_front)
-    target_slot = max(0, min(5, int(action) - 4))
-    target_off = OFF_SIDE0 + target_slot * POKEMON_SIZE
-    target_alive = (int(battle[target_off + 1]) > 0) and ((int(battle[target_off + 15]) & 1) == 0)
 
-    # Fall back to first alive slot if requested target is invalid
+    target_slot = max(0, min(5, int(action) - 4))
+    target_off = side_base + target_slot * POKEMON_SIZE
+    target_alive = (int(battle[target_off + 1]) > 0) and (
+        (int(battle[target_off + 15]) & 1) == 0
+    )
+
     if not target_alive or int(action) < 4:
         for i in range(6):
-            so = OFF_SIDE0 + i * POKEMON_SIZE
+            so = side_base + i * POKEMON_SIZE
             if int(battle[so + 1]) > 0 and (int(battle[so + 15]) & 1) == 0:
                 target_slot = i
                 break
 
-    # Regenerator / Natural Cure on outgoing mon (if it's still alive,
-    # i.e. switch was triggered by U-turn / Eject Pack / Eject Button /
-    # Red Card / Parting Shot, NOT by faint). Showdown fires
-    # `BeforeSwitchOut` for any voluntary switch.
-    old_active0 = int(battle[OFF_META + M_ACTIVE0])
-    old_p0_off = OFF_SIDE0 + old_active0 * POKEMON_SIZE
-    if int(battle[old_p0_off + 1]) > 0:
-        fx.apply_regenerator_on_switch_out(battle, old_p0_off, True)
-        fx.apply_natural_cure_on_switch_out(battle, old_p0_off, True)
+    old_active = int(battle[OFF_META + active_meta])
+    old_off = side_base + old_active * POKEMON_SIZE
+    if int(battle[old_off + 1]) > 0:
+        fx.apply_regenerator_on_switch_out(battle, old_off, True)
+        fx.apply_natural_cure_on_switch_out(battle, old_off, True)
 
-    heal_wish_sentinel = int(battle[OFF_FIELD + F_DESTINY_BOND_0])
+    heal_wish_sentinel = int(battle[OFF_FIELD + destiny_bond_off])
 
-    battle[OFF_META + M_ACTIVE0] = target_slot
-    _sync_showdown_order_on_switch(side_order0, target_slot)
-    # Clear switch-related state
-    _clear_side_switch_state_common(battle, 0)
-    for off in (
-        F_VOLATILE_0,
-        F_LEECH_SEED_0,
-        F_DISABLE_TURNS_0,
-        F_EXTENDED_VOLATILE_0,
-        F_DESTINY_BOND_0,
-        F_SUBSTITUTE_0,
-        F_YAWN_TURNS_0,
-        F_PERISH_COUNT_0,
-    ):
+    battle[OFF_META + active_meta] = target_slot
+    _sync_showdown_order_on_switch(side_order, target_slot)
+    _clear_side_switch_state_common(battle, side)
+    for off in clear_field_offs:
         battle[OFF_FIELD + off] = 0
 
-    chosen = OFF_SIDE0 + target_slot * POKEMON_SIZE
+    chosen = side_base + target_slot * POKEMON_SIZE
     _reset_incoming_switch_state_tracked(chosen)
     _forced_switch_consumed_pending = apply_pending_wish_on_switch_in(
         battle,
-        0,
+        side,
         chosen,
         state,
         game_data,
@@ -13403,44 +14583,45 @@ def step_forced_switch(
         is_pending_wish_sentinel(heal_wish_sentinel)
         and not _forced_switch_consumed_pending
     ):
-        battle[OFF_FIELD + F_DESTINY_BOND_0] = np.int16(heal_wish_sentinel)
+        battle[OFF_FIELD + destiny_bond_off] = np.int16(heal_wish_sentinel)
 
-    active1 = int(battle[OFF_META + M_ACTIVE1])
-    opp_off = OFF_SIDE1 + active1 * POKEMON_SIZE
+    opp_active = int(battle[OFF_META + opp_active_meta])
+    opp_side_base = OFF_SIDE1 if side == 0 else OFF_SIDE0
+    opp_off = opp_side_base + opp_active * POKEMON_SIZE
     pending_opp_slot = int(state.pending_opp_switch_in_slot)
     pending_opp_speed = int(state.pending_opp_switch_action_speed)
     forced_switch_action_speed = int(state.forced_switch_action_speed)
-    _postswitch_p0_speed = (
+    _postswitch_self_speed = (
         forced_switch_action_speed
         if forced_switch_action_speed > 0
         else _get_switch_resume_action_speed(battle, chosen)
     )
     _opp_effective_speed = fx.get_effective_speed(battle, opp_off)
     if int(battle[OFF_FIELD + F_TRICK_ROOM]) > 0:
-        _postswitch_p1_speed = 10000 - int(_opp_effective_speed)
+        _postswitch_opp_speed = 10000 - int(_opp_effective_speed)
     else:
-        _postswitch_p1_speed = int(_opp_effective_speed)
-    fx.apply_hazard_damage_on_switch(battle, chosen, OFF_FIELD + F_HAZARDS_0)
+        _postswitch_opp_speed = int(_opp_effective_speed)
+    fx.apply_hazard_damage_on_switch(battle, chosen, OFF_FIELD + hazards_off)
     _reset_toxic_counter_on_switch_in(battle, chosen)
-    # Skip onSwitchIn if hazards KO'd the replacement
-    # (battle-actions.ts:187 `if (!poke.hp) continue;`).
     if int(battle[chosen + 1]) > 0:
         has_pending_opp_switch = (
-            pending_opp_slot == active1
+            pending_opp_slot == opp_active
             and pending_opp_slot >= 0
             and int(battle[opp_off + 1]) > 0
         )
         if has_pending_opp_switch:
-            p0_switchin_speed = fx.get_effective_speed(battle, chosen)
-            p1_switchin_speed = fx.get_effective_speed(battle, opp_off)
+            self_switchin_speed = fx.get_effective_speed(battle, chosen)
+            opp_switchin_speed = fx.get_effective_speed(battle, opp_off)
             tr_active = int(battle[OFF_FIELD + F_TRICK_ROOM]) > 0
-            p0_first = (
-                (p0_switchin_speed >= p1_switchin_speed)
+            self_first = (
+                (self_switchin_speed >= opp_switchin_speed)
                 if not tr_active
-                else (p0_switchin_speed <= p1_switchin_speed)
+                else (self_switchin_speed <= opp_switchin_speed)
             )
-            if p0_first:
-                fx.apply_switch_in_ability(battle, chosen, opp_off, True, gen5_prng=gen5_prng)
+            if self_first:
+                fx.apply_switch_in_ability(
+                    battle, chosen, opp_off, True, gen5_prng=gen5_prng
+                )
                 if int(battle[opp_off + 1]) > 0:
                     fx.apply_switch_in_ability(
                         battle,
@@ -13450,7 +14631,9 @@ def step_forced_switch(
                         gen5_prng=gen5_prng,
                     )
             else:
-                fx.apply_switch_in_ability(battle, opp_off, chosen, True, gen5_prng=gen5_prng)
+                fx.apply_switch_in_ability(
+                    battle, opp_off, chosen, True, gen5_prng=gen5_prng
+                )
                 if int(battle[chosen + 1]) > 0:
                     fx.apply_switch_in_ability(
                         battle,
@@ -13459,8 +14642,8 @@ def step_forced_switch(
                         True,
                         gen5_prng=gen5_prng,
                     )
-            _postswitch_p1_speed = pending_opp_speed
-        else:
+            _postswitch_opp_speed = pending_opp_speed
+        elif int(battle[opp_off + 1]) > 0:
             fx.apply_switch_in_ability_with_trace_reaction(
                 battle,
                 chosen,
@@ -13468,35 +14651,34 @@ def step_forced_switch(
                 True,
                 gen5_prng=gen5_prng,
             )
-        # Forced-switch resume path in Showdown also consumes the same
-        # Forced-switch resume path in Showdown also consumes the same
-        # 3 post-switch speed-comparator frames as the symmetric inline
-        # opponent replacement handled inside step_battle_gen9:
-        #   1. post-switch action eachEvent('Update')
-        #   2. runSwitch speedSort(allActive)
-        #   3. post-runSwitch eachEvent('Update')
-        # The tie check uses the replacement's neutral on-entry speed
-        # before hazards or entry effects like Sticky Web can modify it.
+        elif side == 1:
+            state.pending_opp_switch_in_slot = np.int8(target_slot)
+            state.pending_opp_switch_action_speed = np.int16(_postswitch_self_speed)
+        if side == 0:
+            _tie_speed0 = _postswitch_self_speed
+            _tie_speed1 = _postswitch_opp_speed
+        else:
+            _tie_speed0 = _postswitch_opp_speed
+            _tie_speed1 = _postswitch_self_speed
         _consume_switch_request_resume_tie_frames(
-            _postswitch_p0_speed,
-            _postswitch_p1_speed,
-            True,
+            _tie_speed0,
+            _tie_speed1,
+            int(battle[opp_off + 1]) > 0,
             gen5_prng,
         )
         _run_switch_in_update_item_hooks(chosen)
         _clear_pending_opp_switch_in()
         state.phase = np.int8(Phase.BATTLE)
     else:
-        # If the newly switched-in Pokemon faints to hazards, remain in FORCED_SWITCH
-        # phase unless all Pokemon are fainted.
-        p0_bench_alive = 0
+        bench_alive = 0
         for i in range(6):
             if i != target_slot:
-                so = OFF_SIDE0 + i * POKEMON_SIZE
+                so = side_base + i * POKEMON_SIZE
                 if int(battle[so + 1]) > 0 and (int(battle[so + 15]) & 1) == 0:
-                    p0_bench_alive += 1
-        if p0_bench_alive > 0:
+                    bench_alive += 1
+        if bench_alive > 0:
             state.phase = np.int8(Phase.FORCED_SWITCH)
+            state.forced_switch_side = np.int8(side)
         else:
             _clear_pending_opp_switch_in()
             state.phase = np.int8(Phase.BATTLE)
@@ -13505,6 +14687,8 @@ def step_forced_switch(
     state.forced_switch_hp = np.int16(0)
     state.forced_switch_original = np.int8(-1)
     state.forced_switch_action_speed = np.int16(0)
+    if int(state.phase) != Phase.FORCED_SWITCH:
+        state.forced_switch_side = np.int8(-1)
     alive0 = _count_alive(battle, OFF_SIDE0)
     alive1 = _count_alive(battle, OFF_SIDE1)
     max_turns = getattr(state, "max_turns", 200)

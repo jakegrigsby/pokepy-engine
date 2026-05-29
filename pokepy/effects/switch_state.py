@@ -13,6 +13,7 @@ from pokepy.core.constants import (
 
 _PARADOX_STAT_MASK = 0x6010
 
+
 def reset_incoming_switch_state(
     battle: np.ndarray,
     pokemon_offset: int,

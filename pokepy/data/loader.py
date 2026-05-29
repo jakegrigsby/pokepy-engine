@@ -16,6 +16,7 @@ from typing import Dict, Optional
 
 import numpy as np
 
+
 @dataclass
 class GameData:
     """Pure-numpy game data tables."""
@@ -38,6 +39,7 @@ class GameData:
     item_is_berry: Optional[np.ndarray] = None
     item_is_choice: Optional[np.ndarray] = None
 
+
 @dataclass
 class MoveEffectData:
     """Move effect arrays indexed by move ID. Built from move_effects.MOVE_EFFECTS."""
@@ -58,6 +60,7 @@ class MoveEffectData:
     hits_min: np.ndarray
     hits_max: np.ndarray
 
+
 @dataclass
 class IDMappings:
     species_to_idx: Dict[str, int]
@@ -70,9 +73,11 @@ class IDMappings:
     ability_names: Dict[int, str]
     item_names: Dict[int, str]
 
+
 _cached: Optional[GameData] = None
 _cached_mappings: Optional[IDMappings] = None
 _cached_move_effects: Optional[MoveEffectData] = None
+
 
 def get_data_path() -> Path:
     """Pokemon Showdown data is bundled at pokepy/data/extracted/.
@@ -83,6 +88,7 @@ def get_data_path() -> Path:
     if env:
         return Path(env).expanduser().resolve()
     return Path(__file__).resolve().parent / "extracted"
+
 
 def load_game_data(data_path: Optional[Path] = None) -> GameData:
     global _cached
@@ -151,13 +157,16 @@ def load_game_data(data_path: Optional[Path] = None) -> GameData:
                     acc_arr[_num] = 127
                 _flags = _entry.get("flags") or {}
                 if _flags.get("mustpressure"):
-                    flags_arr[_num] = np.uint32(int(flags_arr[_num]) | int(_FLAG_MUSTPRESSURE))
+                    flags_arr[_num] = np.uint32(
+                        int(flags_arr[_num]) | int(_FLAG_MUSTPRESSURE)
+                    )
         except Exception:
             pass
 
     if data_path is None:
         _cached = gd
     return gd
+
 
 def load_id_mappings(data_path: Optional[Path] = None) -> IDMappings:
     """Load string -> int ID mappings from id_mappings.json."""
@@ -183,7 +192,10 @@ def load_id_mappings(data_path: Optional[Path] = None) -> IDMappings:
         _cached_mappings = m
     return m
 
-def load_move_effect_data(move_to_idx: Optional[Dict[str, int]] = None) -> MoveEffectData:
+
+def load_move_effect_data(
+    move_to_idx: Optional[Dict[str, int]] = None,
+) -> MoveEffectData:
     """Build MoveEffectData from pokepy.data.move_effects.MOVE_EFFECTS."""
     global _cached_move_effects
     if _cached_move_effects is not None and move_to_idx is None:

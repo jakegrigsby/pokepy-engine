@@ -61,6 +61,7 @@ from pokepy.effects.volatiles import (
     apply_encore_from_move,
 )
 
+
 def _hand_state():
     """Build a minimal battle buffer with two normal-type Pokemon (one per side)."""
     gd = load_game_data()
@@ -94,6 +95,7 @@ def _hand_state():
             bs[poff + 15] = 0  # flags
     return state, gd, me
 
+
 def test_apply_leech_seed_sets_target_flag():
     state, gd, me = _hand_state()
     bs = state.battle_state
@@ -112,11 +114,12 @@ def test_apply_leech_seed_sets_target_flag():
         move_effects=me,
     )
 
-    assert int(bs[OFF_FIELD + F_LEECH_SEED_1]) == 1, (
-        "leech seed flag should be set on target side after Leech Seed hits"
-    )
+    assert (
+        int(bs[OFF_FIELD + F_LEECH_SEED_1]) == 1
+    ), "leech seed flag should be set on target side after Leech Seed hits"
     # Side 0 not seeded
     assert int(bs[OFF_FIELD + F_LEECH_SEED_0]) == 0
+
 
 def test_apply_substitute_pays_quarter_hp_and_sets_sub_field():
     state, gd, me = _hand_state()
@@ -136,12 +139,13 @@ def test_apply_substitute_pays_quarter_hp_and_sets_sub_field():
         move_effects=me,
     )
 
-    assert int(bs[OFF_FIELD + F_SUBSTITUTE_0]) == expected_cost, (
-        f"substitute should equal max_hp//4 = {expected_cost}"
-    )
-    assert int(bs[user_offset + 1]) == starting_hp - expected_cost, (
-        "user should have lost max_hp//4 HP"
-    )
+    assert (
+        int(bs[OFF_FIELD + F_SUBSTITUTE_0]) == expected_cost
+    ), f"substitute should equal max_hp//4 = {expected_cost}"
+    assert (
+        int(bs[user_offset + 1]) == starting_hp - expected_cost
+    ), "user should have lost max_hp//4 HP"
+
 
 def test_apply_perish_song_sets_both_counters_to_4():
     state, gd, me = _hand_state()
@@ -160,6 +164,7 @@ def test_apply_perish_song_sets_both_counters_to_4():
     assert int(bs[OFF_FIELD + F_PERISH_COUNT_0]) == 4
     assert int(bs[OFF_FIELD + F_PERISH_COUNT_1]) == 4
 
+
 def test_apply_destiny_bond_sets_user_flag():
     state, gd, me = _hand_state()
     bs = state.battle_state
@@ -176,6 +181,7 @@ def test_apply_destiny_bond_sets_user_flag():
     assert int(bs[OFF_FIELD + F_DESTINY_BOND_0]) == 1
     # Side 1 untouched
     assert int(bs[OFF_FIELD + F_DESTINY_BOND_1]) == 0
+
 
 def test_apply_confusion_sets_volatile_turns_for_confuse_ray():
     state, gd, me = _hand_state()
@@ -197,9 +203,8 @@ def test_apply_confusion_sets_volatile_turns_for_confuse_ray():
 
     new_turns = get_confusion_turns(int(bs[OFF_FIELD + F_VOLATILE_1]))
     assert new_turns > 0, f"expected confusion turns > 0, got {new_turns}"
-    assert 2 <= new_turns <= 5, (
-        f"confusion lasts 2-5 turns, got {new_turns}"
-    )
+    assert 2 <= new_turns <= 5, f"confusion lasts 2-5 turns, got {new_turns}"
+
 
 def test_apply_taunt_sets_taunt_turns():
     state, gd, me = _hand_state()
@@ -220,6 +225,7 @@ def test_apply_taunt_sets_taunt_turns():
     new_turns = get_taunt_turns(int(bs[OFF_FIELD + F_VOLATILE_1]))
     assert new_turns > 0, f"expected taunt turns > 0, got {new_turns}"
     assert new_turns == 3
+
 
 def test_apply_encore_sets_encore_turns_when_target_has_last_move():
     state, gd, me = _hand_state()

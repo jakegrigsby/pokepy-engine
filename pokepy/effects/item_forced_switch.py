@@ -18,24 +18,56 @@ import numpy as np
 
 from pokepy.core.bitpack import get_status, set_status
 from pokepy.core.constants import (
-    OFF_SIDE0, OFF_SIDE1, OFF_FIELD, OFF_META, OFF_MOVES, M_ACTIVE0, M_ACTIVE1, POKEMON_SIZE,
-    ITEM_EJECT_BUTTON, ITEM_RED_CARD,
-    M_PARTIAL_TRAP_TURNS_0, M_PARTIAL_TRAP_TURNS_1,
-    M_ACTIVE_MOVE_ACTIONS_0, M_ACTIVE_MOVE_ACTIONS_1,
-    F_CHOICE_LOCK_0, F_LAST_MOVE_0, F_DISABLE_0, F_VOLATILE_0, F_LEECH_SEED_0,
-    F_DISABLE_TURNS_0, F_EXTENDED_VOLATILE_0, F_DESTINY_BOND_0, F_SUBSTITUTE_0,
-    F_YAWN_TURNS_0, F_PERISH_COUNT_0, F_HAZARDS_0,
-    F_CHOICE_LOCK_1, F_LAST_MOVE_1, F_DISABLE_1, F_VOLATILE_1, F_LEECH_SEED_1,
-    F_DISABLE_TURNS_1, F_EXTENDED_VOLATILE_1, F_DESTINY_BOND_1, F_SUBSTITUTE_1,
-    F_YAWN_TURNS_1, F_PERISH_COUNT_1, F_HAZARDS_1,
-    EXT_VOL_MEAN_LOOK, EXT_VOL_PARTIAL_TRAP,
-    NEUTRAL_BOOSTS_13, NEUTRAL_BOOSTS_14,
-    STATUS_TOXIC, CAT_STATUS,
+    OFF_SIDE0,
+    OFF_SIDE1,
+    OFF_FIELD,
+    OFF_META,
+    OFF_MOVES,
+    M_ACTIVE0,
+    M_ACTIVE1,
+    POKEMON_SIZE,
+    ITEM_EJECT_BUTTON,
+    ITEM_RED_CARD,
+    M_PARTIAL_TRAP_TURNS_0,
+    M_PARTIAL_TRAP_TURNS_1,
+    M_ACTIVE_MOVE_ACTIONS_0,
+    M_ACTIVE_MOVE_ACTIONS_1,
+    F_CHOICE_LOCK_0,
+    F_LAST_MOVE_0,
+    F_DISABLE_0,
+    F_VOLATILE_0,
+    F_LEECH_SEED_0,
+    F_DISABLE_TURNS_0,
+    F_EXTENDED_VOLATILE_0,
+    F_DESTINY_BOND_0,
+    F_SUBSTITUTE_0,
+    F_YAWN_TURNS_0,
+    F_PERISH_COUNT_0,
+    F_HAZARDS_0,
+    F_CHOICE_LOCK_1,
+    F_LAST_MOVE_1,
+    F_DISABLE_1,
+    F_VOLATILE_1,
+    F_LEECH_SEED_1,
+    F_DISABLE_TURNS_1,
+    F_EXTENDED_VOLATILE_1,
+    F_DESTINY_BOND_1,
+    F_SUBSTITUTE_1,
+    F_YAWN_TURNS_1,
+    F_PERISH_COUNT_1,
+    F_HAZARDS_1,
+    EXT_VOL_MEAN_LOOK,
+    EXT_VOL_PARTIAL_TRAP,
+    NEUTRAL_BOOSTS_13,
+    NEUTRAL_BOOSTS_14,
+    STATUS_TOXIC,
+    CAT_STATUS,
 )
 from pokepy.effects.switch_slot_conditions import (
     apply_pending_wish_on_switch_in,
     is_pending_wish_sentinel,
 )
+
 
 def _clear_opp_switch_state(battle: np.ndarray, new_active1: int) -> None:
     """Clear field-level state when the opponent (side 1) auto-switches via
@@ -48,14 +80,23 @@ def _clear_opp_switch_state(battle: np.ndarray, new_active1: int) -> None:
     for off in (F_CHOICE_LOCK_1, F_LAST_MOVE_1, F_DISABLE_1):
         battle[OFF_FIELD + off] = -1
     battle[OFF_MOVES + M_ACTIVE_MOVE_ACTIONS_1] = 0
-    for off in (F_VOLATILE_1, F_LEECH_SEED_1, F_DISABLE_TURNS_1, F_EXTENDED_VOLATILE_1,
-                F_DESTINY_BOND_1, F_SUBSTITUTE_1, F_YAWN_TURNS_1, F_PERISH_COUNT_1):
+    for off in (
+        F_VOLATILE_1,
+        F_LEECH_SEED_1,
+        F_DISABLE_TURNS_1,
+        F_EXTENDED_VOLATILE_1,
+        F_DESTINY_BOND_1,
+        F_SUBSTITUTE_1,
+        F_YAWN_TURNS_1,
+        F_PERISH_COUNT_1,
+    ):
         battle[OFF_FIELD + off] = 0
     _clear_opponent_source_tied_lock_state(battle, side=1)
     new_p1 = OFF_SIDE1 + int(new_active1) * POKEMON_SIZE
     tera = int(battle[new_p1 + 14]) & -4096
     battle[new_p1 + 13] = NEUTRAL_BOOSTS_13
     battle[new_p1 + 14] = (NEUTRAL_BOOSTS_14 & 4095) | tera
+
 
 def _clear_switched_out_pokemon_state(battle: np.ndarray, pokemon_off: int) -> None:
     """Mirror Showdown's per-Pokemon clearVolatile() work on switch-out.
@@ -85,6 +126,7 @@ def _clear_switched_out_pokemon_state(battle: np.ndarray, pokemon_off: int) -> N
     battle[poff + 14] = (NEUTRAL_BOOSTS_14 & 4095) | tera
     battle[poff + 15] = int(battle[poff + 15]) & ~_SWITCH_OUT_CLEAR_MASK
 
+
 def _clear_opponent_source_tied_lock_state(battle: np.ndarray, side: int) -> None:
     """Clear target-side locks that end when the switching source leaves."""
     if int(side) == 0:
@@ -95,9 +137,11 @@ def _clear_opponent_source_tied_lock_state(battle: np.ndarray, side: int) -> Non
         opp_partial_trap_turns = M_PARTIAL_TRAP_TURNS_0
 
     battle[OFF_FIELD + opp_ext_vol] = np.int16(
-        int(battle[OFF_FIELD + opp_ext_vol]) & ~(EXT_VOL_MEAN_LOOK | EXT_VOL_PARTIAL_TRAP)
+        int(battle[OFF_FIELD + opp_ext_vol])
+        & ~(EXT_VOL_MEAN_LOOK | EXT_VOL_PARTIAL_TRAP)
     )
     battle[OFF_MOVES + opp_partial_trap_turns] = 0
+
 
 def _apply_opp_switch_in_effects(
     battle: np.ndarray,
@@ -154,6 +198,7 @@ def _apply_opp_switch_in_effects(
             gen5_prng=gen5_prng,
         )
 
+
 def _consume_opp_item_switch_pre_switchin_frames(
     battle: np.ndarray,
     new_active1: int,
@@ -184,10 +229,13 @@ def _consume_opp_item_switch_pre_switchin_frames(
     if int(battle[new_p1 + 1]) <= 0 or int(battle[p0_off + 1]) <= 0:
         return
 
-    pre_switch_in_tie = fx.get_effective_speed(battle, new_p1) == fx.get_effective_speed(battle, p0_off)
+    pre_switch_in_tie = fx.get_effective_speed(
+        battle, new_p1
+    ) == fx.get_effective_speed(battle, p0_off)
     if pre_switch_in_tie:
         for _ in range(3):
             gen5_prng.random(0, 2)
+
 
 def _finalize_opp_item_switch_resume_frames(
     battle: np.ndarray,
@@ -207,6 +255,7 @@ def _finalize_opp_item_switch_resume_frames(
         return
     if fx.get_effective_speed(battle, new_p1) == fx.get_effective_speed(battle, p0_off):
         gen5_prng.random(0, 2)
+
 
 def _consume_player_item_switch_pre_switchin_frames(
     battle: np.ndarray,
@@ -235,10 +284,13 @@ def _consume_player_item_switch_pre_switchin_frames(
     if int(battle[new_p0 + 1]) <= 0 or int(battle[p1_off + 1]) <= 0:
         return
 
-    pre_switch_in_tie = fx.get_effective_speed(battle, new_p0) == fx.get_effective_speed(battle, p1_off)
+    pre_switch_in_tie = fx.get_effective_speed(
+        battle, new_p0
+    ) == fx.get_effective_speed(battle, p1_off)
     if pre_switch_in_tie:
         for _ in range(3):
             gen5_prng.random(0, 2)
+
 
 def _finalize_player_item_switch_resume_frames(
     battle: np.ndarray,
@@ -259,19 +311,29 @@ def _finalize_player_item_switch_resume_frames(
     if fx.get_effective_speed(battle, new_p0) == fx.get_effective_speed(battle, p1_off):
         gen5_prng.random(0, 2)
 
+
 def _clear_player_switch_state(battle: np.ndarray, new_active0: int) -> None:
     """Clear field-level state when the player (side 0) is forcibly dragged."""
     for off in (F_CHOICE_LOCK_0, F_LAST_MOVE_0, F_DISABLE_0):
         battle[OFF_FIELD + off] = -1
     battle[OFF_MOVES + M_ACTIVE_MOVE_ACTIONS_0] = 0
-    for off in (F_VOLATILE_0, F_LEECH_SEED_0, F_DISABLE_TURNS_0, F_EXTENDED_VOLATILE_0,
-                F_DESTINY_BOND_0, F_SUBSTITUTE_0, F_YAWN_TURNS_0, F_PERISH_COUNT_0):
+    for off in (
+        F_VOLATILE_0,
+        F_LEECH_SEED_0,
+        F_DISABLE_TURNS_0,
+        F_EXTENDED_VOLATILE_0,
+        F_DESTINY_BOND_0,
+        F_SUBSTITUTE_0,
+        F_YAWN_TURNS_0,
+        F_PERISH_COUNT_0,
+    ):
         battle[OFF_FIELD + off] = 0
     _clear_opponent_source_tied_lock_state(battle, side=0)
     new_p0 = OFF_SIDE0 + int(new_active0) * POKEMON_SIZE
     tera = int(battle[new_p0 + 14]) & -4096
     battle[new_p0 + 13] = NEUTRAL_BOOSTS_13
     battle[new_p0 + 14] = (NEUTRAL_BOOSTS_14 & 4095) | tera
+
 
 def _apply_player_switch_in_effects(
     battle: np.ndarray,
@@ -322,11 +384,13 @@ def _apply_player_switch_in_effects(
             gen5_prng=gen5_prng,
         )
 
+
 def _to_int16(val: int) -> int:
     val = int(val) & 0xFFFF
     if val >= 0x8000:
         val -= 0x10000
     return val
+
 
 def _sync_showdown_order_on_switch(order: np.ndarray, new_active: int) -> None:
     new_active = int(new_active)
@@ -340,6 +404,7 @@ def _sync_showdown_order_on_switch(order: np.ndarray, new_active: int) -> None:
     old_front = int(order[0])
     order[0] = np.int8(new_active)
     order[idx] = np.int8(old_front)
+
 
 def _random_drag_switch_slot(
     battle: np.ndarray,
@@ -368,6 +433,7 @@ def _random_drag_switch_slot(
     choice_idx = int(gen5_prng.random(len(switchable)))
     return int(switchable[choice_idx])
 
+
 def _red_card_triggered(move_id: int, did_hit: bool, game_data) -> bool:
     """Showdown's Red Card hook keys off a landed non-status move, not raw damage.
 
@@ -379,6 +445,7 @@ def _red_card_triggered(move_id: int, did_hit: bool, game_data) -> bool:
     if move_id < 0 or not bool(did_hit):
         return False
     return int(game_data.move_category[move_id]) != CAT_STATUS
+
 
 def apply_item_forced_switch(
     battle: np.ndarray,
@@ -431,6 +498,7 @@ def apply_item_forced_switch(
         apply_regenerator_on_switch_out as _regen_out,
         apply_natural_cure_on_switch_out as _natcure_out,
     )
+
     p1_item = int(battle[p1_off + 6])
     if (
         p1_item == ITEM_EJECT_BUTTON
@@ -452,7 +520,9 @@ def apply_item_forced_switch(
             active1 = int(battle[OFF_META + M_ACTIVE1])
             new_active1 = _auto_switch_fn(battle, OFF_SIDE1, active1)
             if new_active1 != active1:
-                pending_switch_slot_condition1 = int(battle[OFF_FIELD + F_DESTINY_BOND_1])
+                pending_switch_slot_condition1 = int(
+                    battle[OFF_FIELD + F_DESTINY_BOND_1]
+                )
                 battle[OFF_META + M_ACTIVE1] = np.int16(new_active1)
                 _sync_showdown_order_on_switch(order1, new_active1)
                 # Showdown clears the side's volatile / choicelock state when
@@ -527,7 +597,9 @@ def apply_item_forced_switch(
         _regen_out(battle, opp_off_for_regen, True)
         _natcure_out(battle, opp_off_for_regen, True)
         _clear_switched_out_pokemon_state(battle, opp_off_for_regen)
-        new_active1 = _random_drag_switch_slot(battle, OFF_SIDE1, active1, order1, gen5_prng)
+        new_active1 = _random_drag_switch_slot(
+            battle, OFF_SIDE1, active1, order1, gen5_prng
+        )
         if new_active1 != active1:
             pending_switch_slot_condition1 = int(battle[OFF_FIELD + F_DESTINY_BOND_1])
             battle[OFF_META + M_ACTIVE1] = np.int16(new_active1)
@@ -578,9 +650,13 @@ def apply_item_forced_switch(
             own_off_for_regen = OFF_SIDE0 + active0 * POKEMON_SIZE
             _regen_out(battle, own_off_for_regen, True)
             _natcure_out(battle, own_off_for_regen, True)
-            new_active0 = _random_drag_switch_slot(battle, OFF_SIDE0, active0, order0, gen5_prng)
+            new_active0 = _random_drag_switch_slot(
+                battle, OFF_SIDE0, active0, order0, gen5_prng
+            )
             if new_active0 != active0:
-                pending_switch_slot_condition0 = int(battle[OFF_FIELD + F_DESTINY_BOND_0])
+                pending_switch_slot_condition0 = int(
+                    battle[OFF_FIELD + F_DESTINY_BOND_0]
+                )
                 battle[OFF_META + M_ACTIVE0] = np.int16(new_active0)
                 _sync_showdown_order_on_switch(order0, new_active0)
                 _clear_player_switch_state(battle, new_active0)

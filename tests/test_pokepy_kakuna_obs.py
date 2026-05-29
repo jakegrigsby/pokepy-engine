@@ -7,7 +7,12 @@ import pytest
 
 from pokepy.core.state import MultiFormatState
 from pokepy.core.constants import (
-    OFF_SIDE0, OFF_SIDE1, OFF_META, M_ACTIVE0, M_ACTIVE1, POKEMON_SIZE,
+    OFF_SIDE0,
+    OFF_SIDE1,
+    OFF_META,
+    M_ACTIVE0,
+    M_ACTIVE1,
+    POKEMON_SIZE,
 )
 from pokepy.data.loader import load_game_data, load_id_mappings
 from pokepy.obs.universal import UniversalState, UniversalPokemon, UniversalMove
@@ -16,15 +21,28 @@ from pokepy.obs.tokenizer import load_default_tokenizer
 from pokepy.obs.kakuna_obs import build_kakuna_obs, build_rl2_features
 from pokepy.obs.state_to_universal import state_to_universal_state
 
+
 def _make_min_pokemon(name="bulbasaur") -> UniversalPokemon:
     return UniversalPokemon(
-        name=name, hp_pct=1.0,
-        types="grass poison", item="leftovers", ability="overgrow",
-        lvl=100, status="nostatus", effect="noeffect",
+        name=name,
+        hp_pct=1.0,
+        types="grass poison",
+        item="leftovers",
+        ability="overgrow",
+        lvl=100,
+        status="nostatus",
+        effect="noeffect",
         moves=[UniversalMove.blank() for _ in range(4)],
-        base_atk=49, base_spa=65, base_def=49, base_spd=65, base_spe=45, base_hp=45,
-        tera_type="grass", base_species=name,
+        base_atk=49,
+        base_spa=65,
+        base_def=49,
+        base_spd=65,
+        base_spe=45,
+        base_hp=45,
+        tera_type="grass",
+        base_species=name,
     )
+
 
 def _make_min_state() -> UniversalState:
     return UniversalState(
@@ -46,11 +64,13 @@ def _make_min_state() -> UniversalState:
         opponent_teampreview=["bulbasaur", "charmander"],
     )
 
+
 def test_tokenizer_loads():
     tok = load_default_tokenizer()
     assert len(tok) == 2541
     assert tok.vocab["<blank>"] == 1
     assert tok.vocab["<anychoice>"] == 0
+
 
 def test_state_to_obs_shapes():
     s = _make_min_state()
@@ -60,6 +80,7 @@ def test_state_to_obs_shapes():
     assert word_count == 106, f"expected 106 tokens, got {word_count}"
     assert numbers.dtype == np.float32
     assert numbers.shape == (55,), f"expected (55,), got {numbers.shape}"
+
 
 def test_build_kakuna_obs_shapes():
     s = _make_min_state()
@@ -72,11 +93,13 @@ def test_build_kakuna_obs_shapes():
     assert obs["illegal_actions"].dtype == np.bool_
     assert obs["illegal_actions"].shape == (13,)
 
+
 def test_kakuna_obs_known_tokens():
     s = _make_min_state()
     obs = build_kakuna_obs(s)
     # Should not all be -1 (we use real metamon vocab)
     assert (obs["text_tokens"] >= 0).sum() > 50, "most tokens should be in vocab"
+
 
 def test_build_rl2_features_shape():
     rl2 = build_rl2_features(prev_reward=0.5, prev_action=3)
@@ -85,6 +108,7 @@ def test_build_rl2_features_shape():
     assert rl2[0] == 0.5
     assert rl2[1 + 3] == 1.0
     assert rl2[1] == 0.0
+
 
 def test_state_to_universal_runs_on_empty_state():
     """Bridge from MultiFormatState to UniversalState shouldn't crash on a hand-built state."""
@@ -108,24 +132,24 @@ def test_state_to_universal_runs_on_empty_state():
     bs[OFF_META + M_ACTIVE1] = 0
     # side0 active: species, hp, max_hp, level, types, ability, item, stats
     p0 = OFF_SIDE0 + 0 * POKEMON_SIZE
-    bs[p0 + 0] = 1                           # species
-    bs[p0 + 1] = 100                         # current hp
-    bs[p0 + 2] = 100                         # max hp
-    bs[p0 + 3] = 100                         # level
-    bs[p0 + 4] = 4 | (7 << 8)                # grass | poison
-    bs[p0 + 5] = 0                           # ability
-    bs[p0 + 6] = 0                           # item
+    bs[p0 + 0] = 1  # species
+    bs[p0 + 1] = 100  # current hp
+    bs[p0 + 2] = 100  # max hp
+    bs[p0 + 3] = 100  # level
+    bs[p0 + 4] = 4 | (7 << 8)  # grass | poison
+    bs[p0 + 5] = 0  # ability
+    bs[p0 + 6] = 0  # item
     for i, v in enumerate([60, 60, 60, 60, 60]):
         bs[p0 + 7 + i] = v
-    bs[p0 + 13] = 0x6666                     # neutral boosts
+    bs[p0 + 13] = 0x6666  # neutral boosts
     bs[p0 + 14] = 0x0666
 
     p1 = OFF_SIDE1 + 0 * POKEMON_SIZE
-    bs[p1 + 0] = 4                           # charmander
+    bs[p1 + 0] = 4  # charmander
     bs[p1 + 1] = 100
     bs[p1 + 2] = 100
     bs[p1 + 3] = 100
-    bs[p1 + 4] = 1                           # fire
+    bs[p1 + 4] = 1  # fire
     bs[p1 + 13] = 0x6666
     bs[p1 + 14] = 0x0666
     for i, v in enumerate([60, 60, 60, 60, 60]):

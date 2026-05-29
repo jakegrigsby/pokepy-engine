@@ -14,7 +14,8 @@ from typing import Tuple
 
 A = 0x5D588B656C078965
 C = 0x269EC3
-M = 2 ** 64
+M = 2**64
+
 
 def gen5_seed_from_array(seed_array: Tuple[int, int, int, int]) -> int:
     return (
@@ -24,6 +25,7 @@ def gen5_seed_from_array(seed_array: Tuple[int, int, int, int]) -> int:
         | seed_array[3]
     )
 
+
 def gen5_seed_to_array(seed: int) -> Tuple[int, int, int, int]:
     return (
         (seed >> 48) & 0xFFFF,
@@ -31,6 +33,7 @@ def gen5_seed_to_array(seed: int) -> Tuple[int, int, int, int]:
         (seed >> 16) & 0xFFFF,
         seed & 0xFFFF,
     )
+
 
 class Gen5PRNG:
     """Showdown-compatible Gen 5 LCG."""
@@ -55,12 +58,12 @@ class Gen5PRNG:
         """
         value = self.next()
         if from_val is None:
-            return value / (2 ** 32)
+            return value / (2**32)
         from_val = int(from_val)
         if to_val is None or to_val == 0:
-            return int(value * from_val / (2 ** 32))
+            return int(value * from_val / (2**32))
         to_val = int(to_val)
-        return int(value * (to_val - from_val) / (2 ** 32)) + from_val
+        return int(value * (to_val - from_val) / (2**32)) + from_val
 
     def random_chance(self, numerator: int, denominator: int) -> bool:
         """Showdown PRNG.randomChance: returns True with probability num/denom.

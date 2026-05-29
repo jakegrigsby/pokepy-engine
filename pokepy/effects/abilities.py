@@ -4,6 +4,7 @@ Real ports of:
 
 All functions mutate `battle: np.ndarray` in place. Stateful PRNG via `Gen5PRNG`.
 """
+
 from __future__ import annotations
 
 from pokepy.effects._common import np, MultiFormatState, Gen5PRNG
@@ -133,17 +134,17 @@ from pokepy.core.constants import (
 from pokepy.data.type_charts import MODERN_TYPE_CHART
 
 # Embody Aspect (Ogerpon forms) — not in core constants.py, but used by switch-in
-ABILITY_EMBODY_ASPECT_TEAL = 301         # +1 Spe
-ABILITY_EMBODY_ASPECT_WELLSPRING = 302   # +1 SpD
+ABILITY_EMBODY_ASPECT_TEAL = 301  # +1 Spe
+ABILITY_EMBODY_ASPECT_WELLSPRING = 302  # +1 SpD
 ABILITY_EMBODY_ASPECT_HEARTHFLAME = 303  # +1 Atk
 ABILITY_EMBODY_ASPECT_CORNERSTONE = 304  # +1 Def
 
 # Terrain Seeds use the packed item ids from pokepy's item table.
-ITEM_ELECTRIC_SEED = 664
-ITEM_PSYCHIC_SEED = 665
-ITEM_MISTY_SEED = 666
-ITEM_GRASSY_SEED = 667
-ITEM_ABILITY_SHIELD = 746
+ITEM_ELECTRIC_SEED = 881
+ITEM_PSYCHIC_SEED = 882
+ITEM_MISTY_SEED = 883
+ITEM_GRASSY_SEED = 884
+ITEM_ABILITY_SHIELD = 1881
 ABILITY_STICKY_HOLD = 60
 ABILITY_MAGICIAN = 170
 ABILITY_CUTE_CHARM = 56
@@ -155,11 +156,13 @@ _PARADOX_STAT_SPA = 0x2010
 _PARADOX_STAT_SPD = 0x4000
 _PARADOX_STAT_SPE = 0x4010
 
+
 def _apply_stage_to_stat(base_stat: int, boost: int) -> int:
     boost = max(-6, min(6, int(boost)))
     if boost >= 0:
         return (int(base_stat) * (2 + boost)) // 2
     return (int(base_stat) * 2) // (2 - boost)
+
 
 def _encode_paradox_best_stat_flag(battle: np.ndarray, pokemon_offset: int) -> int:
     """Mirror Showdown's getBestStat(false, true) at paradox activation time."""
@@ -169,11 +172,26 @@ def _encode_paradox_best_stat_flag(battle: np.ndarray, pokemon_offset: int) -> i
     boosts14 = int(battle[poff + 14])
 
     stats = [
-        (_PARADOX_STAT_ATK, _apply_stage_to_stat(int(battle[poff + 7]), extract_boost(boosts13, 0))),
-        (_PARADOX_STAT_DEF, _apply_stage_to_stat(int(battle[poff + 8]), extract_boost(boosts13, 4))),
-        (_PARADOX_STAT_SPA, _apply_stage_to_stat(int(battle[poff + 9]), extract_boost(boosts13, 8))),
-        (_PARADOX_STAT_SPD, _apply_stage_to_stat(int(battle[poff + 10]), extract_boost(boosts13, 12))),
-        (_PARADOX_STAT_SPE, _apply_stage_to_stat(int(battle[poff + 11]), extract_boost(boosts14, 0))),
+        (
+            _PARADOX_STAT_ATK,
+            _apply_stage_to_stat(int(battle[poff + 7]), extract_boost(boosts13, 0)),
+        ),
+        (
+            _PARADOX_STAT_DEF,
+            _apply_stage_to_stat(int(battle[poff + 8]), extract_boost(boosts13, 4)),
+        ),
+        (
+            _PARADOX_STAT_SPA,
+            _apply_stage_to_stat(int(battle[poff + 9]), extract_boost(boosts13, 8)),
+        ),
+        (
+            _PARADOX_STAT_SPD,
+            _apply_stage_to_stat(int(battle[poff + 10]), extract_boost(boosts13, 12)),
+        ),
+        (
+            _PARADOX_STAT_SPE,
+            _apply_stage_to_stat(int(battle[poff + 11]), extract_boost(boosts14, 0)),
+        ),
     ]
 
     best_flag, best_value = stats[0]
@@ -181,6 +199,7 @@ def _encode_paradox_best_stat_flag(battle: np.ndarray, pokemon_offset: int) -> i
         if value > best_value:
             best_flag, best_value = flag, value
     return best_flag
+
 
 def apply_booster_energy_update(battle: np.ndarray, pokemon_offset: int) -> None:
     """Mirror Booster Energy's active-mon `onUpdate` consumption.
@@ -205,9 +224,8 @@ def apply_booster_energy_update(battle: np.ndarray, pokemon_offset: int) -> None
     cur_weather = int(battle[OFF_FIELD + F_WEATHER])
     cur_terrain = int(battle[OFF_FIELD + F_TERRAIN])
     field_activates = (
-        (ability == ABILITY_PROTOSYNTHESIS and cur_weather == WEATHER_SUN)
-        or (ability == ABILITY_QUARK_DRIVE and cur_terrain == TERRAIN_ELECTRIC)
-    )
+        ability == ABILITY_PROTOSYNTHESIS and cur_weather == WEATHER_SUN
+    ) or (ability == ABILITY_QUARK_DRIVE and cur_terrain == TERRAIN_ELECTRIC)
     if field_activates:
         return
 
@@ -218,6 +236,7 @@ def apply_booster_energy_update(battle: np.ndarray, pokemon_offset: int) -> None
         cur_flags -= 0x10000
     battle[poff + 6] = 0
     battle[poff + 15] = cur_flags
+
 
 def apply_magician_from_move(
     battle: np.ndarray,
@@ -270,6 +289,7 @@ def apply_magician_from_move(
     battle[target_offset + 6] = 0
     battle[user_offset + 6] = target_item
 
+
 def apply_speed_boost(battle: np.ndarray, pokemon_offset: int, game_data) -> None:
     """Port of _apply_speed_boost (line ~7737).
 
@@ -284,10 +304,13 @@ def apply_speed_boost(battle: np.ndarray, pokemon_offset: int, game_data) -> Non
     active_move_actions = (
         M_ACTIVE_MOVE_ACTIONS_0 if poff < OFF_SIDE1 else M_ACTIVE_MOVE_ACTIONS_1
     )
-    if (int(battle[OFF_MOVES + active_move_actions]) & ACTIVE_MOVE_ACTIONS_COUNT_MASK) <= 0:
+    if (
+        int(battle[OFF_MOVES + active_move_actions]) & ACTIVE_MOVE_ACTIONS_COUNT_MASK
+    ) <= 0:
         return
     boosts14 = int(battle[poff + 14])
     battle[poff + 14] = apply_boost_to_packed(boosts14, 0, 1)  # Spe at shift 0
+
 
 def apply_shed_skin_hydration(
     battle: np.ndarray,
@@ -327,10 +350,16 @@ def apply_shed_skin_hydration(
     # Check Air Lock / Cloud Nine on either active mon. We don't have
     # _weather_suppressed in this module, so check inline.
     from pokepy.core.constants import (
-        OFF_META as _OM_HY, M_ACTIVE0 as _MA0_HY, M_ACTIVE1 as _MA1_HY,
-        OFF_SIDE0 as _OS0_HY, OFF_SIDE1 as _OS1_HY, POKEMON_SIZE as _PS_HY,
-        ABILITY_AIR_LOCK as _AL_HY, ABILITY_CLOUD_NINE as _CN_HY,
+        OFF_META as _OM_HY,
+        M_ACTIVE0 as _MA0_HY,
+        M_ACTIVE1 as _MA1_HY,
+        OFF_SIDE0 as _OS0_HY,
+        OFF_SIDE1 as _OS1_HY,
+        POKEMON_SIZE as _PS_HY,
+        ABILITY_AIR_LOCK as _AL_HY,
+        ABILITY_CLOUD_NINE as _CN_HY,
     )
+
     _a0_hy = int(battle[_OM_HY + _MA0_HY])
     _a1_hy = int(battle[_OM_HY + _MA1_HY])
     _ab0_hy = int(battle[_OS0_HY + _a0_hy * _PS_HY + 5])
@@ -339,7 +368,7 @@ def apply_shed_skin_hydration(
     # Utility Umbrella only suppresses sun/rain (not primordial), but
     # primordial weather is itself an "ability" weather and Utility Umbrella
     # also suppresses it per data/items.ts:7444.
-    rain_active = (weather in (WEATHER_RAIN, WEATHER_PRIMORDIAL_SEA))
+    rain_active = weather in (WEATHER_RAIN, WEATHER_PRIMORDIAL_SEA)
     hydration_cures = (
         has_hydration and rain_active and not weather_suppressed and not has_umbrella
     )
@@ -356,6 +385,7 @@ def apply_shed_skin_hydration(
 
     if hydration_cures or shed_cures:
         battle[poff + 12] = set_status(STATUS_NONE, 0)
+
 
 def apply_terrain_seed_item(battle: np.ndarray, pokemon_offset: int) -> None:
     """Consume a matching Terrain Seed and apply its stat boost."""
@@ -381,6 +411,7 @@ def apply_terrain_seed_item(battle: np.ndarray, pokemon_offset: int) -> None:
     battle[poff + 13] = apply_boost_to_packed(int(battle[poff + 13]), boost_shift, 1)
     battle[poff + 6] = 0
 
+
 def _switch_in_ability_is_suppressed(
     battle: np.ndarray,
     switcher_offset: int,
@@ -401,6 +432,7 @@ def _switch_in_ability_is_suppressed(
     opponent_ability = int(battle[o_off + 5])
     return opponent_alive and opponent_ability == ABILITY_NEUTRALIZING_GAS
 
+
 def _consume_field_change_each_event_frame(
     battle: np.ndarray,
     switcher_offset: int,
@@ -420,6 +452,7 @@ def _consume_field_change_each_event_frame(
 
     if fx.get_effective_speed(battle, s_off) == fx.get_effective_speed(battle, o_off):
         gen5_prng.random(0, 2)
+
 
 def apply_switch_in_ability(
     battle: np.ndarray,
@@ -457,7 +490,12 @@ def apply_switch_in_ability(
     # Hyper Cutter ONLY blocks Atk drops (not all stat drops). Showdown source:
     # data/abilities.ts hypercutter `onTryBoost: { atk: ... }`. Pokepy treats it
     # as a full Clear Body block since Intimidate only drops atk.
-    from pokepy.core.constants import ABILITY_HYPER_CUTTER, ABILITY_MIRROR_ARMOR, ABILITY_GUARD_DOG
+    from pokepy.core.constants import (
+        ABILITY_HYPER_CUTTER,
+        ABILITY_MIRROR_ARMOR,
+        ABILITY_GUARD_DOG,
+    )
+
     opp_has_clear_body = opponent_ability in (
         ABILITY_CLEAR_BODY,
         ABILITY_WHITE_SMOKE,
@@ -537,7 +575,9 @@ def apply_switch_in_ability(
             reflect_change = -1
         if reflect_change != 0:
             sw_boosts13_ma = int(battle[s_off + 13])
-            battle[s_off + 13] = apply_boost_to_packed(sw_boosts13_ma, 0, reflect_change)
+            battle[s_off + 13] = apply_boost_to_packed(
+                sw_boosts13_ma, 0, reflect_change
+            )
             # Defiant / Competitive on switcher when stat lowered.
             if reflect_change < 0:
                 if switcher_ability == ABILITY_DEFIANT:
@@ -577,6 +617,7 @@ def apply_switch_in_ability(
     # AND the atk drop wasn't capped to 0 (intimidate_change != 0). The
     # +1 Spe boost is applied via the item's `boosts: { spe: 1 }`.
     from pokepy.core.constants import ITEM_ADRENALINE_ORB
+
     if has_intimidate and not opp_has_sub_intim:
         opp_item_ao = int(battle[o_off + 6])
         if opp_item_ao == ITEM_ADRENALINE_ORB and int(battle[o_off + 1]) > 0:
@@ -584,7 +625,7 @@ def apply_switch_in_ability(
             spe_stage_ao = (opp_boosts14_ao >> 0) & 0xF
             # Showdown also blocks if `boost.atk === 0` (i.e. already at -6
             # in pre-bounded form). Atk slot at shift 0 of opp_boosts13.
-            atk_stage_ao = ((int(battle[o_off + 13]) >> 0) & 0xF)
+            atk_stage_ao = (int(battle[o_off + 13]) >> 0) & 0xF
             atk_at_floor = atk_stage_ao == 0  # 0 nibble == -6 stage
             spe_at_max = spe_stage_ao == 12  # 12 nibble == +6 stage
             if (not spe_at_max) and (not atk_at_floor):
@@ -633,30 +674,35 @@ def apply_switch_in_ability(
     # Down, Stance Change, Tera Shift, Teraform Zero, Trace itself, Wonder
     # Guard, Zen Mode, Zero to Hero. Pokepy keeps the small set that are in
     # constants.py + a couple of common locals.
-    _NOTRACE_ABILITIES = frozenset((
-        ABILITY_TRACE,
-        # multitype, stance change, schooling, shields down, comatose, etc.
-        121,  # multitype
-        176,  # stancechange
-        208,  # schooling
-        197,  # shieldsdown
-        213,  # comatose
-        209,  # disguise
-        248,  # iceface
-        211,  # powerconstruct
-        281,  # protosynthesis
-        282,  # quarkdrive
-        288,  # orichalcumpulse
-        289,  # hadronengine
-        256,  # neutralizinggas
-        150,  # imposter
-        25,   # wonderguard
-        161,  # zenmode
-        258,  # hungerswitch
-        241,  # gulpmissile
-        59,   # forecast (gen-specific id but listed)
-        301, 302, 303, 304,  # embody aspect (all four)
-    ))
+    _NOTRACE_ABILITIES = frozenset(
+        (
+            ABILITY_TRACE,
+            # multitype, stance change, schooling, shields down, comatose, etc.
+            121,  # multitype
+            176,  # stancechange
+            208,  # schooling
+            197,  # shieldsdown
+            213,  # comatose
+            209,  # disguise
+            248,  # iceface
+            211,  # powerconstruct
+            281,  # protosynthesis
+            282,  # quarkdrive
+            288,  # orichalcumpulse
+            289,  # hadronengine
+            256,  # neutralizinggas
+            150,  # imposter
+            25,  # wonderguard
+            161,  # zenmode
+            258,  # hungerswitch
+            241,  # gulpmissile
+            59,  # forecast (gen-specific id but listed)
+            301,
+            302,
+            303,
+            304,  # embody aspect (all four)
+        )
+    )
     has_trace = switcher_ability == ABILITY_TRACE
     opp_ability_trace = int(battle[o_off + 5])
     can_copy = (opp_ability_trace > 0) and (opp_ability_trace not in _NOTRACE_ABILITIES)
@@ -710,7 +756,9 @@ def apply_switch_in_ability(
 
     primal_weather = has_primordial_sea or has_desolate_land or has_delta_stream
     primal_weathers_set = (
-        WEATHER_PRIMORDIAL_SEA, WEATHER_DESOLATE_LAND, WEATHER_DELTA_STREAM,
+        WEATHER_PRIMORDIAL_SEA,
+        WEATHER_DESOLATE_LAND,
+        WEATHER_DELTA_STREAM,
     )
     current_is_primal = current_weather in primal_weathers_set
 
@@ -725,7 +773,9 @@ def apply_switch_in_ability(
     )
     same_weather_id = ability_sets_weather and (wanted_weather == current_weather)
 
-    weather_changed = ability_sets_weather and not blocked_by_primal and not same_weather_id
+    weather_changed = (
+        ability_sets_weather and not blocked_by_primal and not same_weather_id
+    )
     if weather_changed:
         final_weather = wanted_weather
         battle[OFF_FIELD + F_WEATHER] = final_weather
@@ -770,7 +820,11 @@ def apply_switch_in_ability(
         final_terrain = TERRAIN_ELECTRIC
 
     ability_sets_terrain = (
-        has_electric_surge or has_grassy_surge or has_psychic_surge or has_misty_surge or has_hadron
+        has_electric_surge
+        or has_grassy_surge
+        or has_psychic_surge
+        or has_misty_surge
+        or has_hadron
     )
     terrain_changed = ability_sets_terrain and final_terrain != current_terrain
     if terrain_changed:
@@ -829,6 +883,7 @@ def apply_switch_in_ability(
     # remains a known gap. Tera type lives in the upper 4 bits of slot
     # +14, which we preserve so a transformed Ditto keeps its own tera.
     from pokepy.core.constants import ABILITY_IMPOSTER as _ABILITY_IMPOSTER
+
     if switcher_ability == _ABILITY_IMPOSTER:
         # Don't transform into a substituted opponent (Showdown blocks via
         # `pokemon.volatiles['substitute']` check at sim/pokemon.ts:1241).
@@ -851,7 +906,10 @@ def apply_switch_in_ability(
             battle[s_off + 14] = new_b14
 
     # ----- Booster Energy consumption (Protosynthesis / Quark Drive) ----
-    has_paradox_ability = switcher_ability in (ABILITY_PROTOSYNTHESIS, ABILITY_QUARK_DRIVE)
+    has_paradox_ability = switcher_ability in (
+        ABILITY_PROTOSYNTHESIS,
+        ABILITY_QUARK_DRIVE,
+    )
     switcher_item = int(battle[s_off + 6])
     cur_weather2 = int(battle[OFF_FIELD + F_WEATHER])
     cur_terrain2 = int(battle[OFF_FIELD + F_TERRAIN])
@@ -863,7 +921,9 @@ def apply_switch_in_ability(
     )
     field_activates = proto_has_sun or quark_has_eterrain
     should_consume_booster = (
-        has_paradox_ability and switcher_item == ITEM_BOOSTER_ENERGY and not field_activates
+        has_paradox_ability
+        and switcher_item == ITEM_BOOSTER_ENERGY
+        and not field_activates
     )
     if has_paradox_ability:
         cur_flags = int(battle[s_off + 15]) & ~_PARADOX_STAT_MASK
@@ -891,6 +951,7 @@ def apply_switch_in_ability(
     # the encoded best-stat bits.
     if weather_changed or terrain_changed:
         apply_booster_energy_update(battle, o_off)
+
 
 def apply_switch_in_ability_with_trace_reaction(
     battle: np.ndarray,
@@ -930,6 +991,7 @@ def apply_switch_in_ability_with_trace_reaction(
         gen5_prng=gen5_prng,
     )
 
+
 def apply_regenerator_on_switch_out(
     battle: np.ndarray,
     pokemon_offset: int,
@@ -956,6 +1018,7 @@ def apply_regenerator_on_switch_out(
     new_hp = min(max_hp, current_hp + heal_amount)
     battle[poff + 1] = new_hp
 
+
 def apply_natural_cure_on_switch_out(
     battle: np.ndarray,
     pokemon_offset: int,
@@ -976,6 +1039,7 @@ def apply_natural_cure_on_switch_out(
     if status == STATUS_NONE:
         return
     battle[poff + 12] = 0
+
 
 def apply_absorb_ability_healing(
     battle: np.ndarray,
@@ -1058,6 +1122,7 @@ def apply_absorb_ability_healing(
             new_flags -= 0x10000
         battle[d_off + 15] = new_flags
 
+
 def apply_weakness_policy(
     battle: np.ndarray,
     defender_offset: int,
@@ -1092,22 +1157,24 @@ def apply_weakness_policy(
     # Skip fixed-damage moves (Seismic Toss, Night Shade, Super Fang,
     # Endeavor, Final Gambit, Counter, Mirror Coat, Metal Burst, Pain Split,
     # Psywave, Dragon Rage, Sonic Boom, Bide).
-    _FIXED_DAMAGE_MOVES = frozenset((
-        69,   # seismictoss
-        100,  # nightshade
-        162,  # superfang
-        877,  # ruination
-        283,  # endeavor
-        710,  # finalgambit
-        68,   # counter
-        243,  # mirrorcoat
-        484,  # metalburst
-        220,  # painsplit
-        149,  # psywave
-        82,   # dragonrage
-        49,   # sonicboom
-        117,  # bide
-    ))
+    _FIXED_DAMAGE_MOVES = frozenset(
+        (
+            69,  # seismictoss
+            100,  # nightshade
+            162,  # superfang
+            877,  # ruination
+            283,  # endeavor
+            710,  # finalgambit
+            68,  # counter
+            243,  # mirrorcoat
+            484,  # metalburst
+            220,  # painsplit
+            149,  # psywave
+            82,  # dragonrage
+            49,  # sonicboom
+            117,  # bide
+        )
+    )
     if int(move_id) in _FIXED_DAMAGE_MOVES:
         return
 
@@ -1127,6 +1194,7 @@ def apply_weakness_policy(
     boosts13 = apply_boost_to_packed(boosts13, 8, 2)  # +2 SpA
     battle[d_off + 13] = boosts13
     battle[d_off + 6] = 0  # consume item
+
 
 def apply_ko_boost_ability(
     battle: np.ndarray,
@@ -1162,24 +1230,34 @@ def apply_ko_boost_ability(
     base_spe = int(battle[a_off + 11])
 
     highest_is_atk = (
-        base_atk >= base_def and base_atk >= base_spa
-        and base_atk >= base_spd and base_atk >= base_spe
+        base_atk >= base_def
+        and base_atk >= base_spa
+        and base_atk >= base_spd
+        and base_atk >= base_spe
     )
     highest_is_def = (
         (not highest_is_atk)
-        and base_def >= base_spa and base_def >= base_spd and base_def >= base_spe
+        and base_def >= base_spa
+        and base_def >= base_spd
+        and base_def >= base_spe
     )
     highest_is_spa = (
-        (not highest_is_atk) and (not highest_is_def)
-        and base_spa >= base_spd and base_spa >= base_spe
+        (not highest_is_atk)
+        and (not highest_is_def)
+        and base_spa >= base_spd
+        and base_spa >= base_spe
     )
     highest_is_spd = (
-        (not highest_is_atk) and (not highest_is_def) and (not highest_is_spa)
+        (not highest_is_atk)
+        and (not highest_is_def)
+        and (not highest_is_spa)
         and base_spd >= base_spe
     )
     highest_is_spe = (
-        (not highest_is_atk) and (not highest_is_def)
-        and (not highest_is_spa) and (not highest_is_spd)
+        (not highest_is_atk)
+        and (not highest_is_def)
+        and (not highest_is_spa)
+        and (not highest_is_spd)
     )
 
     boosts13 = int(battle[a_off + 13])
@@ -1205,6 +1283,7 @@ def apply_ko_boost_ability(
     battle[a_off + 13] = boosts13
     battle[a_off + 14] = boosts14
 
+
 def _effect_spore_roll_blocked(battle: np.ndarray, attacker_offset: int) -> bool:
     """Return True when Showdown would skip Effect Spore's chance roll."""
     a_off = int(attacker_offset)
@@ -1222,6 +1301,7 @@ def _effect_spore_roll_blocked(battle: np.ndarray, attacker_offset: int) -> bool
         or attacker_ability == ABILITY_OVERCOAT
         or attacker_item == ITEM_SAFETY_GOGGLES
     )
+
 
 def apply_contact_status_ability(
     battle: np.ndarray,
@@ -1275,6 +1355,7 @@ def apply_contact_status_ability(
     if gd is None:
         # Need move_flags lookup; load lazily
         from pokepy.data.loader import load_game_data
+
         gd = load_game_data()
 
     mid = int(move_id)
@@ -1302,7 +1383,7 @@ def apply_contact_status_ability(
     # the target block (treated as secondary effect).
     _ABILITY_POISON_TOUCH = 143
     _ABILITY_SHIELD_DUST = 19
-    _ITEM_COVERT_CLOAK = 816
+    _ITEM_COVERT_CLOAK = 1885
     if atk_ability == _ABILITY_POISON_TOUCH:
         target_hp_pt = int(battle[d_off + 1])
         target_status_pt = get_status(int(battle[d_off + 12]))
@@ -1319,10 +1400,11 @@ def apply_contact_status_ability(
         tt1 = tt_packed & 0xFF
         tt2 = (tt_packed >> 8) & 0xFF
         type_immune_pt = (
-            (tt1 == _TYPE_POISON or tt2 == _TYPE_POISON
-             or tt1 == _TYPE_STEEL or tt2 == _TYPE_STEEL)
-            and atk_ability != _ABILITY_CORROSION
-        )
+            tt1 == _TYPE_POISON
+            or tt2 == _TYPE_POISON
+            or tt1 == _TYPE_STEEL
+            or tt2 == _TYPE_STEEL
+        ) and atk_ability != _ABILITY_CORROSION
         should_roll_pt = not target_has_block
         if should_roll_pt:
             roll_pt = prerolled_rolls.pop(0) if prerolled_rolls else prng.random(10)
@@ -1340,7 +1422,11 @@ def apply_contact_status_ability(
     has_effect_spore = def_ability == ABILITY_EFFECT_SPORE
     has_cute_charm = def_ability == ABILITY_CUTE_CHARM
     has_contact_ability = (
-        has_flame_body or has_static or has_poison_point or has_effect_spore or has_cute_charm
+        has_flame_body
+        or has_static
+        or has_poison_point
+        or has_effect_spore
+        or has_cute_charm
     )
     if not has_contact_ability:
         return
@@ -1483,6 +1569,7 @@ def apply_contact_status_ability(
                 is_status_move=False,
             )
 
+
 def apply_resolved_contact_status_ability(
     battle: np.ndarray,
     attacker_offset: int,
@@ -1532,7 +1619,9 @@ def apply_resolved_contact_status_ability(
         if status_code != STATUS_NONE:
             prerolled_sleep_turns = None
             if status_code == STATUS_SLEEP:
-                prerolled_sleep_turns = int(get_status_turns(int(resolved_status_field)))
+                prerolled_sleep_turns = int(
+                    get_status_turns(int(resolved_status_field))
+                )
             _try_apply_status(
                 battle,
                 None,

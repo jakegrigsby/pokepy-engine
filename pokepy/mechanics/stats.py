@@ -10,6 +10,7 @@ from __future__ import annotations
 import math
 import numpy as np
 
+
 def calc_stat_gen1(base, level, is_hp: bool) -> np.int16:
     """Gen 1 stat (assumes 15 DVs, 65535 stat exp)."""
     base_i = int(base)
@@ -23,7 +24,10 @@ def calc_stat_gen1(base, level, is_hp: bool) -> np.int16:
         stat = (((base_i + dv) * 2 + stat_exp_bonus) * lvl_i // 100) + 5
     return np.int16(max(0, min(32767, stat)))
 
-def calc_stat_modern(base, level, iv: int, ev: int, is_hp: bool, nature_mult: float = 1.0) -> np.int16:
+
+def calc_stat_modern(
+    base, level, iv: int, ev: int, is_hp: bool, nature_mult: float = 1.0
+) -> np.int16:
     """Modern (Gen 3+) stat formula."""
     base_i = int(base)
     lvl_i = int(level)
@@ -36,6 +40,7 @@ def calc_stat_modern(base, level, iv: int, ev: int, is_hp: bool, nature_mult: fl
         # Match Showdown: float multiply, then int16 cast (truncates toward zero).
         stat = int(np.int16(np.float32(stat) * np.float32(nature_mult)))
     return np.int16(max(0, min(32767, stat)))
+
 
 def get_boost_multiplier(boost) -> np.float32:
     """Stat multiplier from boost stage (-6..+6)."""

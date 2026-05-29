@@ -40,11 +40,13 @@ MOVE_SKILL_SWAP = 285
 MOVE_BURN_UP = 682
 MOVE_DOUBLE_SHOCK = 892
 
+
 def _to_int16(val: int) -> int:
     val = int(val) & 0xFFFF
     if val >= 0x8000:
         val -= 0x10000
     return val
+
 
 def apply_misc_move_effects(
     battle: np.ndarray,
@@ -69,8 +71,10 @@ def apply_misc_move_effects(
         b13 = int(battle[target_off + 13])
         b14 = int(battle[target_off + 14])
         any_pos = (
-            extract_boost(b13, 0) > 0 or extract_boost(b13, 4) > 0
-            or extract_boost(b13, 8) > 0 or extract_boost(b13, 12) > 0
+            extract_boost(b13, 0) > 0
+            or extract_boost(b13, 4) > 0
+            or extract_boost(b13, 8) > 0
+            or extract_boost(b13, 12) > 0
             or extract_boost(b14, 0) > 0
         )
         if not any_pos:
@@ -95,7 +99,9 @@ def apply_misc_move_effects(
             continue
         target_atk_base = int(battle[target_off + 7])
         target_atk_boost = extract_boost(int(battle[target_off + 13]), 0)
-        target_atk_eff = int(target_atk_base * float(get_boost_multiplier(target_atk_boost)))
+        target_atk_eff = int(
+            target_atk_base * float(get_boost_multiplier(target_atk_boost))
+        )
         user_hp = int(battle[user_off + 1])
         user_max = int(battle[user_off + 2])
         if user_hp > 0:
@@ -103,6 +109,7 @@ def apply_misc_move_effects(
             battle[user_off + 1] = np.int16(new_hp)
         b13 = int(battle[target_off + 13])
         battle[target_off + 13] = _to_int16(apply_boost_to_packed(b13, 0, -1))
+
 
 def move_missing_required_live_type(
     battle: np.ndarray,
@@ -122,6 +129,7 @@ def move_missing_required_live_type(
     type1 = types & 0xFF
     type2 = (types >> 8) & 0xFF
     return type1 != required_type and type2 != required_type
+
 
 def apply_self_type_removal_from_move(
     battle: np.ndarray,
@@ -152,6 +160,7 @@ def apply_self_type_removal_from_move(
     new_type2 = TYPE_UNKNOWN if type2 == removed_type else type2
     battle[poff + 4] = np.int16(_to_int16(new_type1 | (new_type2 << 8)))
     return True
+
 
 def apply_belly_drum_from_move(
     battle: np.ndarray,
@@ -196,6 +205,7 @@ def apply_belly_drum_from_move(
     battle[uoff + 1] = np.int16(max(0, hp - cost))
     return True
 
+
 def apply_skill_swap_from_move(
     battle: np.ndarray,
     move_id: int,
@@ -225,27 +235,29 @@ def apply_skill_swap_from_move(
     # Shields Down, Disguise, Power Construct, Ice Face, Zen Mode,
     # Illusion, Battle Bond, Gulp Missile, RKS System, Hunger Switch,
     # Neutralizing Gas, As One, Protosynthesis, Quark Drive.
-    FORBIDDEN = frozenset((
-        25,   # wonder_guard
-        121,  # multitype
-        176,  # stance_change
-        208,  # schooling
-        197,  # shields_down
-        209,  # disguise
-        211,  # power_construct
-        248,  # ice_face
-        161,  # zen_mode
-        149,  # illusion
-        210,  # battle_bond
-        241,  # gulp_missile
-        225,  # rks_system
-        258,  # hunger_switch
-        259,  # neutralizing_gas
-        266,  # as_one_glastrier
-        267,  # as_one_spectrier
-        281,  # protosynthesis (ABILITY_PROTOSYNTHESIS)
-        282,  # quark_drive (ABILITY_QUARK_DRIVE)
-    ))
+    FORBIDDEN = frozenset(
+        (
+            25,  # wonder_guard
+            121,  # multitype
+            176,  # stance_change
+            208,  # schooling
+            197,  # shields_down
+            209,  # disguise
+            211,  # power_construct
+            248,  # ice_face
+            161,  # zen_mode
+            149,  # illusion
+            210,  # battle_bond
+            241,  # gulp_missile
+            225,  # rks_system
+            258,  # hunger_switch
+            259,  # neutralizing_gas
+            266,  # as_one_glastrier
+            267,  # as_one_spectrier
+            281,  # protosynthesis (ABILITY_PROTOSYNTHESIS)
+            282,  # quark_drive (ABILITY_QUARK_DRIVE)
+        )
+    )
     u_ab = int(battle[uoff + 5])
     t_ab = int(battle[toff + 5])
     if u_ab in FORBIDDEN or t_ab in FORBIDDEN:
@@ -257,8 +269,10 @@ def apply_skill_swap_from_move(
     # data/items.ts:2-20 abilityshield onSetAbility returns null. The shield
     # protects the holder on either side of the swap.
     _ITEM_ABILITY_SHIELD_SS = 746
-    if (int(battle[uoff + 6]) == _ITEM_ABILITY_SHIELD_SS
-            or int(battle[toff + 6]) == _ITEM_ABILITY_SHIELD_SS):
+    if (
+        int(battle[uoff + 6]) == _ITEM_ABILITY_SHIELD_SS
+        or int(battle[toff + 6]) == _ITEM_ABILITY_SHIELD_SS
+    ):
         return
     battle[uoff + 5] = t_ab
     battle[toff + 5] = u_ab

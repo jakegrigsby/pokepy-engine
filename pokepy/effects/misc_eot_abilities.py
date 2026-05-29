@@ -9,12 +9,17 @@ from __future__ import annotations
 import numpy as np
 
 from pokepy.core.constants import (
-    OFF_FIELD, F_WEATHER, WEATHER_SUN,
-    STATUS_SLEEP, ABILITY_MAGIC_GUARD, ABILITY_SOLAR_POWER,
+    OFF_FIELD,
+    F_WEATHER,
+    WEATHER_SUN,
+    STATUS_SLEEP,
+    ABILITY_MAGIC_GUARD,
+    ABILITY_SOLAR_POWER,
 )
 from pokepy.core.bitpack import get_status
 
 ABILITY_BAD_DREAMS = 123
+
 
 def apply_misc_eot_abilities(battle: np.ndarray, p0_off: int, p1_off: int) -> None:
     """Solar Power EOT damage, Bad Dreams EOT damage. Mutates battle."""
@@ -30,18 +35,24 @@ def apply_misc_eot_abilities(battle: np.ndarray, p0_off: int, p1_off: int) -> No
     # slot), so the prior `ab == ABILITY_MAGIC_GUARD` check was dead code.
     # Utility Umbrella blocks sun/rain effects on the holder.
     from pokepy.core.constants import (
-        ABILITY_AIR_LOCK, ABILITY_CLOUD_NINE,
-        OFF_SIDE0 as _OS0, OFF_SIDE1 as _OS1,
-        OFF_META as _OM, M_ACTIVE0 as _MA0, M_ACTIVE1 as _MA1,
-        POKEMON_SIZE as _PS, ITEM_UTILITY_UMBRELLA as _UMB,
+        ABILITY_AIR_LOCK,
+        ABILITY_CLOUD_NINE,
+        OFF_SIDE0 as _OS0,
+        OFF_SIDE1 as _OS1,
+        OFF_META as _OM,
+        M_ACTIVE0 as _MA0,
+        M_ACTIVE1 as _MA1,
+        POKEMON_SIZE as _PS,
+        ITEM_UTILITY_UMBRELLA as _UMB,
     )
+
     _a0 = int(battle[_OM + _MA0])
     _a1 = int(battle[_OM + _MA1])
     _ab0_sp = int(battle[_OS0 + _a0 * _PS + 5])
     _ab1_sp = int(battle[_OS1 + _a1 * _PS + 5])
-    _weather_sup = (
-        _ab0_sp in (ABILITY_AIR_LOCK, ABILITY_CLOUD_NINE)
-        or _ab1_sp in (ABILITY_AIR_LOCK, ABILITY_CLOUD_NINE)
+    _weather_sup = _ab0_sp in (ABILITY_AIR_LOCK, ABILITY_CLOUD_NINE) or _ab1_sp in (
+        ABILITY_AIR_LOCK,
+        ABILITY_CLOUD_NINE,
     )
     for poff in (p0_off, p1_off):
         ab = int(battle[poff + 5])

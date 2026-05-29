@@ -17,9 +17,11 @@ from pokepy.core.constants import (
     LUNAR_DANCE_PENDING,
 )
 
+
 def is_pending_wish_sentinel(pending_sentinel: int) -> bool:
     """Return True when the captured switch slot condition is a wish heal."""
     return int(pending_sentinel) in (HEALING_WISH_PENDING, LUNAR_DANCE_PENDING)
+
 
 def apply_pending_wish_on_switch_in(
     battle: np.ndarray,

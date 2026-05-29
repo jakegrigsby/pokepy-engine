@@ -3,6 +3,7 @@
 Port of MultiFormatFastEnv._apply_hazard_from_move / _apply_hazard_damage_on_switch
 (the Showdown reference implementation).
 """
+
 from __future__ import annotations
 
 from pokepy.effects._common import np, MultiFormatState, Gen5PRNG
@@ -49,7 +50,8 @@ from pokepy.data.type_charts import MODERN_TYPE_CHART
 
 # Iron Ball grounds Flying-types; not in pokepy.core.constants yet.
 # Showdown: data/items.ts ironball -> sim/pokemon.ts isGrounded().
-_ITEM_IRON_BALL = 224
+_ITEM_IRON_BALL = 278
+
 
 def apply_hazard_from_move(
     battle: np.ndarray,
@@ -111,7 +113,9 @@ def apply_hazard_from_move(
         if int(user_ability) == _ABILITY_SHEER_FORCE_HZ:
             return
         # Skip Magic Bounce reflection — these moves are not reflectable.
-        hazard_offset_dh = OFF_FIELD + (F_HAZARDS_0 if target_side == 0 else F_HAZARDS_1)
+        hazard_offset_dh = OFF_FIELD + (
+            F_HAZARDS_0 if target_side == 0 else F_HAZARDS_1
+        )
         cur_dh = int(battle[hazard_offset_dh])
         if hazard_type == HAZARD_STEALTH_ROCK:
             new_dh = set_stealth_rock(cur_dh)
@@ -128,11 +132,19 @@ def apply_hazard_from_move(
     # blocked the status move), reflect the hazard back. We detect this by
     # checking the target's active mon ability — if Magic Bounce, swap sides.
     from pokepy.core.constants import (
-        OFF_SIDE0, OFF_SIDE1, OFF_META, M_ACTIVE0, M_ACTIVE1,
-        POKEMON_SIZE, ABILITY_MAGIC_BOUNCE,
+        OFF_SIDE0,
+        OFF_SIDE1,
+        OFF_META,
+        M_ACTIVE0,
+        M_ACTIVE1,
+        POKEMON_SIZE,
+        ABILITY_MAGIC_BOUNCE,
     )
+
     target_base = OFF_SIDE0 if target_side == 0 else OFF_SIDE1
-    target_active = int(battle[OFF_META + (M_ACTIVE0 if target_side == 0 else M_ACTIVE1)])
+    target_active = int(
+        battle[OFF_META + (M_ACTIVE0 if target_side == 0 else M_ACTIVE1)]
+    )
     target_ability = int(battle[target_base + target_active * POKEMON_SIZE + 5])
     _MOLD_BREAKER_SET_HZ = (104, 163, 164)  # moldbreaker, turboblaze, teravolt
     user_ignores_ability = int(user_ability) in _MOLD_BREAKER_SET_HZ
@@ -162,6 +174,7 @@ def apply_hazard_from_move(
     if val >= 0x8000:
         val -= 0x10000
     battle[hazard_offset] = val
+
 
 def apply_hazard_damage_on_switch(
     battle: np.ndarray,
@@ -245,11 +258,13 @@ def apply_hazard_damage_on_switch(
         ABILITY_IMMUNITY as _ABI_IMMUN,
         ABILITY_PURIFYING_SALT as _ABI_PSALT,
         TERRAIN_MISTY as _TMISTY,
-        F_SCREENS_0 as _FS0_TS, F_SCREENS_1 as _FS1_TS,
+        F_SCREENS_0 as _FS0_TS,
+        F_SCREENS_1 as _FS1_TS,
         F_TERRAIN as _FTER_TS,
         SCREEN_SAFEGUARD_SHIFT as _SAFE_TS,
         OFF_SIDE1 as _OFF_SIDE1_TS,
     )
+
     _ABILITY_COMATOSE_TS = 213  # see pokepy/effects/status_apply.py:63
     is_poison = (type1 == TYPE_POISON) or (type2 == TYPE_POISON)
     is_steel = (type1 == TYPE_STEEL) or (type2 == TYPE_STEEL)
@@ -298,7 +313,9 @@ def apply_hazard_damage_on_switch(
     has_web = get_sticky_web(hazards)
     if is_grounded and (not has_boots) and has_web > 0:
         target_is_side0 = int(pokemon_offset) < OFF_SIDE1
-        source_slot = int(battle[OFF_META + (M_ACTIVE1 if target_is_side0 else M_ACTIVE0)])
+        source_slot = int(
+            battle[OFF_META + (M_ACTIVE1 if target_is_side0 else M_ACTIVE0)]
+        )
         source_base = OFF_SIDE1 if target_is_side0 else OFF_SIDE0
         source_offset = source_base + source_slot * POKEMON_SIZE
         apply_direct_stat_changes(

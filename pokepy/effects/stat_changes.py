@@ -3,6 +3,7 @@
 (line ~7225). Mutates `battle` in place. Advances `gen5_prng` only when the
 move actually has a stat-change effect (matches Showdown's behavior).
 """
+
 from __future__ import annotations
 
 from pokepy.effects._common import np, MultiFormatState, Gen5PRNG
@@ -36,7 +37,7 @@ from pokepy.core.constants import (
 )
 
 # IDs not exported from constants.py — defined locally to mirror the Showdown reference usage
-ITEM_CLEAR_AMULET = 747
+ITEM_CLEAR_AMULET = 1882
 ABILITY_MIRROR_ARMOR = 240
 ABILITY_OPPORTUNIST = 290
 MOVE_GROWTH = 74
@@ -52,6 +53,7 @@ _UMBRELLA_EFFECTIVE_WEATHERS = (
     WEATHER_PRIMORDIAL_SEA,
     WEATHER_DESOLATE_LAND,
 )
+
 
 def _effective_weather_for_pokemon(
     battle: np.ndarray,
@@ -79,9 +81,13 @@ def _effective_weather_for_pokemon(
     ):
         return WEATHER_NONE
 
-    if int(battle[int(pokemon_offset) + 6]) == ITEM_UTILITY_UMBRELLA and weather in _UMBRELLA_EFFECTIVE_WEATHERS:
+    if (
+        int(battle[int(pokemon_offset) + 6]) == ITEM_UTILITY_UMBRELLA
+        and weather in _UMBRELLA_EFFECTIVE_WEATHERS
+    ):
         return WEATHER_NONE
     return weather
+
 
 def get_live_move_stat_change_spec(
     battle: np.ndarray,
@@ -138,6 +144,7 @@ def get_live_move_stat_change_spec(
 
     return stat_changes, stat_target, stat_chance, is_selfboost_like
 
+
 def apply_direct_stat_changes(
     battle: np.ndarray,
     source_offset: int,
@@ -183,7 +190,7 @@ def apply_direct_stat_changes(
         and is_opponent_drop
         and target_ability == ABILITY_MIRROR_ARMOR
     )
-    _ABILITY_HYPER_CUTTER = 110
+    _ABILITY_HYPER_CUTTER = 52
     _ABILITY_BIG_PECKS = 145
     _ABILITY_KEEN_EYE = 51
     _ABILITY_MINDS_EYE = 300
@@ -272,6 +279,7 @@ def apply_direct_stat_changes(
             allow_mirror_armor=False,
         )
 
+
 def apply_stat_changes_from_move(
     battle: np.ndarray,
     move_id: int,
@@ -296,11 +304,13 @@ def apply_stat_changes_from_move(
     target_offset = int(target_offset)
     hit = bool(hit)
 
-    stat_changes, stat_target, stat_chance, is_selfboost_like = get_live_move_stat_change_spec(
-        battle,
-        move_id,
-        move_effects,
-        user_offset,
+    stat_changes, stat_target, stat_chance, is_selfboost_like = (
+        get_live_move_stat_change_spec(
+            battle,
+            move_id,
+            move_effects,
+            user_offset,
+        )
     )
 
     # Serene Grace: double secondary effect chance
@@ -317,6 +327,7 @@ def apply_stat_changes_from_move(
     # those from move-level boosts in pokepy's data, so we keep it
     # conservative and only suppress true secondaries (chance < 100).
     from pokepy.core.constants import ABILITY_SHEER_FORCE as _ABILITY_SHEER_FORCE_SC
+
     has_sheer_force = user_ability_se == _ABILITY_SHEER_FORCE_SC
     if has_sheer_force and stat_chance < 100:
         return
@@ -337,24 +348,26 @@ def apply_stat_changes_from_move(
         EFFECT_DEFOG as _EFFECT_DEFOG_SC,
     )
     from pokepy.core.constants import EFFECT_SWITCH as _EFFECT_SWITCH_SC
+
     _ABILITY_SHIELD_DUST_SC = 19
     _ITEM_COVERT_CLOAK_SC = 750
     move_effect_type_sc = int(move_effects.effect_type[move_id])
     is_primary_stat_move = move_effect_type_sc in (
-        _EFFECT_STAT_CHANGE_SC, _EFFECT_STATUS_SC,
+        _EFFECT_STAT_CHANGE_SC,
+        _EFFECT_STATUS_SC,
     )
     if stat_target == 1 and not is_primary_stat_move:
         target_ability_sd = effective_ability(battle, target_offset, user_offset)
         target_item_sd = int(battle[target_offset + 6])
-        if (target_ability_sd == _ABILITY_SHIELD_DUST_SC
-                or target_item_sd == _ITEM_COVERT_CLOAK_SC):
+        if (
+            target_ability_sd == _ABILITY_SHIELD_DUST_SC
+            or target_item_sd == _ITEM_COVERT_CLOAK_SC
+        ):
             return
 
     # Only advance PRNG if move has any stat changes
     has_any_stat_change = (
-        hit
-        and (stat_chance > 0)
-        and any(c != 0 for c in stat_changes)
+        hit and (stat_chance > 0) and any(c != 0 for c in stat_changes)
     )
     if not has_any_stat_change:
         return
@@ -370,7 +383,8 @@ def apply_stat_changes_from_move(
     _is_primary_status_boost = (
         move_effect_type_sc == _EFFECT_STAT_CHANGE_SC
         or move_effect_type_sc == _EFFECT_DEFOG_SC
-        or move_effect_type_sc == _EFFECT_SWITCH_SC  # Parting Shot: onHit boost, no PRNG
+        or move_effect_type_sc
+        == _EFFECT_SWITCH_SC  # Parting Shot: onHit boost, no PRNG
         or move_id in (MOVE_SKULL_BASH, MOVE_METEOR_BEAM, MOVE_ELECTRO_SHOT)
     )
     if _is_primary_status_boost or is_selfboost_like:
@@ -391,7 +405,11 @@ def apply_stat_changes_from_move(
     # the secondary stat drop no-ops. Mirror that here for true
     # opponent-targeted damaging stat changes while preserving primary status
     # moves (Growl, Parting Shot, etc.) and self boosts/drops.
-    if stat_target == 1 and not is_primary_stat_move and int(battle[target_offset + 1]) <= 0:
+    if (
+        stat_target == 1
+        and not is_primary_stat_move
+        and int(battle[target_offset + 1]) <= 0
+    ):
         return
 
     # Determine which Pokemon to modify
@@ -420,6 +438,7 @@ def apply_stat_changes_from_move(
     # Hyper Cutter ONLY blocks Atk drops (idx 0). Showdown source:
     # data/abilities.ts hypercutter `onTryBoost: { if (boost.atk && boost.atk < 0) ... }`
     from pokepy.core.constants import ABILITY_HYPER_CUTTER
+
     has_hyper_cutter = target_ability == ABILITY_HYPER_CUTTER
     # Big Pecks ONLY blocks Def drops (idx 1). Showdown source:
     # data/abilities.ts bigpecks `onTryBoost: { if (boost.def && boost.def < 0) ... }`
@@ -432,7 +451,11 @@ def apply_stat_changes_from_move(
     _ABILITY_KEEN_EYE = 51
     _ABILITY_MINDS_EYE = 300
     _ABILITY_ILLUMINATE = 35
-    has_keen_eye_sc = target_ability in (_ABILITY_KEEN_EYE, _ABILITY_MINDS_EYE, _ABILITY_ILLUMINATE)
+    has_keen_eye_sc = target_ability in (
+        _ABILITY_KEEN_EYE,
+        _ABILITY_MINDS_EYE,
+        _ABILITY_ILLUMINATE,
+    )
 
     # Mirror Armor reflects negative stat changes back to the source (Showdown:
     # data/abilities.ts mirrorarmor onTryBoost). Track reflected changes here
@@ -501,7 +524,12 @@ def apply_stat_changes_from_move(
     if any(c != 0 for c in reflected):
         src_b13 = int(battle[user_offset + 13])
         src_b14 = int(battle[user_offset + 14])
-        for shift, c in ((0, reflected[0]), (4, reflected[1]), (8, reflected[2]), (12, reflected[3])):
+        for shift, c in (
+            (0, reflected[0]),
+            (4, reflected[1]),
+            (8, reflected[2]),
+            (12, reflected[3]),
+        ):
             if c != 0:
                 src_b13 = apply_boost_to_packed(src_b13, shift, c)
         for shift, c in ((0, reflected[4]), (4, reflected[5]), (8, reflected[6])):
@@ -546,6 +574,7 @@ def apply_stat_changes_from_move(
             opp_of_user_offset = OFF_SIDE0 + opp_active * POKEMON_SIZE
         opp_has_opportunist = int(battle[opp_of_user_offset + 5]) == ABILITY_OPPORTUNIST
         from pokepy.core.constants import ITEM_MIRROR_HERB
+
         opp_has_mirror_herb = int(battle[opp_of_user_offset + 6]) == ITEM_MIRROR_HERB
         if opp_has_opportunist or opp_has_mirror_herb:
             opp_b13 = int(battle[opp_of_user_offset + 13])

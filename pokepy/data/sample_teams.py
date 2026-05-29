@@ -29,50 +29,159 @@ NamedTeam = List[NamedPokemon]
 SAMPLE_TEAMS_NAMED: List[NamedTeam] = [
     # Team 1: Hyper offense
     [
-        dict(species="dragapult", moves=["dracometeor", "shadowball", "uturn", "fireblast"],
-             item="choicespecs", ability="infiltrator", tera_type="ghost", level=100),
-        dict(species="kingambit", moves=["kowtowcleave", "suckerpunch", "ironhead", "lowkick"],
-             item="leftovers", ability="supremeoverlord", tera_type="dark", level=100),
-        dict(species="greattusk", moves=["earthquake", "headlongrush", "iceshard", "knockoff"],
-             item="boosterenergy", ability="protosynthesis", tera_type="ground", level=100),
-        dict(species="ironvaliant", moves=["moonblast", "psyshock", "thunderbolt", "spirit_break"],
-             item="boosterenergy", ability="quarkdrive", tera_type="fairy", level=100),
-        dict(species="gholdengo", moves=["makeitrain", "shadowball", "nastyplot", "recover"],
-             item="airballoon", ability="goodasgold", tera_type="steel", level=100),
-        dict(species="ironmoth", moves=["fireblast", "sludgewave", "energyball", "uturn"],
-             item="heavydutyboots", ability="quarkdrive", tera_type="grass", level=100),
+        dict(
+            species="dragapult",
+            moves=["dracometeor", "shadowball", "uturn", "fireblast"],
+            item="choicespecs",
+            ability="infiltrator",
+            tera_type="ghost",
+            level=100,
+        ),
+        dict(
+            species="kingambit",
+            moves=["kowtowcleave", "suckerpunch", "ironhead", "lowkick"],
+            item="leftovers",
+            ability="supremeoverlord",
+            tera_type="dark",
+            level=100,
+        ),
+        dict(
+            species="greattusk",
+            moves=["earthquake", "headlongrush", "iceshard", "knockoff"],
+            item="boosterenergy",
+            ability="protosynthesis",
+            tera_type="ground",
+            level=100,
+        ),
+        dict(
+            species="ironvaliant",
+            moves=["moonblast", "psyshock", "thunderbolt", "spirit_break"],
+            item="boosterenergy",
+            ability="quarkdrive",
+            tera_type="fairy",
+            level=100,
+        ),
+        dict(
+            species="gholdengo",
+            moves=["makeitrain", "shadowball", "nastyplot", "recover"],
+            item="airballoon",
+            ability="goodasgold",
+            tera_type="steel",
+            level=100,
+        ),
+        dict(
+            species="ironmoth",
+            moves=["fireblast", "sludgewave", "energyball", "uturn"],
+            item="heavydutyboots",
+            ability="quarkdrive",
+            tera_type="grass",
+            level=100,
+        ),
     ],
     # Team 2: Bulky balance
     [
-        dict(species="corviknight", moves=["bravebird", "bodypress", "roost", "uturn"],
-             item="leftovers", ability="pressure", tera_type="dragon", level=100),
-        dict(species="garganacl", moves=["saltcure", "recover", "earthquake", "stealthrock"],
-             item="leftovers", ability="purifyingsalt", tera_type="ghost", level=100),
-        dict(species="slowking", moves=["scald", "futuresight", "chillywater", "slackoff"],
-             item="heavydutyboots", ability="regenerator", tera_type="water", level=100),
-        dict(species="cinderace", moves=["pyroball", "uturn", "willowisp", "courtchange"],
-             item="heavydutyboots", ability="libero", tera_type="grass", level=100),
-        dict(species="rotomwash", moves=["voltswitch", "hydropump", "willowisp", "painsplit"],
-             item="leftovers", ability="levitate", tera_type="ghost", level=100),
-        dict(species="kingambit", moves=["kowtowcleave", "suckerpunch", "swordsdance", "ironhead"],
-             item="blacksludge", ability="supremeoverlord", tera_type="dark", level=100),
+        dict(
+            species="corviknight",
+            moves=["bravebird", "bodypress", "roost", "uturn"],
+            item="leftovers",
+            ability="pressure",
+            tera_type="dragon",
+            level=100,
+        ),
+        dict(
+            species="garganacl",
+            moves=["saltcure", "recover", "earthquake", "stealthrock"],
+            item="leftovers",
+            ability="purifyingsalt",
+            tera_type="ghost",
+            level=100,
+        ),
+        dict(
+            species="slowking",
+            moves=["scald", "futuresight", "chillywater", "slackoff"],
+            item="heavydutyboots",
+            ability="regenerator",
+            tera_type="water",
+            level=100,
+        ),
+        dict(
+            species="cinderace",
+            moves=["pyroball", "uturn", "willowisp", "courtchange"],
+            item="heavydutyboots",
+            ability="libero",
+            tera_type="grass",
+            level=100,
+        ),
+        dict(
+            species="rotomwash",
+            moves=["voltswitch", "hydropump", "willowisp", "painsplit"],
+            item="leftovers",
+            ability="levitate",
+            tera_type="ghost",
+            level=100,
+        ),
+        dict(
+            species="kingambit",
+            moves=["kowtowcleave", "suckerpunch", "swordsdance", "ironhead"],
+            item="blacksludge",
+            ability="supremeoverlord",
+            tera_type="dark",
+            level=100,
+        ),
     ],
     # Team 3: Stall (simpler — fewer high-investment effects)
     [
-        dict(species="blissey", moves=["seismictoss", "softboiled", "calmmind", "shadowball"],
-             item="heavydutyboots", ability="naturalcure", tera_type="poison", level=100),
-        dict(species="toxapex", moves=["scald", "toxic", "recover", "haze"],
-             item="blacksludge", ability="regenerator", tera_type="fairy", level=100),
-        dict(species="dondozo", moves=["bodypress", "rest", "sleeptalk", "curse"],
-             item="leftovers", ability="unaware", tera_type="grass", level=100),
-        dict(species="clodsire", moves=["earthquake", "recover", "toxic", "spikes"],
-             item="leftovers", ability="unaware", tera_type="dark", level=100),
-        dict(species="skarmory", moves=["bodypress", "roost", "spikes", "whirlwind"],
-             item="leftovers", ability="sturdy", tera_type="dragon", level=100),
-        dict(species="alomomola", moves=["wish", "protect", "scald", "flipturn"],
-             item="heavydutyboots", ability="regenerator", tera_type="water", level=100),
+        dict(
+            species="blissey",
+            moves=["seismictoss", "softboiled", "calmmind", "shadowball"],
+            item="heavydutyboots",
+            ability="naturalcure",
+            tera_type="poison",
+            level=100,
+        ),
+        dict(
+            species="toxapex",
+            moves=["scald", "toxic", "recover", "haze"],
+            item="blacksludge",
+            ability="regenerator",
+            tera_type="fairy",
+            level=100,
+        ),
+        dict(
+            species="dondozo",
+            moves=["bodypress", "rest", "sleeptalk", "curse"],
+            item="leftovers",
+            ability="unaware",
+            tera_type="grass",
+            level=100,
+        ),
+        dict(
+            species="clodsire",
+            moves=["earthquake", "recover", "toxic", "spikes"],
+            item="leftovers",
+            ability="unaware",
+            tera_type="dark",
+            level=100,
+        ),
+        dict(
+            species="skarmory",
+            moves=["bodypress", "roost", "spikes", "whirlwind"],
+            item="leftovers",
+            ability="sturdy",
+            tera_type="dragon",
+            level=100,
+        ),
+        dict(
+            species="alomomola",
+            moves=["wish", "protect", "scald", "flipturn"],
+            item="heavydutyboots",
+            ability="regenerator",
+            tera_type="water",
+            level=100,
+        ),
     ],
 ]
+
 
 def _lookup(name: str, mapping: Dict[str, int], kind: str) -> int:
     """Look up a clean-name → ID; warn if missing."""
@@ -84,7 +193,10 @@ def _lookup(name: str, mapping: Dict[str, int], kind: str) -> int:
         return int(mapping[str(name)])
     return -1
 
-def team_names_to_ids(team: NamedTeam, game_data: GameData, mappings: IDMappings) -> Dict[str, Any]:
+
+def team_names_to_ids(
+    team: NamedTeam, game_data: GameData, mappings: IDMappings
+) -> Dict[str, Any]:
     """Convert a named-team list to the dict format `init_battle_state` expects."""
     species, moves, items, abilities, tera_types, levels = [], [], [], [], [], []
     for entry in team:
@@ -118,6 +230,7 @@ def team_names_to_ids(team: NamedTeam, game_data: GameData, mappings: IDMappings
         tera_types=tera_types,
         levels=levels,
     )
+
 
 def load_sample_teams() -> List[Dict[str, Any]]:
     """Convert all SAMPLE_TEAMS_NAMED to engine-ready team dicts.

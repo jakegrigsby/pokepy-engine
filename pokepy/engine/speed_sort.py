@@ -22,6 +22,7 @@ from typing import List, Tuple
 # Entry type: (order, priority, speed, subOrder, effectOrder)
 Entry = Tuple[int, int, int, int, int]
 
+
 class SpeedSortTracker:
     """Simulates Showdown's speedSort PRNG frame consumption."""
 

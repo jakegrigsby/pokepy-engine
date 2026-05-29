@@ -25,9 +25,11 @@ from pokepy.core.constants import (
     OFF_SIDE1,
     OFF_FIELD,
     OFF_META,
+    OFF_MOVES,
     POKEMON_SIZE,
     M_ACTIVE0,
     M_ACTIVE1,
+    M_ACTIVE_MOVE_ACTIONS_0,
     M_WEATHER_TURNS,
     M_TERRAIN_TURNS,
     F_WEATHER,
@@ -102,6 +104,7 @@ from pokepy.effects.abilities import (
     apply_contact_status_ability,
 )
 
+
 def _hand_state(
     side0_ability: int = 0,
     side1_ability: int = 0,
@@ -125,8 +128,24 @@ def _hand_state(
     bs[OFF_FIELD + F_TERRAIN] = TERRAIN_NONE
 
     configs = [
-        (OFF_SIDE0, side0_ability, side0_type, side0_hp, side0_max, side0_item, side0_status),
-        (OFF_SIDE1, side1_ability, side1_type, side1_hp, side1_max, side1_item, side1_status),
+        (
+            OFF_SIDE0,
+            side0_ability,
+            side0_type,
+            side0_hp,
+            side0_max,
+            side0_item,
+            side0_status,
+        ),
+        (
+            OFF_SIDE1,
+            side1_ability,
+            side1_type,
+            side1_hp,
+            side1_max,
+            side1_item,
+            side1_status,
+        ),
     ]
     for base, ab, ty, hp, mx, item, st in configs:
         poff = base + 0 * POKEMON_SIZE
@@ -148,23 +167,29 @@ def _hand_state(
         bs[poff + 15] = 0
     return state
 
+
 def _p0_off() -> int:
     return OFF_SIDE0 + 0 * POKEMON_SIZE
 
+
 def _p1_off() -> int:
     return OFF_SIDE1 + 0 * POKEMON_SIZE
+
 
 # ============================================================================
 # Speed Boost
 # ============================================================================
 
+
 def test_speed_boost_grants_plus_one_speed():
     state = _hand_state(side0_ability=ABILITY_SPEED_BOOST)
     bs = state.battle_state
     poff = _p0_off()
+    bs[OFF_MOVES + M_ACTIVE_MOVE_ACTIONS_0] = 1
     assert extract_boost(int(bs[poff + 14]), 0) == 0
     apply_speed_boost(bs, poff, game_data=None)
     assert extract_boost(int(bs[poff + 14]), 0) == 1
+
 
 def test_speed_boost_skips_when_no_ability():
     state = _hand_state(side0_ability=0)
@@ -173,6 +198,7 @@ def test_speed_boost_skips_when_no_ability():
     apply_speed_boost(bs, poff, game_data=None)
     assert extract_boost(int(bs[poff + 14]), 0) == 0
 
+
 def test_speed_boost_skips_when_fainted():
     state = _hand_state(side0_ability=ABILITY_SPEED_BOOST, side0_hp=0)
     bs = state.battle_state
@@ -180,9 +206,11 @@ def test_speed_boost_skips_when_fainted():
     apply_speed_boost(bs, poff, game_data=None)
     assert extract_boost(int(bs[poff + 14]), 0) == 0
 
+
 # ============================================================================
 # Shed Skin / Hydration
 # ============================================================================
+
 
 def test_hydration_cures_in_rain():
     state = _hand_state(side0_ability=ABILITY_HYDRATION, side0_status=STATUS_BURN)
@@ -193,6 +221,7 @@ def test_hydration_cures_in_rain():
     apply_shed_skin_hydration(bs, poff, game_data=None, gen5_prng=Gen5PRNG())
     assert get_status(int(bs[poff + 12])) == STATUS_NONE
 
+
 def test_hydration_no_rain_no_cure():
     state = _hand_state(side0_ability=ABILITY_HYDRATION, side0_status=STATUS_BURN)
     bs = state.battle_state
@@ -201,9 +230,11 @@ def test_hydration_no_rain_no_cure():
     apply_shed_skin_hydration(bs, poff, game_data=None, gen5_prng=Gen5PRNG())
     assert get_status(int(bs[poff + 12])) == STATUS_BURN
 
+
 # ============================================================================
 # Switch-in abilities
 # ============================================================================
+
 
 def test_intimidate_lowers_opponent_attack():
     state = _hand_state(side0_ability=ABILITY_INTIMIDATE)
@@ -215,6 +246,7 @@ def test_intimidate_lowers_opponent_attack():
     apply_switch_in_ability(bs, p0, p1, did_switch=True)
     assert extract_boost(int(bs[p1 + 13]), 0) == -1
 
+
 def test_intimidate_skipped_when_no_switch():
     state = _hand_state(side0_ability=ABILITY_INTIMIDATE)
     bs = state.battle_state
@@ -222,19 +254,26 @@ def test_intimidate_skipped_when_no_switch():
     apply_switch_in_ability(bs, p0, p1, did_switch=False)
     assert extract_boost(int(bs[p1 + 13]), 0) == 0
 
+
 def test_intimidate_blocked_by_clear_body():
-    state = _hand_state(side0_ability=ABILITY_INTIMIDATE, side1_ability=ABILITY_CLEAR_BODY)
+    state = _hand_state(
+        side0_ability=ABILITY_INTIMIDATE, side1_ability=ABILITY_CLEAR_BODY
+    )
     bs = state.battle_state
     p0, p1 = _p0_off(), _p1_off()
     apply_switch_in_ability(bs, p0, p1, did_switch=True)
     assert extract_boost(int(bs[p1 + 13]), 0) == 0
 
+
 def test_intimidate_reversed_by_contrary():
-    state = _hand_state(side0_ability=ABILITY_INTIMIDATE, side1_ability=ABILITY_CONTRARY)
+    state = _hand_state(
+        side0_ability=ABILITY_INTIMIDATE, side1_ability=ABILITY_CONTRARY
+    )
     bs = state.battle_state
     p0, p1 = _p0_off(), _p1_off()
     apply_switch_in_ability(bs, p0, p1, did_switch=True)
     assert extract_boost(int(bs[p1 + 13]), 0) == 1
+
 
 def test_intimidate_triggers_defiant():
     state = _hand_state(side0_ability=ABILITY_INTIMIDATE, side1_ability=ABILITY_DEFIANT)
@@ -244,6 +283,7 @@ def test_intimidate_triggers_defiant():
     # -1 from intimidate, +2 from defiant -> +1 net
     assert extract_boost(int(bs[p1 + 13]), 0) == 1
 
+
 def test_intimidate_blocked_by_substitute():
     state = _hand_state(side0_ability=ABILITY_INTIMIDATE)
     bs = state.battle_state
@@ -251,6 +291,7 @@ def test_intimidate_blocked_by_substitute():
     p0, p1 = _p0_off(), _p1_off()
     apply_switch_in_ability(bs, p0, p1, did_switch=True)
     assert extract_boost(int(bs[p1 + 13]), 0) == 0
+
 
 def test_drought_sets_sun():
     state = _hand_state(side1_ability=ABILITY_DROUGHT)
@@ -260,12 +301,14 @@ def test_drought_sets_sun():
     assert int(bs[OFF_FIELD + F_WEATHER]) == WEATHER_SUN
     assert int(bs[OFF_META + M_WEATHER_TURNS]) == 5
 
+
 def test_drizzle_sets_rain():
     state = _hand_state(side1_ability=ABILITY_DRIZZLE)
     bs = state.battle_state
     p0, p1 = _p0_off(), _p1_off()
     apply_switch_in_ability(bs, p1, p0, did_switch=True)
     assert int(bs[OFF_FIELD + F_WEATHER]) == WEATHER_RAIN
+
 
 def test_electric_surge_sets_terrain():
     state = _hand_state(side0_ability=ABILITY_ELECTRIC_SURGE)
@@ -275,15 +318,17 @@ def test_electric_surge_sets_terrain():
     assert int(bs[OFF_FIELD + F_TERRAIN]) == TERRAIN_ELECTRIC
     assert int(bs[OFF_META + M_TERRAIN_TURNS]) == 5
 
+
 def test_download_boosts_atk_when_def_lower():
     state = _hand_state(side0_ability=ABILITY_DOWNLOAD)
     bs = state.battle_state
     p0, p1 = _p0_off(), _p1_off()
-    bs[p1 + 8] = 50   # opponent def
+    bs[p1 + 8] = 50  # opponent def
     bs[p1 + 10] = 100  # opponent spd
     apply_switch_in_ability(bs, p0, p1, did_switch=True)
     # Def < SpD -> +1 Atk
     assert extract_boost(int(bs[p0 + 13]), 0) == 1
+
 
 def test_download_boosts_spa_when_spd_lower():
     state = _hand_state(side0_ability=ABILITY_DOWNLOAD)
@@ -295,12 +340,14 @@ def test_download_boosts_spa_when_spd_lower():
     # Def >= SpD -> +1 SpA
     assert extract_boost(int(bs[p0 + 13]), 8) == 1
 
+
 def test_intrepid_sword_boosts_attack():
     state = _hand_state(side0_ability=ABILITY_INTREPID_SWORD)
     bs = state.battle_state
     p0, p1 = _p0_off(), _p1_off()
     apply_switch_in_ability(bs, p0, p1, did_switch=True)
     assert extract_boost(int(bs[p0 + 13]), 0) == 1
+
 
 def test_dauntless_shield_boosts_defense_once():
     state = _hand_state(side0_ability=ABILITY_DAUNTLESS_SHIELD)
@@ -313,9 +360,11 @@ def test_dauntless_shield_boosts_defense_once():
     apply_switch_in_ability(bs, p0, p1, did_switch=True)
     assert extract_boost(int(bs[p0 + 13]), 4) == 0
 
+
 # ============================================================================
 # Regenerator / Natural Cure on switch out
 # ============================================================================
+
 
 def test_regenerator_heals_one_third():
     state = _hand_state(side1_ability=ABILITY_REGENERATOR, side1_hp=50, side1_max=100)
@@ -325,12 +374,14 @@ def test_regenerator_heals_one_third():
     # 100 / 3 = 33; 50 + 33 = 83
     assert int(bs[p1 + 1]) == 83
 
+
 def test_regenerator_does_not_overheal():
     state = _hand_state(side1_ability=ABILITY_REGENERATOR, side1_hp=90, side1_max=100)
     bs = state.battle_state
     p1 = _p1_off()
     apply_regenerator_on_switch_out(bs, p1, did_switch=True)
     assert int(bs[p1 + 1]) == 100
+
 
 def test_regenerator_skipped_without_switch():
     state = _hand_state(side1_ability=ABILITY_REGENERATOR, side1_hp=50, side1_max=100)
@@ -339,46 +390,44 @@ def test_regenerator_skipped_without_switch():
     apply_regenerator_on_switch_out(bs, p1, did_switch=False)
     assert int(bs[p1 + 1]) == 50
 
+
 def test_natural_cure_clears_status_on_switch():
-    state = _hand_state(
-        side1_ability=ABILITY_NATURAL_CURE, side1_status=STATUS_BURN
-    )
+    state = _hand_state(side1_ability=ABILITY_NATURAL_CURE, side1_status=STATUS_BURN)
     bs = state.battle_state
     p1 = _p1_off()
     apply_natural_cure_on_switch_out(bs, p1, did_switch=True)
     assert get_status(int(bs[p1 + 12])) == STATUS_NONE
 
+
 # ============================================================================
 # Absorb abilities (healing & stat boosts)
 # ============================================================================
 
+
 def test_water_absorb_heals_25_percent():
-    state = _hand_state(
-        side1_ability=ABILITY_WATER_ABSORB, side1_hp=50, side1_max=100
-    )
+    state = _hand_state(side1_ability=ABILITY_WATER_ABSORB, side1_hp=50, side1_max=100)
     bs = state.battle_state
     p1 = _p1_off()
     apply_absorb_ability_healing(bs, p1, TYPE_WATER, hit=True)
     # 100 / 4 = 25; 50 + 25 = 75
     assert int(bs[p1 + 1]) == 75
 
+
 def test_volt_absorb_heals_on_electric():
-    state = _hand_state(
-        side1_ability=ABILITY_VOLT_ABSORB, side1_hp=20, side1_max=100
-    )
+    state = _hand_state(side1_ability=ABILITY_VOLT_ABSORB, side1_hp=20, side1_max=100)
     bs = state.battle_state
     p1 = _p1_off()
     apply_absorb_ability_healing(bs, p1, TYPE_ELECTRIC, hit=True)
     assert int(bs[p1 + 1]) == 45
 
+
 def test_water_absorb_no_heal_for_fire_move():
-    state = _hand_state(
-        side1_ability=ABILITY_WATER_ABSORB, side1_hp=50, side1_max=100
-    )
+    state = _hand_state(side1_ability=ABILITY_WATER_ABSORB, side1_hp=50, side1_max=100)
     bs = state.battle_state
     p1 = _p1_off()
     apply_absorb_ability_healing(bs, p1, TYPE_FIRE, hit=True)
     assert int(bs[p1 + 1]) == 50
+
 
 def test_sap_sipper_boosts_attack_on_grass_move():
     state = _hand_state(side1_ability=ABILITY_SAP_SIPPER)
@@ -387,12 +436,14 @@ def test_sap_sipper_boosts_attack_on_grass_move():
     apply_absorb_ability_healing(bs, p1, TYPE_GRASS, hit=True)
     assert extract_boost(int(bs[p1 + 13]), 0) == 1
 
+
 def test_lightning_rod_boosts_spa_on_electric():
     state = _hand_state(side1_ability=ABILITY_LIGHTNING_ROD)
     bs = state.battle_state
     p1 = _p1_off()
     apply_absorb_ability_healing(bs, p1, TYPE_ELECTRIC, hit=True)
     assert extract_boost(int(bs[p1 + 13]), 8) == 1
+
 
 def test_motor_drive_boosts_speed_on_electric():
     state = _hand_state(side1_ability=ABILITY_MOTOR_DRIVE)
@@ -401,6 +452,7 @@ def test_motor_drive_boosts_speed_on_electric():
     apply_absorb_ability_healing(bs, p1, TYPE_ELECTRIC, hit=True)
     assert extract_boost(int(bs[p1 + 14]), 0) == 1
 
+
 def test_flash_fire_sets_flag():
     state = _hand_state(side1_ability=ABILITY_FLASH_FIRE)
     bs = state.battle_state
@@ -408,14 +460,14 @@ def test_flash_fire_sets_flag():
     apply_absorb_ability_healing(bs, p1, TYPE_FIRE, hit=True)
     assert int(bs[p1 + 15]) & 0x200, "Flash Fire flag bit should be set"
 
+
 # ============================================================================
 # Weakness Policy
 # ============================================================================
 
+
 def test_weakness_policy_triggers_on_super_effective():
-    state = _hand_state(
-        side1_type=TYPE_GRASS, side1_item=ITEM_WEAKNESS_POLICY
-    )
+    state = _hand_state(side1_type=TYPE_GRASS, side1_item=ITEM_WEAKNESS_POLICY)
     bs = state.battle_state
     p1 = _p1_off()
     apply_weakness_policy(bs, p1, TYPE_FIRE, hit=True, damage_dealt=20)
@@ -423,19 +475,20 @@ def test_weakness_policy_triggers_on_super_effective():
     assert extract_boost(int(bs[p1 + 13]), 8) == 2  # +2 SpA
     assert int(bs[p1 + 6]) == 0  # item consumed
 
+
 def test_weakness_policy_skips_normal_effective():
-    state = _hand_state(
-        side1_type=TYPE_NORMAL, side1_item=ITEM_WEAKNESS_POLICY
-    )
+    state = _hand_state(side1_type=TYPE_NORMAL, side1_item=ITEM_WEAKNESS_POLICY)
     bs = state.battle_state
     p1 = _p1_off()
     apply_weakness_policy(bs, p1, TYPE_FIRE, hit=True, damage_dealt=10)
     assert extract_boost(int(bs[p1 + 13]), 0) == 0
     assert int(bs[p1 + 6]) == ITEM_WEAKNESS_POLICY
 
+
 # ============================================================================
 # KO Boost abilities
 # ============================================================================
+
 
 def test_moxie_boosts_attack_on_ko():
     state = _hand_state(side0_ability=ABILITY_MOXIE)
@@ -444,6 +497,7 @@ def test_moxie_boosts_attack_on_ko():
     apply_ko_boost_ability(bs, p0, target_fainted=True, hit=True)
     assert extract_boost(int(bs[p0 + 13]), 0) == 1
 
+
 def test_moxie_no_boost_when_target_alive():
     state = _hand_state(side0_ability=ABILITY_MOXIE)
     bs = state.battle_state
@@ -451,12 +505,14 @@ def test_moxie_no_boost_when_target_alive():
     apply_ko_boost_ability(bs, p0, target_fainted=False, hit=True)
     assert extract_boost(int(bs[p0 + 13]), 0) == 0
 
+
 def test_soul_heart_boosts_spa_on_ko():
     state = _hand_state(side0_ability=ABILITY_SOUL_HEART)
     bs = state.battle_state
     p0 = _p0_off()
     apply_ko_boost_ability(bs, p0, target_fainted=True, hit=True)
     assert extract_boost(int(bs[p0 + 13]), 8) == 1
+
 
 def test_beast_boost_picks_highest_stat():
     state = _hand_state(side0_ability=ABILITY_BEAST_BOOST)
@@ -471,9 +527,11 @@ def test_beast_boost_picks_highest_stat():
     apply_ko_boost_ability(bs, p0, target_fainted=True, hit=True)
     assert extract_boost(int(bs[p0 + 14]), 0) == 1  # +1 Spe
 
+
 # ============================================================================
 # Contact status abilities
 # ============================================================================
+
 
 def test_static_paralysis_can_trigger():
     """Roll a Gen5PRNG until we land < 30 then verify it paralyzes."""
@@ -498,13 +556,19 @@ def test_static_paralysis_can_trigger():
         bs2 = st.battle_state
         prng = Gen5PRNG(seed=(seed, seed, seed, seed))
         apply_contact_status_ability(
-            bs2, move_id, p0, p1, hit=True,
-            game_data=gd, gen5_prng=prng,
+            bs2,
+            move_id,
+            p0,
+            p1,
+            hit=True,
+            game_data=gd,
+            gen5_prng=prng,
         )
         if get_status(int(bs2[p0 + 12])) == STATUS_PARALYSIS:
             fired = True
             break
     assert fired, "Static should eventually paralyze attacker over many seeds"
+
 
 def test_contact_ability_skipped_for_long_reach():
     """Long Reach attacker -> contact ability never fires."""
@@ -516,6 +580,7 @@ def test_contact_ability_skipped_for_long_reach():
     )
     bs = state.battle_state
     from pokepy.core.constants import ABILITY_LONG_REACH
+
     p0, p1 = _p0_off(), _p1_off()
     bs[p0 + 5] = ABILITY_LONG_REACH
 
@@ -524,7 +589,12 @@ def test_contact_ability_skipped_for_long_reach():
         bs[p0 + 12] = set_status(STATUS_NONE, 0)
         prng = Gen5PRNG(seed=(seed, seed, seed, seed))
         apply_contact_status_ability(
-            bs, move_id, p0, p1, hit=True,
-            game_data=gd, gen5_prng=prng,
+            bs,
+            move_id,
+            p0,
+            p1,
+            hit=True,
+            game_data=gd,
+            gen5_prng=prng,
         )
         assert get_status(int(bs[p0 + 12])) == STATUS_NONE

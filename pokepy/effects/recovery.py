@@ -1,6 +1,5 @@
-"""Recovery and team-heal moves.
+"""Recovery and team-heal moves."""
 
-"""
 from __future__ import annotations
 
 from pokepy.effects._common import np, MultiFormatState, Gen5PRNG
@@ -37,6 +36,7 @@ MOVE_MOONLIGHT = 236
 MOVE_SHORE_UP = 659
 MOVE_WISH = 273
 
+
 def _has_heal_block(battle: np.ndarray, user_offset: int) -> bool:
     """Return True iff the active user is currently under Heal Block."""
     uoff = int(user_offset)
@@ -45,6 +45,7 @@ def _has_heal_block(battle: np.ndarray, user_offset: int) -> bool:
     )
     ext = int(battle[ext_off]) & 0xFFFF
     return (ext & EXT_VOL_HEAL_BLOCK) != 0
+
 
 def can_rest_succeed(battle: np.ndarray, user_offset: int) -> bool:
     """Mirror Showdown Rest legality closely enough for move execution.
@@ -67,6 +68,7 @@ def can_rest_succeed(battle: np.ndarray, user_offset: int) -> bool:
         STATUS_SLEEP,
         allow_existing_status=True,
     )
+
 
 def apply_recovery_from_move(
     battle: np.ndarray,
@@ -108,19 +110,24 @@ def apply_recovery_from_move(
     raw_weather = int(battle[OFF_FIELD + F_WEATHER])
     # Air Lock / Cloud Nine on either active mon → effective weather is none.
     from pokepy.core.constants import (
-        ABILITY_AIR_LOCK as _AL_RC, ABILITY_CLOUD_NINE as _CN_RC,
-        OFF_SIDE0 as _OS0_RC, OFF_SIDE1 as _OS1_RC,
-        OFF_META as _OM_RC, M_ACTIVE0 as _MA0_RC, M_ACTIVE1 as _MA1_RC,
-        POKEMON_SIZE as _PS_RC, ITEM_UTILITY_UMBRELLA as _UMB_RC,
-        WEATHER_PRIMORDIAL_SEA as _WPS_RC, WEATHER_DESOLATE_LAND as _WDL_RC,
+        ABILITY_AIR_LOCK as _AL_RC,
+        ABILITY_CLOUD_NINE as _CN_RC,
+        OFF_SIDE0 as _OS0_RC,
+        OFF_SIDE1 as _OS1_RC,
+        OFF_META as _OM_RC,
+        M_ACTIVE0 as _MA0_RC,
+        M_ACTIVE1 as _MA1_RC,
+        POKEMON_SIZE as _PS_RC,
+        ITEM_UTILITY_UMBRELLA as _UMB_RC,
+        WEATHER_PRIMORDIAL_SEA as _WPS_RC,
+        WEATHER_DESOLATE_LAND as _WDL_RC,
     )
+
     _a0_rc = int(battle[_OM_RC + _MA0_RC])
     _a1_rc = int(battle[_OM_RC + _MA1_RC])
     _ab0_rc = int(battle[_OS0_RC + _a0_rc * _PS_RC + 5])
     _ab1_rc = int(battle[_OS1_RC + _a1_rc * _PS_RC + 5])
-    _weather_sup_rc = (
-        _ab0_rc in (_AL_RC, _CN_RC) or _ab1_rc in (_AL_RC, _CN_RC)
-    )
+    _weather_sup_rc = _ab0_rc in (_AL_RC, _CN_RC) or _ab1_rc in (_AL_RC, _CN_RC)
     weather = 0 if _weather_sup_rc else raw_weather
 
     is_shore_up = move_id == MOVE_SHORE_UP
@@ -141,14 +148,15 @@ def apply_recovery_from_move(
         # via the same umbrella branch — see sim/pokemon.ts:2149).
         eff_weather = weather
         if has_umbrella and eff_weather in (
-            WEATHER_SUN, WEATHER_RAIN, _WPS_RC, _WDL_RC
+            WEATHER_SUN,
+            WEATHER_RAIN,
+            _WPS_RC,
+            _WDL_RC,
         ):
             eff_weather = 0
         if eff_weather in (WEATHER_SUN, _WDL_RC):
             weather_heal_pct = 66.0
-        elif eff_weather in (
-            WEATHER_RAIN, _WPS_RC, WEATHER_SAND, WEATHER_SNOW
-        ):
+        elif eff_weather in (WEATHER_RAIN, _WPS_RC, WEATHER_SAND, WEATHER_SNOW):
             weather_heal_pct = 25.0
         else:
             weather_heal_pct = 50.0
@@ -164,11 +172,14 @@ def apply_recovery_from_move(
     # Math.round uses round-half-up. For the half case (e.g., 161.5 → 162
     # in JS), explicitly use floor(x + 0.5) to match JS Math.round.
     import math
+
     heal_amount = math.floor(max_hp * final_heal_pct / 100.0 + 0.5)
     new_hp = min(current_hp + heal_amount, max_hp)
 
     is_rest = move_id == MOVE_REST
-    rest_will_succeed = is_rest and hit and (not heal_blocked) and can_rest_succeed(battle, uoff)
+    rest_will_succeed = (
+        is_rest and hit and (not heal_blocked) and can_rest_succeed(battle, uoff)
+    )
     is_wish = move_id == MOVE_WISH
     wish_hp = math.floor(max_hp / 2 + 0.5)  # Math.round parity for Gen 5+
     is_side0 = uoff < OFF_SIDE1
@@ -179,7 +190,9 @@ def apply_recovery_from_move(
     # already pending on that slot fails as a no-op and must not overwrite the
     # queued end-of-turn heal from the earlier Wish.
     wish_pending = int(battle[wish_turns_off]) > 0
-    should_set_wish = is_wish and is_recovery and hit and (not heal_blocked) and not wish_pending
+    should_set_wish = (
+        is_wish and is_recovery and hit and (not heal_blocked) and not wish_pending
+    )
     if should_set_wish:
         # Showdown data/moves.ts:wish stores `slot: source.position` in the
         # side condition and heals THAT slot at EOT (not whoever is active
@@ -187,6 +200,7 @@ def apply_recovery_from_move(
         # (3 bits, slot 0-5 fits) so we can recover it on resolution.
         # wish_hp itself uses ~10 bits (max ~350 in OU), so bits 12+ are free.
         from pokepy.core.constants import OFF_SIDE0 as _OFF0, POKEMON_SIZE as _PS
+
         side_base = _OFF0 if is_side0 else OFF_SIDE1
         slot = (uoff - side_base) // _PS
         wish_hp_packed = (int(wish_hp) & 0x0FFF) | ((int(slot) & 0x7) << 12)
@@ -216,6 +230,7 @@ def apply_recovery_from_move(
         if gen5_prng is not None:
             gen5_prng.random(2, 5)
         battle[uoff + 12] = set_status(STATUS_SLEEP, 3)
+
 
 def apply_team_heal_status(
     battle: np.ndarray,

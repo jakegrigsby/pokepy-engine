@@ -27,15 +27,25 @@ import pytest
 
 from tests.conftest import MonSpec
 from pokepy.core.constants import (
-    OFF_SIDE0, OFF_SIDE1, OFF_META, OFF_FIELD, POKEMON_SIZE,
-    M_ACTIVE0, M_ACTIVE1,
-    STATUS_BURN, STATUS_PARALYSIS, STATUS_SLEEP, STATUS_FREEZE,
-    STATUS_POISON, STATUS_TOXIC,
+    OFF_SIDE0,
+    OFF_SIDE1,
+    OFF_META,
+    OFF_FIELD,
+    POKEMON_SIZE,
+    M_ACTIVE0,
+    M_ACTIVE1,
+    STATUS_BURN,
+    STATUS_PARALYSIS,
+    STATUS_SLEEP,
+    STATUS_FREEZE,
+    STATUS_POISON,
+    STATUS_TOXIC,
 )
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _set_status_raw(state, side: int, status_code: int, turns: int = 0) -> None:
     """Stamp a status directly on the active Pokemon (bypass apply_status)."""
@@ -43,9 +53,11 @@ def _set_status_raw(state, side: int, status_code: int, turns: int = 0) -> None:
     active = int(state.battle_state[OFF_META + (M_ACTIVE0 if side == 0 else M_ACTIVE1)])
     state.battle_state[base + active * POKEMON_SIZE + 12] = (turns << 8) | status_code
 
+
 # ===========================================================================
 # 1. Burn — Will-O-Wisp applies brn, EOT damage = 1/16 max HP
 # ===========================================================================
+
 
 def test_willowisp_applies_burn(fresh_battle, step_turn, status_of):
     state, prng = fresh_battle(
@@ -55,6 +67,7 @@ def test_willowisp_applies_burn(fresh_battle, step_turn, status_of):
     )
     step_turn(state, prng, 0, 0)
     assert status_of(state, 1) == STATUS_BURN
+
 
 def test_burn_eot_damage_one_sixteenth(fresh_battle, step_turn, hp_of, max_hp_of):
     state, prng = fresh_battle(
@@ -67,6 +80,7 @@ def test_burn_eot_damage_one_sixteenth(fresh_battle, step_turn, hp_of, max_hp_of
     step_turn(state, prng, 0, 0)
     # EOT burn = mhp / 16 (Snorlax tackle on Gengar deals 0 because Normal -> Ghost is immune)
     assert hp_pre - hp_of(state, 1) == mhp // 16
+
 
 def test_burn_halves_physical_damage(fresh_battle, step_turn, hp_of):
     # Compare body slam damage with vs without burn
@@ -91,9 +105,11 @@ def test_burn_halves_physical_damage(fresh_battle, step_turn, hp_of):
     # Burn should roughly halve physical damage
     assert burned <= no_burn // 2 + no_burn // 8
 
+
 # ===========================================================================
 # 2. Paralysis
 # ===========================================================================
+
 
 def test_thunderwave_applies_paralysis(fresh_battle, step_turn, status_of):
     state, prng = fresh_battle(
@@ -103,6 +119,7 @@ def test_thunderwave_applies_paralysis(fresh_battle, step_turn, status_of):
     )
     step_turn(state, prng, 0, 0)
     assert status_of(state, 1) == STATUS_PARALYSIS
+
 
 def test_thunderwave_immune_on_ground_type(fresh_battle, step_turn, status_of):
     # Garchomp is Dragon/Ground; T-Wave is Electric -> ground immunity
@@ -114,6 +131,7 @@ def test_thunderwave_immune_on_ground_type(fresh_battle, step_turn, status_of):
     step_turn(state, prng, 0, 0)
     assert status_of(state, 1) == 0
 
+
 def test_thunderwave_immune_on_electric_type(fresh_battle, step_turn, status_of):
     # Pawmot is Electric/Fighting — gen 6+ Electric type immune to paralysis
     state, prng = fresh_battle(
@@ -123,6 +141,7 @@ def test_thunderwave_immune_on_electric_type(fresh_battle, step_turn, status_of)
     )
     step_turn(state, prng, 0, 0)
     assert status_of(state, 1) == 0
+
 
 def test_paralyzed_mon_can_fail_to_move(fresh_battle, step_turn, hp_of):
     state, prng = fresh_battle(
@@ -139,9 +158,11 @@ def test_paralyzed_mon_can_fail_to_move(fresh_battle, step_turn, hp_of):
     # Snorlax took 0 damage from chansey -> chansey was fully paralyzed
     assert hp_of(state, 1) == hp_pre
 
+
 # ===========================================================================
 # 3. Sleep
 # ===========================================================================
+
 
 def test_spore_applies_sleep(fresh_battle, step_turn, status_of):
     state, prng = fresh_battle(
@@ -152,6 +173,7 @@ def test_spore_applies_sleep(fresh_battle, step_turn, status_of):
     step_turn(state, prng, 0, 0)
     assert status_of(state, 1) == STATUS_SLEEP
 
+
 def test_spore_immune_on_grass_type(fresh_battle, step_turn, status_of):
     state, prng = fresh_battle(
         [MonSpec("breloom", ["spore", "tackle", "tackle", "tackle"])],
@@ -160,6 +182,7 @@ def test_spore_immune_on_grass_type(fresh_battle, step_turn, status_of):
     )
     step_turn(state, prng, 0, 0)
     assert status_of(state, 1) == 0
+
 
 def test_hypnosis_applies_sleep(fresh_battle, step_turn, status_of):
     state, prng = fresh_battle(
@@ -170,6 +193,7 @@ def test_hypnosis_applies_sleep(fresh_battle, step_turn, status_of):
     step_turn(state, prng, 0, 0)
     assert status_of(state, 1) == STATUS_SLEEP
 
+
 def test_darkvoid_applies_sleep(fresh_battle, step_turn, status_of):
     state, prng = fresh_battle(
         [MonSpec("snorlax", ["darkvoid", "tackle", "tackle", "tackle"])],
@@ -179,9 +203,11 @@ def test_darkvoid_applies_sleep(fresh_battle, step_turn, status_of):
     step_turn(state, prng, 0, 0)
     assert status_of(state, 1) == STATUS_SLEEP
 
+
 # ===========================================================================
 # 4. Freeze
 # ===========================================================================
+
 
 def test_icebeam_can_freeze(fresh_battle, step_turn, status_of):
     state, prng = fresh_battle(
@@ -191,6 +217,7 @@ def test_icebeam_can_freeze(fresh_battle, step_turn, status_of):
     )
     step_turn(state, prng, 0, 0)
     assert status_of(state, 1) == STATUS_FREEZE
+
 
 def test_fire_move_thaws_frozen_target(fresh_battle, step_turn, status_of):
     state, prng = fresh_battle(
@@ -207,9 +234,11 @@ def test_fire_move_thaws_frozen_target(fresh_battle, step_turn, status_of):
     # matters is that the frozen status is GONE.
     assert status_of(state, 1) != STATUS_FREEZE
 
+
 # ===========================================================================
 # 5. Toxic / regular poison
 # ===========================================================================
+
 
 def test_toxic_applies_badly_poisoned(fresh_battle, step_turn, status_of):
     state, prng = fresh_battle(
@@ -219,6 +248,7 @@ def test_toxic_applies_badly_poisoned(fresh_battle, step_turn, status_of):
     )
     step_turn(state, prng, 0, 0)
     assert status_of(state, 1) == STATUS_TOXIC
+
 
 def test_toxic_damage_increases_over_turns(fresh_battle, step_turn, hp_of):
     state, prng = fresh_battle(
@@ -235,6 +265,7 @@ def test_toxic_damage_increases_over_turns(fresh_battle, step_turn, hp_of):
     # The two later deltas should be at least as large as the first
     assert (hp_b - hp_c) >= (hp_a - hp_b)
 
+
 def test_poison_powder_applies_regular_poison(fresh_battle, step_turn, status_of):
     state, prng = fresh_battle(
         [MonSpec("toxapex", ["poisonpowder", "tackle", "tackle", "tackle"])],
@@ -243,6 +274,7 @@ def test_poison_powder_applies_regular_poison(fresh_battle, step_turn, status_of
     )
     step_turn(state, prng, 0, 0)
     assert status_of(state, 1) == STATUS_POISON
+
 
 def test_poison_eot_one_eighth(fresh_battle, step_turn, hp_of, max_hp_of):
     state, prng = fresh_battle(
@@ -255,9 +287,11 @@ def test_poison_eot_one_eighth(fresh_battle, step_turn, hp_of, max_hp_of):
     step_turn(state, prng, 0, 0)
     assert (hp_pre - hp_of(state, 1)) == mhp // 8
 
+
 # ===========================================================================
 # 6. Type immunities
 # ===========================================================================
+
 
 def test_willowisp_fails_on_fire_type(fresh_battle, step_turn, status_of):
     state, prng = fresh_battle(
@@ -268,6 +302,7 @@ def test_willowisp_fails_on_fire_type(fresh_battle, step_turn, status_of):
     step_turn(state, prng, 0, 0)
     assert status_of(state, 1) == 0
 
+
 def test_toxic_fails_on_poison_type(fresh_battle, step_turn, status_of):
     state, prng = fresh_battle(
         [MonSpec("gengar", ["toxic", "tackle", "tackle", "tackle"])],
@@ -277,6 +312,7 @@ def test_toxic_fails_on_poison_type(fresh_battle, step_turn, status_of):
     step_turn(state, prng, 0, 0)
     assert status_of(state, 1) == 0
 
+
 def test_toxic_fails_on_steel_type(fresh_battle, step_turn, status_of):
     state, prng = fresh_battle(
         [MonSpec("gengar", ["toxic", "tackle", "tackle", "tackle"])],
@@ -285,6 +321,7 @@ def test_toxic_fails_on_steel_type(fresh_battle, step_turn, status_of):
     )
     step_turn(state, prng, 0, 0)
     assert status_of(state, 1) == 0
+
 
 def test_poison_user_toxic_bypasses_steel(fresh_battle, step_turn, status_of):
     # Gen 6+: a Poison-type using Toxic never misses (also bypasses immunities
@@ -297,9 +334,11 @@ def test_poison_user_toxic_bypasses_steel(fresh_battle, step_turn, status_of):
     step_turn(state, prng, 0, 0)
     assert status_of(state, 1) == STATUS_TOXIC
 
+
 # ===========================================================================
 # 7. Ability immunities
 # ===========================================================================
+
 
 def test_limber_blocks_paralysis(fresh_battle, step_turn, status_of):
     state, prng = fresh_battle(
@@ -310,6 +349,7 @@ def test_limber_blocks_paralysis(fresh_battle, step_turn, status_of):
     step_turn(state, prng, 0, 0)
     assert status_of(state, 1) == 0
 
+
 def test_insomnia_blocks_sleep(fresh_battle, step_turn, status_of):
     state, prng = fresh_battle(
         [MonSpec("breloom", ["spore", "tackle", "tackle", "tackle"])],
@@ -318,6 +358,7 @@ def test_insomnia_blocks_sleep(fresh_battle, step_turn, status_of):
     )
     step_turn(state, prng, 0, 0)
     assert status_of(state, 1) == 0
+
 
 def test_vital_spirit_blocks_sleep(fresh_battle, step_turn, status_of):
     state, prng = fresh_battle(
@@ -328,6 +369,7 @@ def test_vital_spirit_blocks_sleep(fresh_battle, step_turn, status_of):
     step_turn(state, prng, 0, 0)
     assert status_of(state, 1) == 0
 
+
 def test_water_veil_blocks_burn(fresh_battle, step_turn, status_of):
     state, prng = fresh_battle(
         [MonSpec("gengar", ["willowisp", "tackle", "tackle", "tackle"])],
@@ -336,6 +378,7 @@ def test_water_veil_blocks_burn(fresh_battle, step_turn, status_of):
     )
     step_turn(state, prng, 0, 0)
     assert status_of(state, 1) == 0
+
 
 def test_immunity_blocks_poison(fresh_battle, step_turn, status_of):
     state, prng = fresh_battle(
@@ -346,6 +389,7 @@ def test_immunity_blocks_poison(fresh_battle, step_turn, status_of):
     step_turn(state, prng, 0, 0)
     assert status_of(state, 1) == 0
 
+
 def test_magma_armor_blocks_freeze(fresh_battle, step_turn, status_of):
     state, prng = fresh_battle(
         [MonSpec("snorlax", ["icebeam", "tackle", "tackle", "tackle"])],
@@ -354,6 +398,7 @@ def test_magma_armor_blocks_freeze(fresh_battle, step_turn, status_of):
     )
     step_turn(state, prng, 0, 0)
     assert status_of(state, 1) == 0
+
 
 def test_purifying_salt_blocks_all_status(fresh_battle, step_turn, status_of):
     state, prng = fresh_battle(
@@ -364,6 +409,7 @@ def test_purifying_salt_blocks_all_status(fresh_battle, step_turn, status_of):
     step_turn(state, prng, 0, 0)
     assert status_of(state, 1) == 0
 
+
 def test_comatose_blocks_other_status(fresh_battle, step_turn, status_of):
     state, prng = fresh_battle(
         [MonSpec("toxapex", ["toxic", "tackle", "tackle", "tackle"])],
@@ -373,9 +419,11 @@ def test_comatose_blocks_other_status(fresh_battle, step_turn, status_of):
     step_turn(state, prng, 0, 0)
     assert status_of(state, 1) == 0
 
+
 # ===========================================================================
 # 8. Defender contact-status abilities
 # ===========================================================================
+
 
 def test_synchronize_copies_toxic_to_attacker(fresh_battle, step_turn, status_of):
     state, prng = fresh_battle(
@@ -387,6 +435,7 @@ def test_synchronize_copies_toxic_to_attacker(fresh_battle, step_turn, status_of
     assert status_of(state, 1) == STATUS_TOXIC
     assert status_of(state, 0) == STATUS_TOXIC
 
+
 def test_synchronize_does_not_copy_sleep(fresh_battle, step_turn, status_of):
     state, prng = fresh_battle(
         [MonSpec("breloom", ["spore", "tackle", "tackle", "tackle"])],
@@ -397,6 +446,7 @@ def test_synchronize_does_not_copy_sleep(fresh_battle, step_turn, status_of):
     assert status_of(state, 1) == STATUS_SLEEP
     assert status_of(state, 0) == 0
 
+
 def test_flame_body_burns_contact_attacker(fresh_battle, step_turn, status_of):
     state, prng = fresh_battle(
         [MonSpec("snorlax", ["tackle", "tackle", "tackle", "tackle"])],
@@ -405,6 +455,7 @@ def test_flame_body_burns_contact_attacker(fresh_battle, step_turn, status_of):
     )
     step_turn(state, prng, 0, 0)
     assert status_of(state, 0) == STATUS_BURN
+
 
 def test_static_paralyzes_contact_attacker(fresh_battle, step_turn, status_of):
     state, prng = fresh_battle(
@@ -415,6 +466,7 @@ def test_static_paralyzes_contact_attacker(fresh_battle, step_turn, status_of):
     step_turn(state, prng, 0, 0)
     assert status_of(state, 0) == STATUS_PARALYSIS
 
+
 def test_poison_point_poisons_contact_attacker(fresh_battle, step_turn, status_of):
     state, prng = fresh_battle(
         [MonSpec("snorlax", ["tackle", "tackle", "tackle", "tackle"])],
@@ -423,6 +475,7 @@ def test_poison_point_poisons_contact_attacker(fresh_battle, step_turn, status_o
     )
     step_turn(state, prng, 0, 0)
     assert status_of(state, 0) == STATUS_POISON
+
 
 def test_effect_spore_can_inflict_status(fresh_battle, step_turn, status_of):
     state, prng = fresh_battle(
@@ -434,9 +487,11 @@ def test_effect_spore_can_inflict_status(fresh_battle, step_turn, status_of):
     # Effect Spore can roll psn / par / slp; just verify *something* applied.
     assert status_of(state, 0) in (STATUS_POISON, STATUS_PARALYSIS, STATUS_SLEEP)
 
+
 # ===========================================================================
 # 9. Secondary status chances on damaging moves (deterministic seeds)
 # ===========================================================================
+
 
 def test_scald_can_burn(fresh_battle, step_turn, status_of):
     state, prng = fresh_battle(
@@ -447,6 +502,7 @@ def test_scald_can_burn(fresh_battle, step_turn, status_of):
     step_turn(state, prng, 0, 0)
     assert status_of(state, 1) == STATUS_BURN
 
+
 def test_lavaplume_can_burn(fresh_battle, step_turn, status_of):
     state, prng = fresh_battle(
         [MonSpec("snorlax", ["lavaplume", "tackle", "tackle", "tackle"])],
@@ -455,6 +511,7 @@ def test_lavaplume_can_burn(fresh_battle, step_turn, status_of):
     )
     step_turn(state, prng, 0, 0)
     assert status_of(state, 1) == STATUS_BURN
+
 
 def test_discharge_can_paralyze(fresh_battle, step_turn, status_of):
     state, prng = fresh_battle(
@@ -465,6 +522,7 @@ def test_discharge_can_paralyze(fresh_battle, step_turn, status_of):
     step_turn(state, prng, 0, 0)
     assert status_of(state, 1) == STATUS_PARALYSIS
 
+
 def test_bodyslam_can_paralyze(fresh_battle, step_turn, status_of):
     state, prng = fresh_battle(
         [MonSpec("snorlax", ["bodyslam", "tackle", "tackle", "tackle"])],
@@ -474,9 +532,11 @@ def test_bodyslam_can_paralyze(fresh_battle, step_turn, status_of):
     step_turn(state, prng, 0, 0)
     assert status_of(state, 1) == STATUS_PARALYSIS
 
+
 # ===========================================================================
 # 10. Status overlap & self-status
 # ===========================================================================
+
 
 def test_status_fails_if_already_statused(fresh_battle, step_turn, status_of):
     state, prng = fresh_battle(
@@ -489,7 +549,10 @@ def test_status_fails_if_already_statused(fresh_battle, step_turn, status_of):
     # Spore should not overwrite the burn
     assert status_of(state, 1) == STATUS_BURN
 
-def test_rest_heals_full_and_sleeps(fresh_battle, step_turn, status_of, hp_of, max_hp_of):
+
+def test_rest_heals_full_and_sleeps(
+    fresh_battle, step_turn, status_of, hp_of, max_hp_of
+):
     state, prng = fresh_battle(
         [MonSpec("snorlax", ["rest", "tackle", "tackle", "tackle"])],
         [MonSpec("chansey", ["tackle"] * 4)],
@@ -501,15 +564,21 @@ def test_rest_heals_full_and_sleeps(fresh_battle, step_turn, status_of, hp_of, m
     assert hp_of(state, 0) == mhp
     assert status_of(state, 0) == STATUS_SLEEP
 
+
 # ===========================================================================
 # 11. Guts / Facade — status interaction with offensive moves
 # ===========================================================================
+
 
 def test_guts_negates_burn_atk_drop(fresh_battle, step_turn, hp_of):
     # Use Blissey (bulkier) so Body Slam doesn't OHKO and we can compare HP.
     # Read slot-0 HP directly to avoid auto-switch when defender is KO'd.
     state, prng = fresh_battle(
-        [MonSpec("snorlax", ["bodyslam", "tackle", "tackle", "tackle"], ability="guts")],
+        [
+            MonSpec(
+                "snorlax", ["bodyslam", "tackle", "tackle", "tackle"], ability="guts"
+            )
+        ],
         [MonSpec("blissey", ["tackle"] * 4)],
         seed=1,
     )
@@ -518,7 +587,11 @@ def test_guts_negates_burn_atk_drop(fresh_battle, step_turn, hp_of):
     no_burn = hp_pre - int(state.battle_state[OFF_SIDE1 + 1])
 
     state, prng = fresh_battle(
-        [MonSpec("snorlax", ["bodyslam", "tackle", "tackle", "tackle"], ability="guts")],
+        [
+            MonSpec(
+                "snorlax", ["bodyslam", "tackle", "tackle", "tackle"], ability="guts"
+            )
+        ],
         [MonSpec("blissey", ["tackle"] * 4)],
         seed=1,
     )
@@ -528,6 +601,7 @@ def test_guts_negates_burn_atk_drop(fresh_battle, step_turn, hp_of):
     burned = hp_pre - int(state.battle_state[OFF_SIDE1 + 1])
     # With Guts + burn the damage should be at least as large (1.5x boost)
     assert burned >= no_burn
+
 
 def test_facade_doubles_when_statused(fresh_battle, step_turn, hp_of):
     # Use Ting-Lu (high HP + def) so Facade can't OHKO either way and the
@@ -553,13 +627,21 @@ def test_facade_doubles_when_statused(fresh_battle, step_turn, hp_of):
     # Facade doubles BP and ignores burn halving → ~2x damage
     assert burned >= int(clean * 1.7)
 
+
 # ===========================================================================
 # 12. Indirect-damage interactions (Magic Guard)
 # ===========================================================================
 
+
 def test_magic_guard_blocks_burn_damage(fresh_battle, step_turn, hp_of):
     state, prng = fresh_battle(
-        [MonSpec("clefable", ["splash", "splash", "splash", "splash"], ability="magicguard")],
+        [
+            MonSpec(
+                "clefable",
+                ["splash", "splash", "splash", "splash"],
+                ability="magicguard",
+            )
+        ],
         [MonSpec("chansey", ["splash"] * 4)],
         seed=1,
     )
@@ -570,11 +652,15 @@ def test_magic_guard_blocks_burn_damage(fresh_battle, step_turn, hp_of):
     # tackle confounder.
     assert hp_of(state, 0) == hp_pre
 
+
 # ===========================================================================
 # 13. Yawn — should set up sleep for the next turn
 # ===========================================================================
 
-@pytest.mark.xfail(strict=False, reason="Yawn delayed-sleep volatile not yet implemented")
+
+@pytest.mark.xfail(
+    strict=False, reason="Yawn delayed-sleep volatile not yet implemented"
+)
 def test_yawn_puts_target_to_sleep_next_turn(fresh_battle, step_turn, status_of):
     state, prng = fresh_battle(
         [MonSpec("snorlax", ["yawn", "tackle", "tackle", "tackle"])],

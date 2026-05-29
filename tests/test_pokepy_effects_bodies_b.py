@@ -55,6 +55,7 @@ from pokepy.effects.weather_terrain import (
     apply_weather_healing,
 )
 
+
 def _hand_state():
     """Build a minimal battle buffer with two normal-type Pokemon (one per side)."""
     gd = load_game_data()
@@ -90,9 +91,11 @@ def _hand_state():
             bs[poff + 15] = 0
     return state, gd, me
 
+
 # -----------------------------------------------------------------------------
 # Decrement helpers
 # -----------------------------------------------------------------------------
+
 
 def test_decrement_weather_reduces_turns_by_one():
     state, gd, me = _hand_state()
@@ -105,6 +108,7 @@ def test_decrement_weather_reduces_turns_by_one():
     assert int(bs[OFF_META + M_WEATHER_TURNS]) == 4
     assert int(bs[OFF_FIELD + F_WEATHER]) == WEATHER_SUN
 
+
 def test_decrement_weather_clears_when_turns_hit_zero():
     state, gd, me = _hand_state()
     bs = state.battle_state
@@ -115,6 +119,7 @@ def test_decrement_weather_clears_when_turns_hit_zero():
 
     assert int(bs[OFF_META + M_WEATHER_TURNS]) == 0
     assert int(bs[OFF_FIELD + F_WEATHER]) == WEATHER_NONE
+
 
 def test_decrement_weather_permanent_unchanged():
     state, gd, me = _hand_state()
@@ -127,6 +132,7 @@ def test_decrement_weather_permanent_unchanged():
     assert int(bs[OFF_META + M_WEATHER_TURNS]) == 0
     assert int(bs[OFF_FIELD + F_WEATHER]) == WEATHER_RAIN
 
+
 def test_decrement_terrain_clears_at_zero():
     state, gd, me = _hand_state()
     bs = state.battle_state
@@ -136,17 +142,21 @@ def test_decrement_terrain_clears_at_zero():
     assert int(bs[OFF_META + M_TERRAIN_TURNS]) == 0
     assert int(bs[OFF_FIELD + F_TERRAIN]) == TERRAIN_NONE
 
+
 def test_decrement_trick_room_basic():
     state, gd, me = _hand_state()
     bs = state.battle_state
     from pokepy.core.constants import F_TRICK_ROOM
+
     bs[OFF_FIELD + F_TRICK_ROOM] = 5
     decrement_trick_room(bs)
     assert int(bs[OFF_FIELD + F_TRICK_ROOM]) == 4
 
+
 # -----------------------------------------------------------------------------
 # Move-triggered weather
 # -----------------------------------------------------------------------------
+
 
 def test_apply_weather_from_move_sunny_day_sets_sun():
     state, gd, me = _hand_state()
@@ -176,6 +186,7 @@ def test_apply_weather_from_move_sunny_day_sets_sun():
     # Default 5 turns (no Heat Rock equipped).
     assert int(bs[OFF_META + M_WEATHER_TURNS]) == 5
 
+
 def test_apply_weather_from_move_miss_does_nothing():
     state, gd, me = _hand_state()
     bs = state.battle_state
@@ -191,9 +202,11 @@ def test_apply_weather_from_move_miss_does_nothing():
     )
     assert int(bs[OFF_FIELD + F_WEATHER]) == WEATHER_NONE
 
+
 # -----------------------------------------------------------------------------
 # Grassy terrain healing
 # -----------------------------------------------------------------------------
+
 
 def test_apply_grassy_terrain_healing_heals_one_sixteenth():
     state, gd, me = _hand_state()
@@ -210,6 +223,7 @@ def test_apply_grassy_terrain_healing_heals_one_sixteenth():
     # 160 / 16 = 10 hp restored
     assert int(bs[poff + 1]) == 90, f"expected 90 hp, got {int(bs[poff + 1])}"
 
+
 def test_apply_grassy_terrain_healing_no_op_without_terrain():
     state, gd, me = _hand_state()
     bs = state.battle_state
@@ -223,9 +237,11 @@ def test_apply_grassy_terrain_healing_no_op_without_terrain():
 
     assert int(bs[poff + 1]) == 80
 
+
 # -----------------------------------------------------------------------------
 # Weather damage standalone (sandstorm)
 # -----------------------------------------------------------------------------
+
 
 def test_apply_weather_damage_sandstorm_deals_one_sixteenth():
     state, gd, me = _hand_state()
@@ -241,9 +257,11 @@ def test_apply_weather_damage_sandstorm_deals_one_sixteenth():
     # 160 / 16 = 10
     assert int(bs[poff + 1]) == 150
 
+
 # -----------------------------------------------------------------------------
 # End-of-turn orchestrator
 # -----------------------------------------------------------------------------
+
 
 def test_end_of_turn_orchestrator_burn_and_sand_decrements_weather():
     state, gd, me = _hand_state()
@@ -257,6 +275,7 @@ def test_end_of_turn_orchestrator_burn_and_sand_decrements_weather():
 
     # Side 1 active is rock-typed so it ignores sand damage but still alive.
     from pokepy.core.constants import TYPE_ROCK
+
     poff1 = OFF_SIDE1 + 0 * POKEMON_SIZE
     bs[poff1 + 1] = 100
     bs[poff1 + 2] = 100
@@ -281,9 +300,9 @@ def test_end_of_turn_orchestrator_burn_and_sand_decrements_weather():
 
     # Burned side 0 should lose HP. Burn alone is 1/16 = 10. Sand also
     # 1/16 = 10 (normal-type, not immune). Total 20.
-    assert hp0_after < 160, (
-        f"side 0 expected to lose HP from burn+sand, got {hp0_after}"
-    )
+    assert (
+        hp0_after < 160
+    ), f"side 0 expected to lose HP from burn+sand, got {hp0_after}"
     assert hp0_after == 140, f"expected 140 hp (burn 10 + sand 10), got {hp0_after}"
 
     # Side 1 (rock) immune to sand → still 100.

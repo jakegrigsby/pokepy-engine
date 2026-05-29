@@ -1,57 +1,11 @@
-# pokepy
+# pokepy-engine
 
-Pure-Python Pokemon battle environment for Generation 9 singles, following
-Pokemon Showdown mechanics. Designed for fast, deterministic, scriptable
-battles — no game client, no network, no external runtime dependencies
-beyond NumPy.
+`pokepy-engine` is an experimental project that aims to serve an important niche for Pokémon RL projects like `metamon`, but probably should not be used for any other purpose.
 
-Useful for:
+<div align="center">
+    <img src="pokepy/psyduck_is_pleased.png" alt="Psyduck is Pleased" width="200">
+</div>
 
-- Training and evaluating Pokemon battle agents in pure Python
-- Reproducing Showdown damage / status / item / ability interactions
-- Running self-play or scripted matchups without spinning up Showdown
+Turning Showdown into an RL environment is very hard, and there are countless state ambiguities. Showdown is not intended for RL training and is far slower than you would expect. Leading RL projects navigate around these problems by spending years accumulating Showdown battle datasets to train agents that intentionally assume the state of the battle is difficult to know for certain. Pokémon is so complicated that starting over and making a fast sim from scratch that is 1:1 with the ever-changing Showdown sim is a massive time commitment. The value of this has been obvious for years, but the short list of projects with the Pokémon expertise and time to make it happen tend to overvalue sim accuracy *in the specific context of model-free RL*. At this point, baselines and datasets have grown strong enough to compensate for sim2sim gaps. The tolerance for inaccuracies has never been higher and coding agents have never been better. The result is this repo: an almost entirely vibe-coded, inaccurate Python simulator that is faster and easier to vectorize than Showdown. It is used to generate mass-scale online RL data and climb the diminishing rate of return towards high-level gameplay, where niche sim mechanics are not a serious bottleneck, before using ground-truth Showdown data to plug the leaks.
 
-## Install
-
-```bash
-pip install git+https://github.com/sethkarten/pokepy-engine.git
-```
-
-Or for local development:
-
-```bash
-git clone https://github.com/sethkarten/pokepy-engine.git
-cd pokepy-engine
-pip install -e ".[dev]"
-```
-
-Pokemon Showdown data tables ship bundled under `pokepy/data/extracted/`.
-Override with the `POKEPY_DATA_PATH` environment variable if you want to
-point at a different copy.
-
-## Quickstart
-
-```python
-from pokepy.env.battle_env import init_battle_state
-from pokepy.data.loader import load_game_data, load_id_mappings
-from pokepy.engine.battle_gen9 import step_battle_gen9
-from pokepy.utils.gen5_prng import Gen5PRNG
-
-gd = load_game_data()
-mappings = load_id_mappings()
-# Build two teams (see tests/conftest.py for the team-dict shape), then:
-# state = init_battle_state(team0, team1, gd, seed=12345)
-# state, ... = step_battle_gen9(state, action0, action1, gd, move_effects, type_chart, prng)
-```
-
-See `tests/` for end-to-end examples.
-
-## Tests
-
-```bash
-pytest tests
-```
-
-## License
-
-MIT — see [LICENSE](LICENSE).
+This is a fork of a project begun by sethkarten/pokepy-engine, maintained and extended by the metamon team.

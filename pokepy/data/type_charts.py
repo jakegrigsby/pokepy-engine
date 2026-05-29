@@ -8,11 +8,26 @@ from __future__ import annotations
 import numpy as np
 
 from pokepy.core.constants import (
-    TYPE_NORMAL, TYPE_FIRE, TYPE_WATER, TYPE_ELECTRIC, TYPE_GRASS, TYPE_ICE,
-    TYPE_FIGHTING, TYPE_POISON, TYPE_GROUND, TYPE_FLYING, TYPE_PSYCHIC,
-    TYPE_BUG, TYPE_ROCK, TYPE_GHOST, TYPE_DRAGON, TYPE_DARK, TYPE_STEEL,
+    TYPE_NORMAL,
+    TYPE_FIRE,
+    TYPE_WATER,
+    TYPE_ELECTRIC,
+    TYPE_GRASS,
+    TYPE_ICE,
+    TYPE_FIGHTING,
+    TYPE_POISON,
+    TYPE_GROUND,
+    TYPE_FLYING,
+    TYPE_PSYCHIC,
+    TYPE_BUG,
+    TYPE_ROCK,
+    TYPE_GHOST,
+    TYPE_DRAGON,
+    TYPE_DARK,
+    TYPE_STEEL,
     TYPE_FAIRY,
 )
+
 
 def create_modern_type_chart() -> np.ndarray:
     """Create modern (Gen 6+) type chart. Shape (19, 19) float32."""
@@ -179,5 +194,6 @@ def create_modern_type_chart() -> np.ndarray:
     chart[TYPE_STEEL, TYPE_FAIRY] = 0.5
 
     return chart
+
 
 MODERN_TYPE_CHART = create_modern_type_chart()

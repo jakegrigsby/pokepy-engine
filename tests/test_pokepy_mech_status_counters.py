@@ -25,25 +25,40 @@ from __future__ import annotations
 import pytest
 from tests.conftest import MonSpec
 from pokepy.core.constants import (
-    OFF_SIDE0, OFF_SIDE1, OFF_META, POKEMON_SIZE, M_ACTIVE0, M_ACTIVE1,
-    STATUS_BURN, STATUS_PARALYSIS, STATUS_SLEEP, STATUS_FREEZE,
-    STATUS_POISON, STATUS_TOXIC, STATUS_NONE,
+    OFF_SIDE0,
+    OFF_SIDE1,
+    OFF_META,
+    POKEMON_SIZE,
+    M_ACTIVE0,
+    M_ACTIVE1,
+    STATUS_BURN,
+    STATUS_PARALYSIS,
+    STATUS_SLEEP,
+    STATUS_FREEZE,
+    STATUS_POISON,
+    STATUS_TOXIC,
+    STATUS_NONE,
 )
+
 
 def _set_status(state, side: int, status: int, turns: int = 0):
     base = OFF_SIDE0 if side == 0 else OFF_SIDE1
     active = int(state.battle_state[OFF_META + (M_ACTIVE0 if side == 0 else M_ACTIVE1)])
-    state.battle_state[base + active * POKEMON_SIZE + 12] = (status & 0xFF) | ((turns & 0xFF) << 8)
+    state.battle_state[base + active * POKEMON_SIZE + 12] = (status & 0xFF) | (
+        (turns & 0xFF) << 8
+    )
+
 
 # ---------------------------------------------------------------------------
 # Sleep
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.xfail(strict=False, reason="sleep prevents move")
 def test_sleeping_mon_cannot_move(fresh_battle, step_turn, hp_of):
     state, prng = fresh_battle(
         [MonSpec("snorlax", ["bodyslam", "tackle", "tackle", "tackle"])],
-        [MonSpec("blissey", ["tackle"]*4)],
+        [MonSpec("blissey", ["tackle"] * 4)],
         seed=1,
     )
     _set_status(state, 0, STATUS_SLEEP, turns=3)  # 3 turns of sleep
@@ -52,15 +67,17 @@ def test_sleeping_mon_cannot_move(fresh_battle, step_turn, hp_of):
     # Snorlax should not have damaged blissey (it's asleep)
     assert hp_of(state, 1) == hp1_pre - 0 or hp_of(state, 1) >= hp1_pre - 5
 
+
 # ---------------------------------------------------------------------------
 # Rest
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.xfail(strict=False, reason="rest heals to full")
 def test_rest_heals_full(fresh_battle, step_turn, hp_of, max_hp_of, status_of):
     state, prng = fresh_battle(
         [MonSpec("snorlax", ["rest", "tackle", "tackle", "tackle"])],
-        [MonSpec("blissey", ["tackle"]*4)],
+        [MonSpec("blissey", ["tackle"] * 4)],
         seed=1,
     )
     max0 = max_hp_of(state, 0)
@@ -69,9 +86,11 @@ def test_rest_heals_full(fresh_battle, step_turn, hp_of, max_hp_of, status_of):
     assert hp_of(state, 0) >= max0 - 5
     assert status_of(state, 0) == STATUS_SLEEP
 
+
 # ---------------------------------------------------------------------------
 # Burn
 # ---------------------------------------------------------------------------
+
 
 def test_burn_damages_eot(fresh_battle, step_turn, hp_of, max_hp_of):
     state, prng = fresh_battle(
@@ -86,16 +105,17 @@ def test_burn_damages_eot(fresh_battle, step_turn, hp_of, max_hp_of):
     # Burn deals 1/16 max HP per turn
     assert hp_of(state, 0) <= hp_pre - max0 // 16 + 5
 
+
 @pytest.mark.xfail(strict=False, reason="burn halves physical attack")
 def test_burn_halves_physical(fresh_battle, step_turn, hp_of):
     state_a, prng_a = fresh_battle(
         [MonSpec("snorlax", ["bodyslam", "tackle", "tackle", "tackle"])],
-        [MonSpec("blissey", ["tackle"]*4)],
+        [MonSpec("blissey", ["tackle"] * 4)],
         seed=1,
     )
     state_b, prng_b = fresh_battle(
         [MonSpec("snorlax", ["bodyslam", "tackle", "tackle", "tackle"])],
-        [MonSpec("blissey", ["tackle"]*4)],
+        [MonSpec("blissey", ["tackle"] * 4)],
         seed=1,
     )
     _set_status(state_a, 0, STATUS_BURN)
@@ -108,15 +128,17 @@ def test_burn_halves_physical(fresh_battle, step_turn, hp_of):
     # Burned snorlax should hit for less
     assert da < db
 
+
 # ---------------------------------------------------------------------------
 # Toxic counter
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.xfail(strict=False, reason="toxic damage scales each turn")
 def test_toxic_damage_increases_each_turn(fresh_battle, step_turn, hp_of, max_hp_of):
     state, prng = fresh_battle(
-        [MonSpec("snorlax", ["splash"]*4)],
-        [MonSpec("snorlax", ["splash"]*4)],
+        [MonSpec("snorlax", ["splash"] * 4)],
+        [MonSpec("snorlax", ["splash"] * 4)],
         seed=1,
     )
     _set_status(state, 0, STATUS_TOXIC, turns=1)
@@ -129,14 +151,16 @@ def test_toxic_damage_increases_each_turn(fresh_battle, step_turn, hp_of, max_hp
     dmg_t2 = hp_t1 - hp_of(state, 0)
     assert dmg_t2 > dmg_t1
 
+
 # ---------------------------------------------------------------------------
 # Magic Guard
 # ---------------------------------------------------------------------------
 
+
 def test_magic_guard_ignores_burn_damage(fresh_battle, step_turn, hp_of):
     state, prng = fresh_battle(
-        [MonSpec("clefable", ["splash"]*4, ability="magicguard")],
-        [MonSpec("snorlax", ["splash"]*4)],
+        [MonSpec("clefable", ["splash"] * 4, ability="magicguard")],
+        [MonSpec("snorlax", ["splash"] * 4)],
         seed=1,
     )
     _set_status(state, 0, STATUS_BURN)
@@ -144,10 +168,11 @@ def test_magic_guard_ignores_burn_damage(fresh_battle, step_turn, hp_of):
     step_turn(state, prng, 0, 0)
     assert hp_of(state, 0) == hp_pre
 
+
 def test_magic_guard_ignores_poison_damage(fresh_battle, step_turn, hp_of):
     state, prng = fresh_battle(
-        [MonSpec("clefable", ["splash"]*4, ability="magicguard")],
-        [MonSpec("snorlax", ["splash"]*4)],
+        [MonSpec("clefable", ["splash"] * 4, ability="magicguard")],
+        [MonSpec("snorlax", ["splash"] * 4)],
         seed=1,
     )
     _set_status(state, 0, STATUS_POISON)
@@ -155,15 +180,17 @@ def test_magic_guard_ignores_poison_damage(fresh_battle, step_turn, hp_of):
     step_turn(state, prng, 0, 0)
     assert hp_of(state, 0) == hp_pre
 
+
 # ---------------------------------------------------------------------------
 # Poison Heal
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.xfail(strict=False, reason="poison heal heals 1/8")
 def test_poison_heal_heals_instead_of_damage(fresh_battle, step_turn, hp_of, max_hp_of):
     state, prng = fresh_battle(
-        [MonSpec("breloom", ["splash"]*4, ability="poisonheal")],
-        [MonSpec("snorlax", ["splash"]*4)],
+        [MonSpec("breloom", ["splash"] * 4, ability="poisonheal")],
+        [MonSpec("snorlax", ["splash"] * 4)],
         seed=1,
     )
     _set_status(state, 0, STATUS_TOXIC)
@@ -173,23 +200,27 @@ def test_poison_heal_heals_instead_of_damage(fresh_battle, step_turn, hp_of, max
     step_turn(state, prng, 0, 0)
     assert hp_of(state, 0) > hp_pre
 
+
 # ---------------------------------------------------------------------------
 # Toxic counter resets on switch
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.xfail(strict=False, reason="toxic counter resets on switch out")
 def test_toxic_counter_resets_on_switch():
     pytest.skip("placeholder — needs switch sequence")
 
+
 # ---------------------------------------------------------------------------
 # Freeze
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.xfail(strict=False, reason="freeze prevents move")
 def test_frozen_mon_cannot_move(fresh_battle, step_turn, hp_of):
     state, prng = fresh_battle(
         [MonSpec("snorlax", ["bodyslam", "tackle", "tackle", "tackle"])],
-        [MonSpec("blissey", ["tackle"]*4)],
+        [MonSpec("blissey", ["tackle"] * 4)],
         seed=1,
     )
     _set_status(state, 0, STATUS_FREEZE)
@@ -199,14 +230,16 @@ def test_frozen_mon_cannot_move(fresh_battle, step_turn, hp_of):
     # blissey may have moved → snorlax may have taken some, but blissey hp intact
     assert hp_of(state, 1) == hp1_pre
 
+
 # ---------------------------------------------------------------------------
 # Paralysis full-para chance (just check status persists)
 # ---------------------------------------------------------------------------
 
+
 def test_paralyzed_status_persists(fresh_battle, step_turn, status_of):
     state, prng = fresh_battle(
-        [MonSpec("snorlax", ["splash"]*4)],
-        [MonSpec("snorlax", ["splash"]*4)],
+        [MonSpec("snorlax", ["splash"] * 4)],
+        [MonSpec("snorlax", ["splash"] * 4)],
         seed=1,
     )
     _set_status(state, 0, STATUS_PARALYSIS)

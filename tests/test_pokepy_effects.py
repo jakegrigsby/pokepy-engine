@@ -2,6 +2,7 @@
 public functions are present. No runtime checks here — bodies are stubs that
 raise NotImplementedError. The integration step will replace those.
 """
+
 from __future__ import annotations
 
 import importlib
@@ -115,12 +116,14 @@ MODULES = {
     "pokepy.effects.auto_switch": ["auto_switch", "count_alive"],
 }
 
+
 @pytest.mark.parametrize("module_name,functions", list(MODULES.items()))
 def test_module_imports_and_exports(module_name, functions):
     mod = importlib.import_module(module_name)
     for fn in functions:
         assert hasattr(mod, fn), f"{module_name} missing {fn}"
         assert callable(getattr(mod, fn)), f"{module_name}.{fn} not callable"
+
 
 def test_package_reexports():
     pkg = importlib.import_module("pokepy.effects")

@@ -4,6 +4,7 @@ Port of MultiFormatFastEnv._apply_flinch_from_move / _check_flinched /
 _clear_volatile_turn_effects (the Showdown reference implementation
 lines 10148-10233).
 """
+
 from __future__ import annotations
 
 from pokepy.effects._common import np, MultiFormatState, Gen5PRNG
@@ -33,13 +34,15 @@ from pokepy.core.constants import (
 )
 
 ABILITY_SHIELD_DUST = 19
-ITEM_COVERT_CLOAK = 750
+ITEM_COVERT_CLOAK = 1885
+
 
 def _to_int16(val: int) -> int:
     val = int(val) & 0xFFFF
     if val >= 0x8000:
         val -= 0x10000
     return val
+
 
 def apply_flinch_from_move(
     battle: np.ndarray,
@@ -73,9 +76,7 @@ def apply_flinch_from_move(
 
     # Determine attacker's offset (opposite side) for Sheer Force check.
     atk_side = 1 - target_side
-    atk_active = int(
-        battle[OFF_META + (M_ACTIVE0 if atk_side == 0 else M_ACTIVE1)]
-    )
+    atk_active = int(battle[OFF_META + (M_ACTIVE0 if atk_side == 0 else M_ACTIVE1)])
     atk_base = OFF_SIDE0 if atk_side == 0 else OFF_SIDE1
     atk_off = atk_base + atk_active * POKEMON_SIZE
     atk_ability = int(battle[atk_off + 5])
@@ -151,11 +152,13 @@ def apply_flinch_from_move(
     new_volatile = set_flinched(current_volatile, flinch_success)
     battle[volatile_offset] = _to_int16(new_volatile)
 
+
 def check_flinched(battle: np.ndarray, side: int) -> bool:
     """Port of _check_flinched (line ~10202)."""
     side = int(side)
     volatile_offset = OFF_FIELD + (F_VOLATILE_0 if side == 0 else F_VOLATILE_1)
     return bool(get_flinched(int(battle[volatile_offset])))
+
 
 def clear_volatile_turn_effects(battle: np.ndarray) -> None:
     """Port of _clear_volatile_turn_effects (line ~10220).

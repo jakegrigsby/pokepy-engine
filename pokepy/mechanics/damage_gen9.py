@@ -12,68 +12,236 @@ import math
 import numpy as np
 
 from pokepy.core.constants import (
-    OFF_SIDE0, OFF_SIDE1, OFF_FIELD, OFF_META, POKEMON_SIZE,
-    M_ACTIVE0, F_WEATHER, F_TERRAIN, F_LAST_MOVE_0, F_LAST_MOVE_1,
-    OFF_MOVES, M_ACTIVE_MOVE_ACTIONS_0, M_ACTIVE_MOVE_ACTIONS_1,
+    OFF_SIDE0,
+    OFF_SIDE1,
+    OFF_FIELD,
+    OFF_META,
+    POKEMON_SIZE,
+    M_ACTIVE0,
+    F_WEATHER,
+    F_TERRAIN,
+    F_LAST_MOVE_0,
+    F_LAST_MOVE_1,
+    OFF_MOVES,
+    M_ACTIVE_MOVE_ACTIONS_0,
+    M_ACTIVE_MOVE_ACTIONS_1,
     ACTIVE_MOVE_ACTIONS_SEMI_INVUL,
-    F_EXTENDED_VOLATILE_0, F_EXTENDED_VOLATILE_1,
-    F_VOLATILE_0, F_VOLATILE_1, F_SCREENS_0, F_SCREENS_1,
-    F_SUBSTITUTE_0, F_SUBSTITUTE_1,
-    M_TERA_ORIG_TYPES_0, M_TERA_ORIG_TYPES_1,
-    SCREEN_REFLECT_SHIFT, SCREEN_LIGHTSCREEN_SHIFT, SCREEN_AURORAVEIL_SHIFT,
-    SCREEN_TAILWIND_SHIFT, SCREEN_MASK_3BIT,
-    TYPE_NORMAL, TYPE_FIRE, TYPE_WATER, TYPE_ELECTRIC, TYPE_GRASS, TYPE_ICE,
-    TYPE_FIGHTING, TYPE_POISON, TYPE_GROUND, TYPE_FLYING, TYPE_PSYCHIC,
-    TYPE_BUG, TYPE_ROCK, TYPE_GHOST, TYPE_DRAGON, TYPE_DARK, TYPE_STEEL, TYPE_FAIRY,
+    F_EXTENDED_VOLATILE_0,
+    F_EXTENDED_VOLATILE_1,
+    F_VOLATILE_0,
+    F_VOLATILE_1,
+    F_SCREENS_0,
+    F_SCREENS_1,
+    F_SUBSTITUTE_0,
+    F_SUBSTITUTE_1,
+    M_TERA_ORIG_TYPES_0,
+    M_TERA_ORIG_TYPES_1,
+    SCREEN_REFLECT_SHIFT,
+    SCREEN_LIGHTSCREEN_SHIFT,
+    SCREEN_AURORAVEIL_SHIFT,
+    SCREEN_TAILWIND_SHIFT,
+    SCREEN_MASK_3BIT,
+    TYPE_NORMAL,
+    TYPE_FIRE,
+    TYPE_WATER,
+    TYPE_ELECTRIC,
+    TYPE_GRASS,
+    TYPE_ICE,
+    TYPE_FIGHTING,
+    TYPE_POISON,
+    TYPE_GROUND,
+    TYPE_FLYING,
+    TYPE_PSYCHIC,
+    TYPE_BUG,
+    TYPE_ROCK,
+    TYPE_GHOST,
+    TYPE_DRAGON,
+    TYPE_DARK,
+    TYPE_STEEL,
+    TYPE_FAIRY,
     TYPE_UNKNOWN,
-    CAT_PHYSICAL, CAT_STATUS, STATUS_NONE, STATUS_BURN, STATUS_POISON, STATUS_TOXIC,
-    STATUS_PARALYSIS, STATUS_SLEEP,
-    WEATHER_NONE, WEATHER_SUN, WEATHER_RAIN, WEATHER_SAND, WEATHER_SNOW,
-    WEATHER_PRIMORDIAL_SEA, WEATHER_DESOLATE_LAND,
-    TERRAIN_NONE, TERRAIN_ELECTRIC, TERRAIN_GRASSY, TERRAIN_PSYCHIC, TERRAIN_MISTY,
-    EXT_VOL_LOCK_ON, EXT_VOL_FORESIGHT, EXT_VOL_FOCUS_ENERGY, EXT_VOL_ATTRACT,
-    FLAG_CONTACT, FLAG_SOUND, FLAG_PUNCH, FLAG_BITE, FLAG_BULLET, FLAG_PULSE, FLAG_SLICING,
+    CAT_PHYSICAL,
+    CAT_STATUS,
+    STATUS_NONE,
+    STATUS_BURN,
+    STATUS_POISON,
+    STATUS_TOXIC,
+    STATUS_PARALYSIS,
+    STATUS_SLEEP,
+    WEATHER_NONE,
+    WEATHER_SUN,
+    WEATHER_RAIN,
+    WEATHER_SAND,
+    WEATHER_SNOW,
+    WEATHER_PRIMORDIAL_SEA,
+    WEATHER_DESOLATE_LAND,
+    TERRAIN_NONE,
+    TERRAIN_ELECTRIC,
+    TERRAIN_GRASSY,
+    TERRAIN_PSYCHIC,
+    TERRAIN_MISTY,
+    EXT_VOL_LOCK_ON,
+    EXT_VOL_FORESIGHT,
+    EXT_VOL_FOCUS_ENERGY,
+    EXT_VOL_ATTRACT,
+    FLAG_CONTACT,
+    FLAG_SOUND,
+    FLAG_PUNCH,
+    FLAG_BITE,
+    FLAG_BULLET,
+    FLAG_PULSE,
+    FLAG_SLICING,
     FLAG_CHARGE,
-    MOVE_STRUGGLE, MOVE_WEATHER_BALL, MOVE_TERRAIN_PULSE,
+    MOVE_STRUGGLE,
+    MOVE_WEATHER_BALL,
+    MOVE_TERRAIN_PULSE,
     MOVE_CHARGE,
-    MOVE_SEISMIC_TOSS, MOVE_NIGHT_SHADE, MOVE_SUPER_FANG, MOVE_RUINATION, MOVE_FACADE,
-    MOVE_DREAM_EATER, MOVE_FROST_BREATH, MOVE_STORM_THROW,
-    MOVE_FISSURE, MOVE_GUILLOTINE, MOVE_HORN_DRILL, MOVE_SHEER_COLD,
-    MOVE_GYRO_BALL, MOVE_BODY_PRESS, MOVE_HEAVY_SLAM, MOVE_HEAT_CRASH,
-    MOVE_LOW_KICK, MOVE_GRASS_KNOT, MOVE_ELECTROBALL,
-    MOVE_WATER_SPOUT, MOVE_ERUPTION, MOVE_DRAGON_ENERGY, MOVE_POPULATION_BOMB, MOVE_TRIPLE_AXEL,
-    MOVE_ENDEAVOR, MOVE_EARTHQUAKE, MOVE_SURF,
-    MOVE_FINAL_GAMBIT, MOVE_PSYWAVE, MOVE_COUNTER, MOVE_MIRROR_COAT, MOVE_METAL_BURST,
-    EFFECT_RECOIL, EFFECT_KNOCK_OFF,
-    ABILITY_LEVITATE, ABILITY_FLASH_FIRE, ABILITY_VOLT_ABSORB, ABILITY_WATER_ABSORB,
-    ABILITY_HUGE_POWER, ABILITY_PURE_POWER, ABILITY_MULTISCALE,
-    ABILITY_HUSTLE, ABILITY_COMPOUND_EYES, ABILITY_SAND_VEIL, ABILITY_SNOW_CLOAK,
-    ABILITY_NO_GUARD, ABILITY_MOLD_BREAKER, ABILITY_TERAVOLT, ABILITY_TURBOBLAZE,
-    ABILITY_STURDY, ABILITY_DISGUISE, ABILITY_ICE_FACE,
-    ABILITY_UNAWARE, ABILITY_SCRAPPY, ABILITY_SAP_SIPPER, ABILITY_STORM_DRAIN,
-    ABILITY_LIGHTNING_ROD, ABILITY_MOTOR_DRIVE, ABILITY_DRY_SKIN, ABILITY_WONDER_GUARD,
-    ABILITY_SOUNDPROOF, ABILITY_BULLETPROOF, ABILITY_EARTH_EATER, ABILITY_WELL_BAKED_BODY,
-    ABILITY_GUTS, ABILITY_TOXIC_BOOST, ABILITY_FLARE_BOOST, ABILITY_MARVEL_SCALE,
-    ABILITY_TECHNICIAN, ABILITY_ADAPTABILITY, ABILITY_SHEER_FORCE, ABILITY_TOUGH_CLAWS,
-    ABILITY_IRON_FIST, ABILITY_SHARPNESS, ABILITY_STRONG_JAW, ABILITY_MEGA_LAUNCHER,
-    ABILITY_PUNK_ROCK, ABILITY_RECKLESS, ABILITY_STEELWORKER, ABILITY_NEUROFORCE,
-    ABILITY_ANALYTIC, ABILITY_OVERGROW, ABILITY_BLAZE, ABILITY_TORRENT, ABILITY_SWARM,
-    ABILITY_GORILLA_TACTICS, ABILITY_WATER_BUBBLE, ABILITY_THICK_FAT,
-    ABILITY_FILTER, ABILITY_SOLID_ROCK, ABILITY_PRISM_ARMOR, ABILITY_ICE_SCALES, ABILITY_FLUFFY,
-    ABILITY_PURIFYING_SALT, ABILITY_TINTED_LENS, ABILITY_FUR_COAT,
-    ABILITY_PROTOSYNTHESIS, ABILITY_QUARK_DRIVE,
-    ABILITY_SUPER_LUCK, ABILITY_SNIPER, ABILITY_INFILTRATOR, ABILITY_SOLAR_POWER,
-    ABILITY_SKILL_LINK, ABILITY_SWIFT_SWIM, ABILITY_CHLOROPHYLL,
-    ABILITY_SAND_RUSH, ABILITY_SLUSH_RUSH, ABILITY_QUICK_FEET, ABILITY_UNBURDEN,
-    ABILITY_FLAME_BODY, ABILITY_STATIC, ABILITY_POISON_POINT, ABILITY_EFFECT_SPORE, ABILITY_LONG_REACH,
-    ITEM_BOOSTER_ENERGY, ITEM_CHOICE_BAND, ITEM_CHOICE_SPECS, ITEM_CHOICE_SCARF,
-    ITEM_LIFE_ORB, ITEM_EXPERT_BELT, ITEM_ASSAULT_VEST, ITEM_EVIOLITE,
-    ITEM_AIR_BALLOON, ITEM_LOADED_DICE, ITEM_UTILITY_UMBRELLA, ITEM_FOCUS_SASH, ITEM_PROTECTIVE_PADS,
-    ITEM_CHARCOAL, ITEM_MYSTIC_WATER, ITEM_MAGNET, ITEM_MIRACLE_SEED, ITEM_ROSE_INCENSE,
-    ITEM_NEVER_MELT_ICE, ITEM_BLACK_BELT, ITEM_POISON_BARB, ITEM_SOFT_SAND,
-    ITEM_SHARP_BEAK, ITEM_TWISTED_SPOON, ITEM_SILVER_POWDER, ITEM_HARD_STONE,
-    ITEM_SPELL_TAG, ITEM_DRAGON_FANG, ITEM_BLACK_GLASSES, ITEM_METAL_COAT,
-    ITEM_FAIRY_FEATHER, ITEM_SILK_SCARF,
+    MOVE_SEISMIC_TOSS,
+    MOVE_NIGHT_SHADE,
+    MOVE_SUPER_FANG,
+    MOVE_RUINATION,
+    MOVE_FACADE,
+    MOVE_DREAM_EATER,
+    MOVE_FROST_BREATH,
+    MOVE_STORM_THROW,
+    MOVE_FISSURE,
+    MOVE_GUILLOTINE,
+    MOVE_HORN_DRILL,
+    MOVE_SHEER_COLD,
+    MOVE_GYRO_BALL,
+    MOVE_BODY_PRESS,
+    MOVE_HEAVY_SLAM,
+    MOVE_HEAT_CRASH,
+    MOVE_LOW_KICK,
+    MOVE_GRASS_KNOT,
+    MOVE_ELECTROBALL,
+    MOVE_WATER_SPOUT,
+    MOVE_ERUPTION,
+    MOVE_DRAGON_ENERGY,
+    MOVE_POPULATION_BOMB,
+    MOVE_TRIPLE_AXEL,
+    MOVE_ENDEAVOR,
+    MOVE_EARTHQUAKE,
+    MOVE_SURF,
+    MOVE_FINAL_GAMBIT,
+    MOVE_PSYWAVE,
+    MOVE_COUNTER,
+    MOVE_MIRROR_COAT,
+    MOVE_METAL_BURST,
+    EFFECT_RECOIL,
+    EFFECT_KNOCK_OFF,
+    ABILITY_LEVITATE,
+    ABILITY_FLASH_FIRE,
+    ABILITY_VOLT_ABSORB,
+    ABILITY_WATER_ABSORB,
+    ABILITY_HUGE_POWER,
+    ABILITY_PURE_POWER,
+    ABILITY_MULTISCALE,
+    ABILITY_HUSTLE,
+    ABILITY_COMPOUND_EYES,
+    ABILITY_SAND_VEIL,
+    ABILITY_SNOW_CLOAK,
+    ABILITY_NO_GUARD,
+    ABILITY_MOLD_BREAKER,
+    ABILITY_TERAVOLT,
+    ABILITY_TURBOBLAZE,
+    ABILITY_STURDY,
+    ABILITY_DISGUISE,
+    ABILITY_ICE_FACE,
+    ABILITY_UNAWARE,
+    ABILITY_SCRAPPY,
+    ABILITY_SAP_SIPPER,
+    ABILITY_STORM_DRAIN,
+    ABILITY_LIGHTNING_ROD,
+    ABILITY_MOTOR_DRIVE,
+    ABILITY_DRY_SKIN,
+    ABILITY_WONDER_GUARD,
+    ABILITY_SOUNDPROOF,
+    ABILITY_BULLETPROOF,
+    ABILITY_EARTH_EATER,
+    ABILITY_WELL_BAKED_BODY,
+    ABILITY_GUTS,
+    ABILITY_TOXIC_BOOST,
+    ABILITY_FLARE_BOOST,
+    ABILITY_MARVEL_SCALE,
+    ABILITY_TECHNICIAN,
+    ABILITY_ADAPTABILITY,
+    ABILITY_SHEER_FORCE,
+    ABILITY_TOUGH_CLAWS,
+    ABILITY_IRON_FIST,
+    ABILITY_SHARPNESS,
+    ABILITY_STRONG_JAW,
+    ABILITY_MEGA_LAUNCHER,
+    ABILITY_PUNK_ROCK,
+    ABILITY_RECKLESS,
+    ABILITY_STEELWORKER,
+    ABILITY_NEUROFORCE,
+    ABILITY_ANALYTIC,
+    ABILITY_OVERGROW,
+    ABILITY_BLAZE,
+    ABILITY_TORRENT,
+    ABILITY_SWARM,
+    ABILITY_GORILLA_TACTICS,
+    ABILITY_WATER_BUBBLE,
+    ABILITY_THICK_FAT,
+    ABILITY_FILTER,
+    ABILITY_SOLID_ROCK,
+    ABILITY_PRISM_ARMOR,
+    ABILITY_ICE_SCALES,
+    ABILITY_FLUFFY,
+    ABILITY_PURIFYING_SALT,
+    ABILITY_TINTED_LENS,
+    ABILITY_FUR_COAT,
+    ABILITY_PROTOSYNTHESIS,
+    ABILITY_QUARK_DRIVE,
+    ABILITY_SUPER_LUCK,
+    ABILITY_SNIPER,
+    ABILITY_INFILTRATOR,
+    ABILITY_SOLAR_POWER,
+    ABILITY_SKILL_LINK,
+    ABILITY_SWIFT_SWIM,
+    ABILITY_CHLOROPHYLL,
+    ABILITY_SAND_RUSH,
+    ABILITY_SLUSH_RUSH,
+    ABILITY_QUICK_FEET,
+    ABILITY_UNBURDEN,
+    ABILITY_FLAME_BODY,
+    ABILITY_STATIC,
+    ABILITY_POISON_POINT,
+    ABILITY_EFFECT_SPORE,
+    ABILITY_LONG_REACH,
+    ITEM_BOOSTER_ENERGY,
+    ITEM_CHOICE_BAND,
+    ITEM_CHOICE_SPECS,
+    ITEM_CHOICE_SCARF,
+    ITEM_LIFE_ORB,
+    ITEM_EXPERT_BELT,
+    ITEM_ASSAULT_VEST,
+    ITEM_EVIOLITE,
+    ITEM_AIR_BALLOON,
+    ITEM_LOADED_DICE,
+    ITEM_UTILITY_UMBRELLA,
+    ITEM_FOCUS_SASH,
+    ITEM_PROTECTIVE_PADS,
+    ITEM_CHARCOAL,
+    ITEM_MYSTIC_WATER,
+    ITEM_MAGNET,
+    ITEM_MIRACLE_SEED,
+    ITEM_ROSE_INCENSE,
+    ITEM_NEVER_MELT_ICE,
+    ITEM_BLACK_BELT,
+    ITEM_POISON_BARB,
+    ITEM_SOFT_SAND,
+    ITEM_SHARP_BEAK,
+    ITEM_TWISTED_SPOON,
+    ITEM_SILVER_POWDER,
+    ITEM_HARD_STONE,
+    ITEM_SPELL_TAG,
+    ITEM_DRAGON_FANG,
+    ITEM_BLACK_GLASSES,
+    ITEM_METAL_COAT,
+    ITEM_FAIRY_FEATHER,
+    ITEM_SILK_SCARF,
     FLAG_BOOSTER_ENERGY_ACTIVE,
 )
 from pokepy.core.bitpack import extract_boost, get_status
@@ -84,8 +252,12 @@ from pokepy.effects.misc import is_take_item_blocked_by_item_rule
 from pokepy.utils.gen5_prng import Gen5PRNG
 from pokepy.data.move_effects import EFFECT_SCREEN_BREAK
 
+
 def _side_actions_offset(side: int) -> int:
-    return OFF_MOVES + (M_ACTIVE_MOVE_ACTIONS_0 if int(side) == 0 else M_ACTIVE_MOVE_ACTIONS_1)
+    return OFF_MOVES + (
+        M_ACTIVE_MOVE_ACTIONS_0 if int(side) == 0 else M_ACTIVE_MOVE_ACTIONS_1
+    )
+
 
 # ----------------------------------------------------------------------------
 # Local constants (defined inline in the Showdown reference source, not promoted to constants.py)
@@ -114,11 +286,11 @@ ABILITY_FAIRY_AURA = 187
 ABILITY_DEFEATIST = 129
 ABILITY_SURGE_SURFER = 207
 
-ITEM_SCOPE_LENS = 429
-ITEM_RAZOR_CLAW = 382
-ITEM_WELLSPRING_MASK = 759
-ITEM_CORNERSTONE_MASK = 758
-ITEM_HEARTHFLAME_MASK = 760
+ITEM_SCOPE_LENS = 232
+ITEM_RAZOR_CLAW = 326
+ITEM_WELLSPRING_MASK = 2407
+ITEM_CORNERSTONE_MASK = 2406
+ITEM_HEARTHFLAME_MASK = 2408
 SPECIES_OGERPON_WELLSPRING = 2065
 SPECIES_OGERPON_CORNERSTONE = 2066
 SPECIES_OGERPON_HEARTHFLAME = 2067
@@ -127,22 +299,22 @@ SPECIES_OGERPON_HEARTHFLAME = 2067
 # not just Arceus. Pokepy models the Arceus take-item restriction separately.
 _TYPE_BOOST_PLATES = {
     TYPE_FIGHTING: frozenset({143}),  # Fist Plate
-    TYPE_POISON: frozenset({516}),    # Toxic Plate
-    TYPE_GROUND: frozenset({117}),    # Earth Plate
-    TYPE_FLYING: frozenset({450}),    # Sky Plate
-    TYPE_PSYCHIC: frozenset({291}),   # Mind Plate
-    TYPE_BUG: frozenset({223}),       # Insect Plate
-    TYPE_ROCK: frozenset({477}),      # Stone Plate
-    TYPE_GHOST: frozenset({464}),     # Spooky Plate
-    TYPE_DRAGON: frozenset({105}),    # Draco Plate
-    TYPE_DARK: frozenset({110}),      # Dread Plate
-    TYPE_STEEL: frozenset({225}),     # Iron Plate
-    TYPE_FIRE: frozenset({146}),      # Flame Plate
-    TYPE_WATER: frozenset({463}),     # Splash Plate
+    TYPE_POISON: frozenset({516}),  # Toxic Plate
+    TYPE_GROUND: frozenset({117}),  # Earth Plate
+    TYPE_FLYING: frozenset({450}),  # Sky Plate
+    TYPE_PSYCHIC: frozenset({291}),  # Mind Plate
+    TYPE_BUG: frozenset({223}),  # Insect Plate
+    TYPE_ROCK: frozenset({477}),  # Stone Plate
+    TYPE_GHOST: frozenset({464}),  # Spooky Plate
+    TYPE_DRAGON: frozenset({105}),  # Draco Plate
+    TYPE_DARK: frozenset({110}),  # Dread Plate
+    TYPE_STEEL: frozenset({225}),  # Iron Plate
+    TYPE_FIRE: frozenset({146}),  # Flame Plate
+    TYPE_WATER: frozenset({463}),  # Splash Plate
     TYPE_ELECTRIC: frozenset({572}),  # Zap Plate
-    TYPE_GRASS: frozenset({282}),     # Meadow Plate
-    TYPE_ICE: frozenset({220}),       # Icicle Plate
-    TYPE_FAIRY: frozenset({610}),     # Pixie Plate
+    TYPE_GRASS: frozenset({282}),  # Meadow Plate
+    TYPE_ICE: frozenset({220}),  # Icicle Plate
+    TYPE_FAIRY: frozenset({610}),  # Pixie Plate
 }
 
 MOVE_SOLAR_BEAM = 76
@@ -190,6 +362,7 @@ MOVE_SURGING_STRIKES = 818
 MOVE_COLLISION_COURSE = 878
 MOVE_ELECTRO_DRIFT = 879
 
+
 def _show_modify(value: int, numerator: float, denominator: int = 1) -> int:
     """Showdown's `modify(value, num, denom)` exactly. Uses 4096-base rounding.
 
@@ -203,6 +376,7 @@ def _show_modify(value: int, numerator: float, denominator: int = 1) -> int:
     """
     modifier = int(numerator * 4096 / denominator)
     return int((int(value * modifier) + 2047) // 4096)
+
 
 class _ChainAccum:
     """Showdown's `runEvent('Modify*', ...)` chainModify accumulator.
@@ -233,7 +407,9 @@ class _ChainAccum:
         self.accum = ((self.accum * next_mod) + 2048) >> 12
         return self
 
-    def chain_if(self, cond: bool, numerator: float, denominator: int = 1) -> "_ChainAccum":
+    def chain_if(
+        self, cond: bool, numerator: float, denominator: int = 1
+    ) -> "_ChainAccum":
         if cond:
             return self.chain(numerator, denominator)
         return self
@@ -244,6 +420,7 @@ class _ChainAccum:
             return value
         # Showdown final modify: trunc((trunc(value * accum) + 2048 - 1) / 4096)
         return int((int(value * self.accum) + 2047) // 4096)
+
 
 def _chain_bp(value: int, mult: float) -> int:
     """Backwards-compatible single-modifier helper used outside chain accumulators.
@@ -270,6 +447,7 @@ def _chain_bp(value: int, mult: float) -> int:
         return _show_modify(value, 8192, 4096)
     return _show_modify(value, mult)
 
+
 def _bp_chain_add_to(accum: _ChainAccum, mult: float) -> None:
     """Adds a float-multiplier modifier into a _ChainAccum, mapping common
     pokepy float values to Showdown's exact chainModify numerators.
@@ -277,43 +455,63 @@ def _bp_chain_add_to(accum: _ChainAccum, mult: float) -> None:
     if mult == 1.0:
         return
     if mult == 1.3:
-        accum.chain(5325, 4096); return
+        accum.chain(5325, 4096)
+        return
     if mult == 1.2:
-        accum.chain(4915, 4096); return
+        accum.chain(4915, 4096)
+        return
     if mult == 1.5:
-        accum.chain(6144, 4096); return
+        accum.chain(6144, 4096)
+        return
     if mult == 1.25:
-        accum.chain(5120, 4096); return
+        accum.chain(5120, 4096)
+        return
     if mult == 1.33 or mult == 1.3333333333333333:
-        accum.chain(5448, 4096); return
+        accum.chain(5448, 4096)
+        return
     if mult == 0.75:
-        accum.chain(3072, 4096); return
+        accum.chain(3072, 4096)
+        return
     if mult == 0.5:
-        accum.chain(2048, 4096); return
+        accum.chain(2048, 4096)
+        return
     if mult == 2.0:
-        accum.chain(8192, 4096); return
+        accum.chain(8192, 4096)
+        return
     accum.chain(mult, 1)
+
 
 def _weather_suppressed(battle: np.ndarray) -> bool:
     """Air Lock and Cloud Nine on EITHER active mon suppress all weather effects."""
     from pokepy.core.constants import (
-        ABILITY_AIR_LOCK, ABILITY_CLOUD_NINE,
-        OFF_SIDE0, OFF_SIDE1, OFF_META, M_ACTIVE0, M_ACTIVE1, POKEMON_SIZE,
+        ABILITY_AIR_LOCK,
+        ABILITY_CLOUD_NINE,
+        OFF_SIDE0,
+        OFF_SIDE1,
+        OFF_META,
+        M_ACTIVE0,
+        M_ACTIVE1,
+        POKEMON_SIZE,
     )
+
     a0 = int(battle[OFF_META + M_ACTIVE0])
     a1 = int(battle[OFF_META + M_ACTIVE1])
     off0 = OFF_SIDE0 + a0 * POKEMON_SIZE
     off1 = OFF_SIDE1 + a1 * POKEMON_SIZE
     ab0 = effective_ability(battle, off0, off1)
     ab1 = effective_ability(battle, off1, off0)
-    return (ab0 in (ABILITY_AIR_LOCK, ABILITY_CLOUD_NINE)
-            or ab1 in (ABILITY_AIR_LOCK, ABILITY_CLOUD_NINE))
+    return ab0 in (ABILITY_AIR_LOCK, ABILITY_CLOUD_NINE) or ab1 in (
+        ABILITY_AIR_LOCK,
+        ABILITY_CLOUD_NINE,
+    )
+
 
 def _effective_weather(battle: np.ndarray) -> int:
     """Returns weather, or WEATHER_NONE if suppressed by Air Lock / Cloud Nine."""
     if _weather_suppressed(battle):
         return WEATHER_NONE
     return int(battle[OFF_FIELD + F_WEATHER])
+
 
 def _effective_weather_for_pokemon(battle: np.ndarray, pokemon_offset: int) -> int:
     """Showdown-style `pokemon.effectiveWeather()` for an active battler."""
@@ -328,6 +526,7 @@ def _effective_weather_for_pokemon(battle: np.ndarray, pokemon_offset: int) -> i
     ):
         return WEATHER_NONE
     return weather
+
 
 def _get_weather_type_multiplier(weather: int, move_type: int) -> float:
     if weather == WEATHER_SUN:
@@ -344,8 +543,13 @@ def _get_weather_type_multiplier(weather: int, move_type: int) -> float:
         return 1.0
     return 1.0
 
+
 def _get_terrain_type_multiplier(
-    battle: np.ndarray, move_type: int, atk_offset: int, def_offset: int, move_id: int,
+    battle: np.ndarray,
+    move_type: int,
+    atk_offset: int,
+    def_offset: int,
+    move_id: int,
 ) -> float:
     terrain = int(battle[OFF_FIELD + F_TERRAIN])
     atk_grounded = is_grounded(battle, atk_offset, def_offset)
@@ -368,6 +572,7 @@ def _get_terrain_type_multiplier(
         return 0.5 if (move_type == TYPE_DRAGON and def_grounded) else 1.0
     return 1.0
 
+
 def _get_effective_speed(battle: np.ndarray, pokemon_offset: int) -> int:
     base_speed = float(battle[pokemon_offset + 11])
     item = int(battle[pokemon_offset + 6])
@@ -380,7 +585,9 @@ def _get_effective_speed(battle: np.ndarray, pokemon_offset: int) -> int:
     boosted_speed = base_speed * float(get_boost_multiplier(spe_boost))
 
     is_side0 = pokemon_offset < OFF_SIDE1
-    screens_offset = (OFF_FIELD + F_SCREENS_0) if is_side0 else (OFF_FIELD + F_SCREENS_1)
+    screens_offset = (
+        (OFF_FIELD + F_SCREENS_0) if is_side0 else (OFF_FIELD + F_SCREENS_1)
+    )
     screens = int(battle[screens_offset])
     tailwind = ((screens >> SCREEN_TAILWIND_SHIFT) & SCREEN_MASK_3BIT) > 0
     tailwind_mult = 2.0 if tailwind else 1.0
@@ -417,7 +624,11 @@ def _get_effective_speed(battle: np.ndarray, pokemon_offset: int) -> int:
         or (ability == ABILITY_QUARK_DRIVE and terrain == TERRAIN_ELECTRIC)
         or booster_consumed
     )
-    paradox_spd_mult = 1.5 if (paradox_active and _get_paradox_best_stat(battle, pokemon_offset) == "spe") else 1.0
+    paradox_spd_mult = (
+        1.5
+        if (paradox_active and _get_paradox_best_stat(battle, pokemon_offset) == "spe")
+        else 1.0
+    )
 
     paralysis_mult = 0.5 if (status == STATUS_PARALYSIS and not has_quick_feet) else 1.0
 
@@ -427,10 +638,16 @@ def _get_effective_speed(battle: np.ndarray, pokemon_offset: int) -> int:
 
     return int(
         boosted_speed
-        * tailwind_mult * scarf_mult * weather_mult
-        * quick_feet_mult * unburden_mult
-        * paradox_spd_mult * paralysis_mult * iron_ball_mult
+        * tailwind_mult
+        * scarf_mult
+        * weather_mult
+        * quick_feet_mult
+        * unburden_mult
+        * paradox_spd_mult
+        * paralysis_mult
+        * iron_ball_mult
     )
+
 
 def _apply_stage_to_stat(base_stat: int, boost: int) -> int:
     boost = max(-6, min(6, int(boost)))
@@ -438,12 +655,14 @@ def _apply_stage_to_stat(base_stat: int, boost: int) -> int:
         return (int(base_stat) * (2 + boost)) // 2
     return (int(base_stat) * 2) // (2 - boost)
 
+
 _PARADOX_STAT_MASK = 0x6010
 _PARADOX_STAT_ATK = 0x0010
 _PARADOX_STAT_DEF = 0x2000
 _PARADOX_STAT_SPA = 0x2010
 _PARADOX_STAT_SPD = 0x4000
 _PARADOX_STAT_SPE = 0x4010
+
 
 def _get_live_paradox_best_stat(battle: np.ndarray, pokemon_offset: int) -> str:
     """Mirror Showdown's getBestStat(false, true) for paradox abilities.
@@ -458,11 +677,26 @@ def _get_live_paradox_best_stat(battle: np.ndarray, pokemon_offset: int) -> str:
     boosts14 = int(battle[p_off + 14])
 
     values = [
-        ("atk", _apply_stage_to_stat(int(battle[p_off + 7]), extract_boost(boosts13, 0))),
-        ("def", _apply_stage_to_stat(int(battle[p_off + 8]), extract_boost(boosts13, 4))),
-        ("spa", _apply_stage_to_stat(int(battle[p_off + 9]), extract_boost(boosts13, 8))),
-        ("spd", _apply_stage_to_stat(int(battle[p_off + 10]), extract_boost(boosts13, 12))),
-        ("spe", _apply_stage_to_stat(int(battle[p_off + 11]), extract_boost(boosts14, 0))),
+        (
+            "atk",
+            _apply_stage_to_stat(int(battle[p_off + 7]), extract_boost(boosts13, 0)),
+        ),
+        (
+            "def",
+            _apply_stage_to_stat(int(battle[p_off + 8]), extract_boost(boosts13, 4)),
+        ),
+        (
+            "spa",
+            _apply_stage_to_stat(int(battle[p_off + 9]), extract_boost(boosts13, 8)),
+        ),
+        (
+            "spd",
+            _apply_stage_to_stat(int(battle[p_off + 10]), extract_boost(boosts13, 12)),
+        ),
+        (
+            "spe",
+            _apply_stage_to_stat(int(battle[p_off + 11]), extract_boost(boosts14, 0)),
+        ),
     ]
 
     best_name, best_value = values[0]
@@ -470,6 +704,7 @@ def _get_live_paradox_best_stat(battle: np.ndarray, pokemon_offset: int) -> str:
         if value > best_value:
             best_name, best_value = name, value
     return best_name
+
 
 def _get_paradox_best_stat(battle: np.ndarray, pokemon_offset: int) -> str:
     p_off = int(pokemon_offset)
@@ -485,6 +720,7 @@ def _get_paradox_best_stat(battle: np.ndarray, pokemon_offset: int) -> str:
     if encoded == _PARADOX_STAT_SPE:
         return "spe"
     return _get_live_paradox_best_stat(battle, p_off)
+
 
 def calc_damage_gen9(
     battle: np.ndarray,
@@ -590,8 +826,8 @@ def calc_damage_gen9(
             atk_b13_tb = int(battle[atk_offset + 13])
             atk_raw = int(battle[atk_offset + 7])
             spa_raw = int(battle[atk_offset + 9])
-            atk_b_stage = ((atk_b13_tb & 0xF) - 6)
-            spa_b_stage = (((atk_b13_tb >> 8) & 0xF) - 6)
+            atk_b_stage = (atk_b13_tb & 0xF) - 6
+            spa_b_stage = ((atk_b13_tb >> 8) & 0xF) - 6
             atk_eff = int(atk_raw * float(get_boost_multiplier(atk_b_stage)))
             spa_eff = int(spa_raw * float(get_boost_multiplier(spa_b_stage)))
             if atk_eff > spa_eff:
@@ -620,7 +856,10 @@ def calc_damage_gen9(
             if slot == atk_active or (slot_hp > 0 and slot_status == STATUS_NONE):
                 species_id = max(
                     0,
-                    min(int(game_data.species_base_stats.shape[0]) - 1, int(battle[slot_off + 0])),
+                    min(
+                        int(game_data.species_base_stats.shape[0]) - 1,
+                        int(battle[slot_off + 0]),
+                    ),
                 )
                 base_atk = int(game_data.species_base_stats[species_id, 1])
                 beat_up_bps.append(5 + base_atk // 10)
@@ -638,14 +877,22 @@ def calc_damage_gen9(
     atk_ability_ate = effective_ability(battle, atk_offset, def_offset)
     is_normal_move = move_type == TYPE_NORMAL
     _ATE_EXCLUDED_MOVES = (
-        MOVE_WEATHER_BALL, MOVE_TERRAIN_PULSE, MOVE_TERA_BLAST,
+        MOVE_WEATHER_BALL,
+        MOVE_TERRAIN_PULSE,
+        MOVE_TERA_BLAST,
         # judgment=246, multiattack=719, naturalgift=363, revelationdance=686,
         # technoblast=546
-        246, 719, 363, 686, 546,
+        246,
+        719,
+        363,
+        686,
+        546,
     )
     ate_type_change = (
-        atk_ability_ate in (ABILITY_REFRIGERATE, ABILITY_PIXILATE, ABILITY_AERILATE, ABILITY_GALVANIZE)
-        and is_normal_move and bp > 0
+        atk_ability_ate
+        in (ABILITY_REFRIGERATE, ABILITY_PIXILATE, ABILITY_AERILATE, ABILITY_GALVANIZE)
+        and is_normal_move
+        and bp > 0
         and move_id not in _ATE_EXCLUDED_MOVES
     )
     if ate_type_change:
@@ -660,7 +907,10 @@ def calc_damage_gen9(
     # Liquid Voice uses the same onModifyType hook family as the -ate
     # abilities, but it rewrites any sound move to Water regardless of base
     # type. Showdown abilities.ts:liquidvoice.
-    if atk_ability_ate == ABILITY_LIQUID_VOICE and (int(game_data.move_flags[move_id]) & FLAG_SOUND) != 0:
+    if (
+        atk_ability_ate == ABILITY_LIQUID_VOICE
+        and (int(game_data.move_flags[move_id]) & FLAG_SOUND) != 0
+    ):
         move_type = TYPE_WATER
 
     # Ivy Cudgel: type changes based on Ogerpon mask
@@ -720,12 +970,21 @@ def calc_damage_gen9(
             # for Stellar (18) the move type is one of the user's original types.
             _is_stab_for_tera_min = False
             if _tera_t == 18:  # Stellar
-                _orig_types_field = int(battle[OFF_META + (M_TERA_ORIG_TYPES_0 if atk_offset < OFF_SIDE1 else M_TERA_ORIG_TYPES_1)])
+                _orig_types_field = int(
+                    battle[
+                        OFF_META
+                        + (
+                            M_TERA_ORIG_TYPES_0
+                            if atk_offset < OFF_SIDE1
+                            else M_TERA_ORIG_TYPES_1
+                        )
+                    ]
+                )
                 _ot1 = _orig_types_field & 0xFF
                 _ot2 = (_orig_types_field >> 8) & 0xFF
                 _is_stab_for_tera_min = (move_type == _ot1) or (move_type == _ot2)
             else:
-                _is_stab_for_tera_min = (move_type == _tera_t)
+                _is_stab_for_tera_min = move_type == _tera_t
             if _is_stab_for_tera_min:
                 bp = 60
 
@@ -750,16 +1009,22 @@ def calc_damage_gen9(
     _def_item_imm = int(battle[def_offset + 6])
     _atk_ability_imm = effective_ability(battle, atk_offset, def_offset)
     _has_mold_breaker_imm = _atk_ability_imm in (
-        ABILITY_MOLD_BREAKER, ABILITY_TERAVOLT, ABILITY_TURBOBLAZE,
+        ABILITY_MOLD_BREAKER,
+        ABILITY_TERAVOLT,
+        ABILITY_TURBOBLAZE,
     )
     # Base type chart lookup
     _eff1 = float(type_chart[_def_t1_imm, move_type])
-    _eff2 = 1.0 if _def_t2_imm == _def_t1_imm else float(type_chart[_def_t2_imm, move_type])
+    _eff2 = (
+        1.0 if _def_t2_imm == _def_t1_imm else float(type_chart[_def_t2_imm, move_type])
+    )
     _tm_imm = _eff1 * _eff2
     # Ring Target / Gravity / Iron Ball / Thousand Arrows override for
     # Flying + Ground. Thousand Arrows (615): forces Flying vuln to Ground.
-    if move_id == 615 and move_type == TYPE_GROUND and (
-        _def_t1_imm == TYPE_FLYING or _def_t2_imm == TYPE_FLYING
+    if (
+        move_id == 615
+        and move_type == TYPE_GROUND
+        and (_def_t1_imm == TYPE_FLYING or _def_t2_imm == TYPE_FLYING)
     ):
         if _tm_imm == 0.0:
             _tm_imm = 1.0
@@ -768,12 +1033,19 @@ def calc_damage_gen9(
         _tm_imm = 1.0
     # Iron Ball grounds Flying (items.ts onNegateImmunity: Ground).
     _ITEM_IRON_BALL_IMM = 224
-    if (_def_item_imm == _ITEM_IRON_BALL_IMM and move_type == TYPE_GROUND
-            and (_def_t1_imm == TYPE_FLYING or _def_t2_imm == TYPE_FLYING)):
+    if (
+        _def_item_imm == _ITEM_IRON_BALL_IMM
+        and move_type == TYPE_GROUND
+        and (_def_t1_imm == TYPE_FLYING or _def_t2_imm == TYPE_FLYING)
+    ):
         _tm_imm = 1.0
     # Levitate / Air Balloon vs Ground. Mold Breaker negates Levitate
     # (abilities are `breakable`) but NOT Air Balloon (item).
-    if (not _has_mold_breaker_imm) and _def_ability_imm == ABILITY_LEVITATE and move_type == TYPE_GROUND:
+    if (
+        (not _has_mold_breaker_imm)
+        and _def_ability_imm == ABILITY_LEVITATE
+        and move_type == TYPE_GROUND
+    ):
         _tm_imm = 0.0
     if _def_item_imm == ITEM_AIR_BALLOON and move_type == TYPE_GROUND:
         _tm_imm = 0.0
@@ -808,9 +1080,15 @@ def calc_damage_gen9(
     # Both are breakable (suppressed by Mold Breaker/Teravolt/Turboblaze).
     _move_flags_imm = int(game_data.move_flags[move_id])
     if not _has_mold_breaker_imm:
-        if _def_ability_imm == ABILITY_SOUNDPROOF and (_move_flags_imm & FLAG_SOUND) != 0:
+        if (
+            _def_ability_imm == ABILITY_SOUNDPROOF
+            and (_move_flags_imm & FLAG_SOUND) != 0
+        ):
             _tm_imm = 0.0
-        elif _def_ability_imm == ABILITY_BULLETPROOF and (_move_flags_imm & FLAG_BULLET) != 0:
+        elif (
+            _def_ability_imm == ABILITY_BULLETPROOF
+            and (_move_flags_imm & FLAG_BULLET) != 0
+        ):
             _tm_imm = 0.0
     # Scrappy / Mind's Eye: Normal and Fighting moves ignore Ghost immunity.
     # Must check here in the early-immunity section to avoid short-circuiting
@@ -818,20 +1096,42 @@ def calc_damage_gen9(
     _has_scrappy_imm = _atk_ability_imm in (ABILITY_SCRAPPY, ABILITY_MINDS_EYE)
     _is_normal_or_fighting_imm = move_type in (TYPE_NORMAL, TYPE_FIGHTING)
     _def_is_ghost_imm = (_def_t1_imm == TYPE_GHOST) or (_def_t2_imm == TYPE_GHOST)
-    if _has_scrappy_imm and _is_normal_or_fighting_imm and _def_is_ghost_imm and _tm_imm == 0.0:
+    if (
+        _has_scrappy_imm
+        and _is_normal_or_fighting_imm
+        and _def_is_ghost_imm
+        and _tm_imm == 0.0
+    ):
         # Recompute ignoring Ghost slot(s) — Scrappy bypasses Ghost immunity.
         _s1 = 1.0 if _def_t1_imm == TYPE_GHOST else _eff1
-        _s2 = 1.0 if _def_t2_imm == TYPE_GHOST else (
-            1.0 if _def_t2_imm == _def_t1_imm else _eff2
+        _s2 = (
+            1.0
+            if _def_t2_imm == TYPE_GHOST
+            else (1.0 if _def_t2_imm == _def_t1_imm else _eff2)
         )
         _tm_imm = _s1 * _s2
     # Foresight volatile: also bypasses Ghost immunity for Normal/Fighting.
-    _def_ext_vol_imm = int(battle[(OFF_FIELD + F_EXTENDED_VOLATILE_0) if def_offset < OFF_SIDE1 else (OFF_FIELD + F_EXTENDED_VOLATILE_1)])
+    _def_ext_vol_imm = int(
+        battle[
+            (
+                (OFF_FIELD + F_EXTENDED_VOLATILE_0)
+                if def_offset < OFF_SIDE1
+                else (OFF_FIELD + F_EXTENDED_VOLATILE_1)
+            )
+        ]
+    )
     _has_foresight_imm = (_def_ext_vol_imm & EXT_VOL_FORESIGHT) != 0
-    if _has_foresight_imm and _is_normal_or_fighting_imm and _def_is_ghost_imm and _tm_imm == 0.0:
+    if (
+        _has_foresight_imm
+        and _is_normal_or_fighting_imm
+        and _def_is_ghost_imm
+        and _tm_imm == 0.0
+    ):
         _s1 = 1.0 if _def_t1_imm == TYPE_GHOST else _eff1
-        _s2 = 1.0 if _def_t2_imm == TYPE_GHOST else (
-            1.0 if _def_t2_imm == _def_t1_imm else _eff2
+        _s2 = (
+            1.0
+            if _def_t2_imm == TYPE_GHOST
+            else (1.0 if _def_t2_imm == _def_t1_imm else _eff2)
         )
         _tm_imm = _s1 * _s2
     # Status moves DON'T go through getDamage — pokepy short-circuits
@@ -856,14 +1156,32 @@ def calc_damage_gen9(
     def_ability_pre = effective_ability(battle, def_offset, atk_offset)
     weather = _effective_weather(battle)
 
-    sand_veil_mult = 0.8 if (def_ability_pre == ABILITY_SAND_VEIL and weather == WEATHER_SAND) else 1.0
-    snow_cloak_mult = 0.8 if (def_ability_pre == ABILITY_SNOW_CLOAK and weather == WEATHER_SNOW) else 1.0
+    sand_veil_mult = (
+        0.8
+        if (def_ability_pre == ABILITY_SAND_VEIL and weather == WEATHER_SAND)
+        else 1.0
+    )
+    snow_cloak_mult = (
+        0.8
+        if (def_ability_pre == ABILITY_SNOW_CLOAK and weather == WEATHER_SNOW)
+        else 1.0
+    )
     # Tangled Feet (Dodrio): 0.5x accuracy when defender is confused.
     # Showdown abilities.ts:tangledfeet onModifyAccuracy.
     _ABILITY_TANGLED_FEET = 77
-    def_vol_tf = int(battle[(OFF_FIELD + F_VOLATILE_0) if def_offset < OFF_SIDE1 else (OFF_FIELD + F_VOLATILE_1)])
+    def_vol_tf = int(
+        battle[
+            (
+                (OFF_FIELD + F_VOLATILE_0)
+                if def_offset < OFF_SIDE1
+                else (OFF_FIELD + F_VOLATILE_1)
+            )
+        ]
+    )
     def_confused_tf = ((def_vol_tf >> 1) & 0x7) > 0
-    tangled_feet_mult = 0.5 if (def_ability_pre == _ABILITY_TANGLED_FEET and def_confused_tf) else 1.0
+    tangled_feet_mult = (
+        0.5 if (def_ability_pre == _ABILITY_TANGLED_FEET and def_confused_tf) else 1.0
+    )
 
     atk_boosts2 = int(battle[atk_offset + 14])
     def_boosts2 = int(battle[def_offset + 14])
@@ -906,7 +1224,15 @@ def calc_damage_gen9(
     # Pokepy already tracks the foresight volatile via EXT_VOL_FORESIGHT and
     # uses it for the Ghost-immunity bypass at L992, but the evasion
     # zeroing was missing. Negative evasion stages are preserved.
-    _def_ext_vol_eva = int(battle[(OFF_FIELD + F_EXTENDED_VOLATILE_0) if def_offset < OFF_SIDE1 else (OFF_FIELD + F_EXTENDED_VOLATILE_1)])
+    _def_ext_vol_eva = int(
+        battle[
+            (
+                (OFF_FIELD + F_EXTENDED_VOLATILE_0)
+                if def_offset < OFF_SIDE1
+                else (OFF_FIELD + F_EXTENDED_VOLATILE_1)
+            )
+        ]
+    )
     if (_def_ext_vol_eva & EXT_VOL_FORESIGHT) != 0 and eva_stage > 0:
         eva_stage = 0
     # Showdown sim/battle-actions.ts:707-722 hitStepAccuracy computes a SINGLE
@@ -942,6 +1268,7 @@ def calc_damage_gen9(
         ITEM_BRIGHT_POWDER as _ITEM_BRIGHT_POWDER_AC,
         ITEM_LAX_INCENSE as _ITEM_LAX_INCENSE_AC,
     )
+
     _atk_item_acc = atk_item_live
     _def_item_acc = int(battle[def_offset + 6])
     # Wide Lens (atk holder): chainModify([4505, 4096]) onSourceModifyAccuracy.
@@ -963,14 +1290,25 @@ def calc_damage_gen9(
     )
     effective_accuracy = int(
         boosted_accuracy
-        * hustle_acc_mult * compound_eyes_mult
-        * sand_veil_mult * snow_cloak_mult * tangled_feet_mult
-        * wide_lens_mult * zoom_lens_mult * bright_powder_mult
+        * hustle_acc_mult
+        * compound_eyes_mult
+        * sand_veil_mult
+        * snow_cloak_mult
+        * tangled_feet_mult
+        * wide_lens_mult
+        * zoom_lens_mult
+        * bright_powder_mult
     )
 
-    has_no_guard = (atk_ability_pre == ABILITY_NO_GUARD) or (def_ability_pre == ABILITY_NO_GUARD)
+    has_no_guard = (atk_ability_pre == ABILITY_NO_GUARD) or (
+        def_ability_pre == ABILITY_NO_GUARD
+    )
 
-    atk_ext_vol_offset = (OFF_FIELD + F_EXTENDED_VOLATILE_0) if atk_side == 0 else (OFF_FIELD + F_EXTENDED_VOLATILE_1)
+    atk_ext_vol_offset = (
+        (OFF_FIELD + F_EXTENDED_VOLATILE_0)
+        if atk_side == 0
+        else (OFF_FIELD + F_EXTENDED_VOLATILE_1)
+    )
     atk_ext_vol = int(battle[atk_ext_vol_offset])
     has_lock_on = (atk_ext_vol & EXT_VOL_LOCK_ON) != 0
 
@@ -1004,7 +1342,9 @@ def calc_damage_gen9(
             _MOVE_THOUSAND_ARROWS_PRE,
         )
 
-        charge_meta_off_pre = OFF_META + (M_CHARGING_0 if def_side == 0 else M_CHARGING_1)
+        charge_meta_off_pre = OFF_META + (
+            M_CHARGING_0 if def_side == 0 else M_CHARGING_1
+        )
         charging_move_pre = int(battle[charge_meta_off_pre])
         if charging_move_pre in _FLY_LIKE_PRE:
             can_hit_semi_invul = move_id in _AIR_HIT_PRE
@@ -1028,14 +1368,17 @@ def calc_damage_gen9(
     # holder's effective sun/rain/primal weather, but Blizzard still checks
     # field snow directly.
     _target_weather_acc = _effective_weather_for_pokemon(battle, def_offset)
-    rain_perfect = (
-        move_id in (MOVE_HURRICANE, MOVE_THUNDER, 846, 847, 848)
-        and _target_weather_acc in (WEATHER_RAIN, WEATHER_PRIMORDIAL_SEA)
-    )
+    rain_perfect = move_id in (
+        MOVE_HURRICANE,
+        MOVE_THUNDER,
+        846,
+        847,
+        848,
+    ) and _target_weather_acc in (WEATHER_RAIN, WEATHER_PRIMORDIAL_SEA)
     snow_perfect = move_id == MOVE_BLIZZARD and weather_acc == WEATHER_SNOW
-    sun_reduced = (
-        move_id in (MOVE_HURRICANE, MOVE_THUNDER)
-        and _target_weather_acc in (WEATHER_SUN, WEATHER_DESOLATE_LAND)
+    sun_reduced = move_id in (MOVE_HURRICANE, MOVE_THUNDER) and _target_weather_acc in (
+        WEATHER_SUN,
+        WEATHER_DESOLATE_LAND,
     )
     if sun_reduced:
         effective_accuracy = 50
@@ -1044,6 +1387,7 @@ def calc_damage_gen9(
     # on itself (from using Glaive Rush last turn), any move aimed at it
     # bypasses accuracy (Showdown data/moves.ts:glaiverush onAccuracy true).
     from pokepy.core.constants import FLAG_GLAIVE_RUSH as _FLAG_GLAIVE_RUSH
+
     def_flags_gr = int(battle[def_offset + 15])
     def_has_glaive_rush = (def_flags_gr & _FLAG_GLAIVE_RUSH) != 0
     # Showdown sim/battle-actions.ts:732 only calls `randomChance(accuracy, 100)`
@@ -1052,8 +1396,12 @@ def calc_damage_gen9(
     # consumed. pokepy used to roll unconditionally, advancing the LCG by one
     # frame more than Showdown for guaranteed-hit moves.
     accuracy_bypassed = (
-        has_no_guard or has_lock_on or weather_perfect_acc or def_has_glaive_rush
-        or accuracy == 0 or accuracy > 100
+        has_no_guard
+        or has_lock_on
+        or weather_perfect_acc
+        or def_has_glaive_rush
+        or accuracy == 0
+        or accuracy > 100
     )
     # Burn Up / Double Shock fail in Showdown's onTryMove before accuracy
     # once the user no longer has the required live typing.
@@ -1066,7 +1414,7 @@ def calc_damage_gen9(
         required_type = TYPE_FIRE if move_id == _MOVE_BURN_UP else TYPE_ELECTRIC
         if atk_t1_live != required_type and atk_t2_live != required_type:
             if out_meta is not None:
-                out_meta['num_hits'] = 1
+                out_meta["num_hits"] = 1
             return 0
     # Showdown's Endeavor `onTryImmunity` checks the target's LIVE HP before
     # hitStepAccuracy. When the target's current HP is not above the user's,
@@ -1078,7 +1426,7 @@ def calc_damage_gen9(
         def_hp_live = int(battle[def_offset + 1])
         if atk_hp_live >= def_hp_live:
             if out_meta is not None:
-                out_meta['num_hits'] = 1
+                out_meta["num_hits"] = 1
             return 0
 
     if accuracy_bypassed:
@@ -1096,11 +1444,13 @@ def calc_damage_gen9(
     # to match Showdown's frame schedule.
     if not hits:
         if out_meta is not None:
-            out_meta['num_hits'] = 1
+            out_meta["num_hits"] = 1
         return 0
 
     atk_level = int(battle[atk_offset + 3])
-    atk_stat_base = int(battle[atk_offset + 7]) if is_physical else int(battle[atk_offset + 9])
+    atk_stat_base = (
+        int(battle[atk_offset + 7]) if is_physical else int(battle[atk_offset + 9])
+    )
     atk_types = int(battle[atk_offset + 4])
     atk_type1 = atk_types & 0xFF
     atk_type2 = (atk_types >> 8) & 0xFF
@@ -1108,14 +1458,24 @@ def calc_damage_gen9(
     atk_item = atk_item_live
 
     def_ability = effective_ability(battle, def_offset, atk_offset)
-    field_atk_ability = atk_ability if int(override_field_atk_ability) < 0 else int(override_field_atk_ability)
-    field_def_ability = def_ability if int(override_field_def_ability) < 0 else int(override_field_def_ability)
+    field_atk_ability = (
+        atk_ability
+        if int(override_field_atk_ability) < 0
+        else int(override_field_atk_ability)
+    )
+    field_def_ability = (
+        def_ability
+        if int(override_field_def_ability) < 0
+        else int(override_field_def_ability)
+    )
 
     atk_has_unaware = atk_ability == ABILITY_UNAWARE
     def_has_unaware = def_ability == ABILITY_UNAWARE
 
     atk_boosts = int(battle[atk_offset + 13])
-    atk_boost = extract_boost(atk_boosts, 0) if is_physical else extract_boost(atk_boosts, 8)
+    atk_boost = (
+        extract_boost(atk_boosts, 0) if is_physical else extract_boost(atk_boosts, 8)
+    )
     if suppress_attacker_boosts:
         atk_boost = 0
     # Unaware on DEFENDER ignores ALL attacker atk/spa boosts (positive AND
@@ -1144,7 +1504,11 @@ def calc_damage_gen9(
     # Atk-modifier abilities. These ALL apply via Showdown's onModifyAtk /
     # onModifySpA chain (NOT onBasePower). Each is a chainModify call into the
     # same accumulator; final modify is applied once below.
-    _has_mold_breaker_early = atk_ability in (ABILITY_MOLD_BREAKER, ABILITY_TERAVOLT, ABILITY_TURBOBLAZE)
+    _has_mold_breaker_early = atk_ability in (
+        ABILITY_MOLD_BREAKER,
+        ABILITY_TERAVOLT,
+        ABILITY_TURBOBLAZE,
+    )
     _atk_hp_early = int(battle[atk_offset + 1])
     _atk_maxhp_early = int(battle[atk_offset + 2])
     if atk_ability == ABILITY_STEELWORKER and move_type == TYPE_STEEL:
@@ -1160,17 +1524,37 @@ def calc_damage_gen9(
     if atk_ability == ABILITY_WATER_BUBBLE and move_type == TYPE_WATER:
         _atk_chain.chain(8192, 4096)  # 2x
     # Pinch abilities (Overgrow/Blaze/Torrent/Swarm) at HP <= 1/3
-    if atk_ability == ABILITY_OVERGROW and move_type == TYPE_GRASS and _atk_hp_early * 3 <= _atk_maxhp_early:
+    if (
+        atk_ability == ABILITY_OVERGROW
+        and move_type == TYPE_GRASS
+        and _atk_hp_early * 3 <= _atk_maxhp_early
+    ):
         _atk_chain.chain(6144, 4096)
-    if atk_ability == ABILITY_BLAZE and move_type == TYPE_FIRE and _atk_hp_early * 3 <= _atk_maxhp_early:
+    if (
+        atk_ability == ABILITY_BLAZE
+        and move_type == TYPE_FIRE
+        and _atk_hp_early * 3 <= _atk_maxhp_early
+    ):
         _atk_chain.chain(6144, 4096)
-    if atk_ability == ABILITY_TORRENT and move_type == TYPE_WATER and _atk_hp_early * 3 <= _atk_maxhp_early:
+    if (
+        atk_ability == ABILITY_TORRENT
+        and move_type == TYPE_WATER
+        and _atk_hp_early * 3 <= _atk_maxhp_early
+    ):
         _atk_chain.chain(6144, 4096)
-    if atk_ability == ABILITY_SWARM and move_type == TYPE_BUG and _atk_hp_early * 3 <= _atk_maxhp_early:
+    if (
+        atk_ability == ABILITY_SWARM
+        and move_type == TYPE_BUG
+        and _atk_hp_early * 3 <= _atk_maxhp_early
+    ):
         _atk_chain.chain(6144, 4096)
     # Flash Fire: stored boost flag in pokemon flag bit 0x200
     atk_flags_ff = int(battle[atk_offset + 15])
-    if atk_ability == ABILITY_FLASH_FIRE and (atk_flags_ff & 0x200) != 0 and move_type == TYPE_FIRE:
+    if (
+        atk_ability == ABILITY_FLASH_FIRE
+        and (atk_flags_ff & 0x200) != 0
+        and move_type == TYPE_FIRE
+    ):
         _atk_chain.chain(6144, 4096)
     # Defender abilities that modify ATTACKER's atk/spa via
     # onSourceModifyAtk / onSourceModifySpA:
@@ -1189,8 +1573,16 @@ def calc_damage_gen9(
         if def_ability == ABILITY_PURIFYING_SALT and move_type == TYPE_GHOST:
             _atk_chain.chain(2048, 4096)
 
-    uses_physical_def = is_physical or move_id in (MOVE_PSYSHOCK, MOVE_PSYSTRIKE, MOVE_SECRET_SWORD)
-    def_stat_base = int(battle[def_offset + 8]) if uses_physical_def else int(battle[def_offset + 10])
+    uses_physical_def = is_physical or move_id in (
+        MOVE_PSYSHOCK,
+        MOVE_PSYSTRIKE,
+        MOVE_SECRET_SWORD,
+    )
+    def_stat_base = (
+        int(battle[def_offset + 8])
+        if uses_physical_def
+        else int(battle[def_offset + 10])
+    )
     def_types = int(battle[def_offset + 4])
     def_type1 = def_types & 0xFF
     def_type2 = (def_types >> 8) & 0xFF
@@ -1198,7 +1590,11 @@ def calc_damage_gen9(
     def_max_hp = int(battle[def_offset + 2])
 
     def_boosts = int(battle[def_offset + 13])
-    def_boost_raw = extract_boost(def_boosts, 4) if uses_physical_def else extract_boost(def_boosts, 12)
+    def_boost_raw = (
+        extract_boost(def_boosts, 4)
+        if uses_physical_def
+        else extract_boost(def_boosts, 12)
+    )
     def_boost = def_boost_raw
     # Unaware on ATTACKER ignores ALL defender def/spd boosts (positive AND
     # negative). Same fix as atk_boost above — sign-agnostic.
@@ -1212,7 +1608,11 @@ def calc_damage_gen9(
     _MOVE_CHIP_AWAY = 498
     _MOVE_SACRED_SWORD = 533
     _MOVE_DARKEST_LARIAT = 663
-    _ignores_def_boost = move_id in (_MOVE_CHIP_AWAY, _MOVE_SACRED_SWORD, _MOVE_DARKEST_LARIAT)
+    _ignores_def_boost = move_id in (
+        _MOVE_CHIP_AWAY,
+        _MOVE_SACRED_SWORD,
+        _MOVE_DARKEST_LARIAT,
+    )
     if _ignores_def_boost:
         def_boost = 0
     def_stat = int(def_stat_base * float(get_boost_multiplier(def_boost)))
@@ -1232,21 +1632,53 @@ def calc_damage_gen9(
     # Tablets of Ruin (Wo-Chien) → onAnyModifyAtk (-25% atk for physical).
     # Sword of Ruin (Chien-Pao) → onAnyModifyDef (-25% def for physical).
     # Beads of Ruin (Chi-Yu) → onAnyModifySpD (-25% spd for special).
-    if field_atk_ability == ABILITY_VESSEL_OF_RUIN and not is_physical and atk_ability != ABILITY_VESSEL_OF_RUIN:
+    if (
+        field_atk_ability == ABILITY_VESSEL_OF_RUIN
+        and not is_physical
+        and atk_ability != ABILITY_VESSEL_OF_RUIN
+    ):
         _atk_chain.chain(3072, 4096)  # 0.75x
-    if field_def_ability == ABILITY_VESSEL_OF_RUIN and not is_physical and atk_ability != ABILITY_VESSEL_OF_RUIN:
+    if (
+        field_def_ability == ABILITY_VESSEL_OF_RUIN
+        and not is_physical
+        and atk_ability != ABILITY_VESSEL_OF_RUIN
+    ):
         _atk_chain.chain(3072, 4096)  # 0.75x
-    if field_atk_ability == ABILITY_TABLETS_OF_RUIN and is_physical and atk_ability != ABILITY_TABLETS_OF_RUIN:
+    if (
+        field_atk_ability == ABILITY_TABLETS_OF_RUIN
+        and is_physical
+        and atk_ability != ABILITY_TABLETS_OF_RUIN
+    ):
         _atk_chain.chain(3072, 4096)
-    if field_def_ability == ABILITY_TABLETS_OF_RUIN and is_physical and atk_ability != ABILITY_TABLETS_OF_RUIN:
+    if (
+        field_def_ability == ABILITY_TABLETS_OF_RUIN
+        and is_physical
+        and atk_ability != ABILITY_TABLETS_OF_RUIN
+    ):
         _atk_chain.chain(3072, 4096)
-    if field_atk_ability == ABILITY_SWORD_OF_RUIN and is_physical and def_ability != ABILITY_SWORD_OF_RUIN:
+    if (
+        field_atk_ability == ABILITY_SWORD_OF_RUIN
+        and is_physical
+        and def_ability != ABILITY_SWORD_OF_RUIN
+    ):
         _def_chain.chain(3072, 4096)
-    if field_def_ability == ABILITY_SWORD_OF_RUIN and is_physical and def_ability != ABILITY_SWORD_OF_RUIN:
+    if (
+        field_def_ability == ABILITY_SWORD_OF_RUIN
+        and is_physical
+        and def_ability != ABILITY_SWORD_OF_RUIN
+    ):
         _def_chain.chain(3072, 4096)
-    if field_atk_ability == ABILITY_BEADS_OF_RUIN and not is_physical and def_ability != ABILITY_BEADS_OF_RUIN:
+    if (
+        field_atk_ability == ABILITY_BEADS_OF_RUIN
+        and not is_physical
+        and def_ability != ABILITY_BEADS_OF_RUIN
+    ):
         _def_chain.chain(3072, 4096)
-    if field_def_ability == ABILITY_BEADS_OF_RUIN and not is_physical and def_ability != ABILITY_BEADS_OF_RUIN:
+    if (
+        field_def_ability == ABILITY_BEADS_OF_RUIN
+        and not is_physical
+        and def_ability != ABILITY_BEADS_OF_RUIN
+    ):
         _def_chain.chain(3072, 4096)
 
     # Assault Vest
@@ -1255,7 +1687,11 @@ def calc_damage_gen9(
         _def_chain.chain(6144, 4096)  # 1.5x
 
     # Fur Coat
-    has_mold_fc = atk_ability in (ABILITY_MOLD_BREAKER, ABILITY_TERAVOLT, ABILITY_TURBOBLAZE)
+    has_mold_fc = atk_ability in (
+        ABILITY_MOLD_BREAKER,
+        ABILITY_TERAVOLT,
+        ABILITY_TURBOBLAZE,
+    )
     if def_ability == ABILITY_FUR_COAT and uses_physical_def and not has_mold_fc:
         _def_chain.chain(8192, 4096)  # 2x
 
@@ -1265,8 +1701,12 @@ def calc_damage_gen9(
     # Breakable — suppressed by Mold Breaker / Teravolt / Turboblaze.
     _ABILITY_GRASS_PELT = 179
     current_terrain_gp = int(battle[OFF_FIELD + F_TERRAIN])
-    if (def_ability == _ABILITY_GRASS_PELT and uses_physical_def
-            and current_terrain_gp == TERRAIN_GRASSY and not has_mold_fc):
+    if (
+        def_ability == _ABILITY_GRASS_PELT
+        and uses_physical_def
+        and current_terrain_gp == TERRAIN_GRASSY
+        and not has_mold_fc
+    ):
         _def_chain.chain(6144, 4096)
 
     if def_item == ITEM_EVIOLITE:
@@ -1278,12 +1718,18 @@ def calc_damage_gen9(
     # means Snowscape still boosts Psyshock / Psystrike / Secret Sword because
     # they target Def even though their move category is not Physical.
     def_is_ice = (def_type1 == TYPE_ICE) or (def_type2 == TYPE_ICE)
-    snow_def_mult = 1.5 if (weather == WEATHER_SNOW and def_is_ice and uses_physical_def) else 1.0
+    snow_def_mult = (
+        1.5 if (weather == WEATHER_SNOW and def_is_ice and uses_physical_def) else 1.0
+    )
     if snow_def_mult != 1.0:
         _def_chain.chain(6144, 4096)
 
     def_is_rock = (def_type1 == TYPE_ROCK) or (def_type2 == TYPE_ROCK)
-    sand_spd_mult = 1.5 if (weather == WEATHER_SAND and def_is_rock and not uses_physical_def) else 1.0
+    sand_spd_mult = (
+        1.5
+        if (weather == WEATHER_SAND and def_is_rock and not uses_physical_def)
+        else 1.0
+    )
     if sand_spd_mult != 1.0:
         _def_chain.chain(6144, 4096)
 
@@ -1296,7 +1742,10 @@ def calc_damage_gen9(
     )
     def_paradox_active = (
         (def_ability == ABILITY_PROTOSYNTHESIS and weather == WEATHER_SUN)
-        or (def_ability == ABILITY_QUARK_DRIVE and int(battle[OFF_FIELD + F_TERRAIN]) == TERRAIN_ELECTRIC)
+        or (
+            def_ability == ABILITY_QUARK_DRIVE
+            and int(battle[OFF_FIELD + F_TERRAIN]) == TERRAIN_ELECTRIC
+        )
         or def_booster_consumed
     )
     _def_paradox_best = _get_paradox_best_stat(battle, def_offset)
@@ -1381,14 +1830,20 @@ def calc_damage_gen9(
     has_scrappy = atk_ability in (ABILITY_SCRAPPY, ABILITY_MINDS_EYE)
     is_normal_or_fighting = move_type in (TYPE_NORMAL, TYPE_FIGHTING)
     def_is_ghost = (def_type1 == TYPE_GHOST) or (def_type2 == TYPE_GHOST)
-    def_ext_vol_offset = (OFF_FIELD + F_EXTENDED_VOLATILE_0) if def_side == 0 else (OFF_FIELD + F_EXTENDED_VOLATILE_1)
+    def_ext_vol_offset = (
+        (OFF_FIELD + F_EXTENDED_VOLATILE_0)
+        if def_side == 0
+        else (OFF_FIELD + F_EXTENDED_VOLATILE_1)
+    )
     def_ext_vol = int(battle[def_ext_vol_offset])
     has_foresight = (def_ext_vol & EXT_VOL_FORESIGHT) != 0
     if (has_scrappy or has_foresight) and is_normal_or_fighting and def_is_ghost:
         # Recompute type_mult ignoring the Ghost slot(s).
         _slot1_mul = 1.0 if def_type1 == TYPE_GHOST else eff1
-        _slot2_mul = 1.0 if (def_type2 == TYPE_GHOST) else (
-            1.0 if def_type2 == def_type1 else eff2
+        _slot2_mul = (
+            1.0
+            if (def_type2 == TYPE_GHOST)
+            else (1.0 if def_type2 == def_type1 else eff2)
         )
         type_mult = _slot1_mul * _slot2_mul
 
@@ -1399,35 +1854,105 @@ def calc_damage_gen9(
         # Future Sight / Doom Desire bypass type immunity (rare in OU).
         type_mult = 1.0
     if move_id == 615:  # Thousand Arrows
-        if move_type == TYPE_GROUND and (def_type1 == TYPE_FLYING or def_type2 == TYPE_FLYING):
+        if move_type == TYPE_GROUND and (
+            def_type1 == TYPE_FLYING or def_type2 == TYPE_FLYING
+        ):
             # Replace flying immunity with neutral
             if type_mult == 0.0:
                 type_mult = 1.0
 
-    has_mold_breaker = atk_ability in (ABILITY_MOLD_BREAKER, ABILITY_TERAVOLT, ABILITY_TURBOBLAZE)
+    has_mold_breaker = atk_ability in (
+        ABILITY_MOLD_BREAKER,
+        ABILITY_TERAVOLT,
+        ABILITY_TURBOBLAZE,
+    )
 
     move_flags_early = int(game_data.move_flags[move_id])
     is_sound = (move_flags_early & FLAG_SOUND) != 0
     is_bullet = (move_flags_early & FLAG_BULLET) != 0
 
-    levitate_immune = (def_ability == ABILITY_LEVITATE) and (move_type == TYPE_GROUND) and not has_mold_breaker
-    flash_fire_immune = (def_ability == ABILITY_FLASH_FIRE) and (move_type == TYPE_FIRE) and not has_mold_breaker
-    volt_immune = (def_ability == ABILITY_VOLT_ABSORB) and (move_type == TYPE_ELECTRIC) and not has_mold_breaker
-    water_immune = (def_ability == ABILITY_WATER_ABSORB) and (move_type == TYPE_WATER) and not has_mold_breaker
-    sap_sipper_immune = (def_ability == ABILITY_SAP_SIPPER) and (move_type == TYPE_GRASS) and not has_mold_breaker
-    storm_drain_immune = (def_ability == ABILITY_STORM_DRAIN) and (move_type == TYPE_WATER) and not has_mold_breaker
-    lightning_rod_immune = (def_ability == ABILITY_LIGHTNING_ROD) and (move_type == TYPE_ELECTRIC) and not has_mold_breaker
-    motor_drive_immune = (def_ability == ABILITY_MOTOR_DRIVE) and (move_type == TYPE_ELECTRIC) and not has_mold_breaker
-    dry_skin_water_immune = (def_ability == ABILITY_DRY_SKIN) and (move_type == TYPE_WATER) and not has_mold_breaker
-    wonder_guard_immune = (def_ability == ABILITY_WONDER_GUARD) and (type_mult <= 1.0) and not has_mold_breaker
-    soundproof_immune = (def_ability == ABILITY_SOUNDPROOF) and is_sound and not has_mold_breaker
-    bulletproof_immune = (def_ability == ABILITY_BULLETPROOF) and is_bullet and not has_mold_breaker
-    earth_eater_immune = (def_ability == ABILITY_EARTH_EATER) and (move_type == TYPE_GROUND) and not has_mold_breaker
-    well_baked_immune = (def_ability == ABILITY_WELL_BAKED_BODY) and (move_type == TYPE_FIRE) and not has_mold_breaker
-    ability_immune = (levitate_immune or flash_fire_immune or volt_immune or water_immune or
-                      sap_sipper_immune or storm_drain_immune or lightning_rod_immune or
-                      motor_drive_immune or dry_skin_water_immune or wonder_guard_immune or
-                      soundproof_immune or bulletproof_immune or earth_eater_immune or well_baked_immune)
+    levitate_immune = (
+        (def_ability == ABILITY_LEVITATE)
+        and (move_type == TYPE_GROUND)
+        and not has_mold_breaker
+    )
+    flash_fire_immune = (
+        (def_ability == ABILITY_FLASH_FIRE)
+        and (move_type == TYPE_FIRE)
+        and not has_mold_breaker
+    )
+    volt_immune = (
+        (def_ability == ABILITY_VOLT_ABSORB)
+        and (move_type == TYPE_ELECTRIC)
+        and not has_mold_breaker
+    )
+    water_immune = (
+        (def_ability == ABILITY_WATER_ABSORB)
+        and (move_type == TYPE_WATER)
+        and not has_mold_breaker
+    )
+    sap_sipper_immune = (
+        (def_ability == ABILITY_SAP_SIPPER)
+        and (move_type == TYPE_GRASS)
+        and not has_mold_breaker
+    )
+    storm_drain_immune = (
+        (def_ability == ABILITY_STORM_DRAIN)
+        and (move_type == TYPE_WATER)
+        and not has_mold_breaker
+    )
+    lightning_rod_immune = (
+        (def_ability == ABILITY_LIGHTNING_ROD)
+        and (move_type == TYPE_ELECTRIC)
+        and not has_mold_breaker
+    )
+    motor_drive_immune = (
+        (def_ability == ABILITY_MOTOR_DRIVE)
+        and (move_type == TYPE_ELECTRIC)
+        and not has_mold_breaker
+    )
+    dry_skin_water_immune = (
+        (def_ability == ABILITY_DRY_SKIN)
+        and (move_type == TYPE_WATER)
+        and not has_mold_breaker
+    )
+    wonder_guard_immune = (
+        (def_ability == ABILITY_WONDER_GUARD)
+        and (type_mult <= 1.0)
+        and not has_mold_breaker
+    )
+    soundproof_immune = (
+        (def_ability == ABILITY_SOUNDPROOF) and is_sound and not has_mold_breaker
+    )
+    bulletproof_immune = (
+        (def_ability == ABILITY_BULLETPROOF) and is_bullet and not has_mold_breaker
+    )
+    earth_eater_immune = (
+        (def_ability == ABILITY_EARTH_EATER)
+        and (move_type == TYPE_GROUND)
+        and not has_mold_breaker
+    )
+    well_baked_immune = (
+        (def_ability == ABILITY_WELL_BAKED_BODY)
+        and (move_type == TYPE_FIRE)
+        and not has_mold_breaker
+    )
+    ability_immune = (
+        levitate_immune
+        or flash_fire_immune
+        or volt_immune
+        or water_immune
+        or sap_sipper_immune
+        or storm_drain_immune
+        or lightning_rod_immune
+        or motor_drive_immune
+        or dry_skin_water_immune
+        or wonder_guard_immune
+        or soundproof_immune
+        or bulletproof_immune
+        or earth_eater_immune
+        or well_baked_immune
+    )
     balloon_immune = (def_item == ITEM_AIR_BALLOON) and (move_type == TYPE_GROUND)
     if ability_immune or balloon_immune:
         type_mult = 0.0
@@ -1480,7 +2005,7 @@ def calc_damage_gen9(
     # stat as opposed to chaining". The runEvent pattern replaces relayVar with
     # Hustle's modified value, then finalModify applies the accumulated chain on
     # top. We defer Hustle to a separate modify applied alongside _atk_chain.apply.
-    _hustle_active = (atk_ability == ABILITY_HUSTLE and is_physical)
+    _hustle_active = atk_ability == ABILITY_HUSTLE and is_physical
 
     atk_hp_def = int(battle[atk_offset + 1])
     atk_maxhp_def = int(battle[atk_offset + 2])
@@ -1509,11 +2034,15 @@ def calc_damage_gen9(
     _atk_item_sp = atk_item_live
     _sp_eff_w = weather
     if _atk_item_sp == ITEM_UTILITY_UMBRELLA and _sp_eff_w in (
-        WEATHER_SUN, WEATHER_DESOLATE_LAND
+        WEATHER_SUN,
+        WEATHER_DESOLATE_LAND,
     ):
         _sp_eff_w = WEATHER_NONE
-    if (atk_ability == ABILITY_SOLAR_POWER and not is_physical
-            and _sp_eff_w in (WEATHER_SUN, WEATHER_DESOLATE_LAND)):
+    if (
+        atk_ability == ABILITY_SOLAR_POWER
+        and not is_physical
+        and _sp_eff_w in (WEATHER_SUN, WEATHER_DESOLATE_LAND)
+    ):
         _atk_chain.chain(6144, 4096)
     # Flare Boost — Showdown data/abilities.ts:1272 `onBasePowerPriority: 19`,
     # chainModify(1.5). Same note as Toxic Boost: left on atk chain for single-
@@ -1525,7 +2054,11 @@ def calc_damage_gen9(
     # defender just switched in (activeTurns === 0). Applies on atk stat,
     # NOT basePower (data/abilities.ts:4403-4422).
     def_is_side0_stakeout = def_offset < OFF_SIDE1
-    def_last_move_stakeout = (OFF_FIELD + F_LAST_MOVE_0) if def_is_side0_stakeout else (OFF_FIELD + F_LAST_MOVE_1)
+    def_last_move_stakeout = (
+        (OFF_FIELD + F_LAST_MOVE_0)
+        if def_is_side0_stakeout
+        else (OFF_FIELD + F_LAST_MOVE_1)
+    )
     def_just_switched_stakeout = int(battle[def_last_move_stakeout]) < 0
     if atk_ability == ABILITY_STAKEOUT and def_just_switched_stakeout:
         _atk_chain.chain(8192, 4096)  # 2x
@@ -1546,7 +2079,8 @@ def calc_damage_gen9(
         _eff_w_op = _effective_weather(battle)
         _atk_item_op = atk_item_live
         if _atk_item_op == ITEM_UTILITY_UMBRELLA and _eff_w_op in (
-            WEATHER_SUN, WEATHER_DESOLATE_LAND
+            WEATHER_SUN,
+            WEATHER_DESOLATE_LAND,
         ):
             _eff_w_op = WEATHER_NONE
         if _eff_w_op in (WEATHER_SUN, WEATHER_DESOLATE_LAND):
@@ -1555,7 +2089,10 @@ def calc_damage_gen9(
     # Protosynthesis / Quark Drive — Showdown onModifyAtk/SpA priority 5,
     # chainModify([5325, 4096]) = 1.3x when best stat is atk or spa
     # (data/abilities.ts:3477-3500). Applies on atk stat, not basePower.
-    _atk_has_paradox_early = atk_ability in (ABILITY_PROTOSYNTHESIS, ABILITY_QUARK_DRIVE)
+    _atk_has_paradox_early = atk_ability in (
+        ABILITY_PROTOSYNTHESIS,
+        ABILITY_QUARK_DRIVE,
+    )
     if _atk_has_paradox_early:
         _atk_item_pe = atk_item_live
         _atk_flags_pe = atk_flags_live
@@ -1565,12 +2102,17 @@ def calc_damage_gen9(
         _booster_consumed_pe = (_atk_flags_pe & FLAG_BOOSTER_ENERGY_ACTIVE) != 0
         _paradox_on = (
             (atk_ability == ABILITY_PROTOSYNTHESIS and weather == WEATHER_SUN)
-            or (atk_ability == ABILITY_QUARK_DRIVE and int(battle[OFF_FIELD + F_TERRAIN]) == TERRAIN_ELECTRIC)
+            or (
+                atk_ability == ABILITY_QUARK_DRIVE
+                and int(battle[OFF_FIELD + F_TERRAIN]) == TERRAIN_ELECTRIC
+            )
             or _booster_consumed_pe
         )
         if _paradox_on:
             _atk_paradox_best = _get_paradox_best_stat(battle, atk_offset)
-            if (_atk_paradox_best == "atk" and is_physical) or (_atk_paradox_best == "spa" and not is_physical):
+            if (_atk_paradox_best == "atk" and is_physical) or (
+                _atk_paradox_best == "spa" and not is_physical
+            ):
                 _atk_chain.chain(5325, 4096)  # 1.3x
 
     def_status_field = int(battle[def_offset + 12])
@@ -1579,8 +2121,12 @@ def calc_damage_gen9(
     # Marvel Scale: Showdown onModifyDef chainModify(1.5) when user is statused.
     # Only applies to physical attacks since SpD is unused for physical.
     # Also gated by Mold Breaker (flags.breakable).
-    marvel_scale_active = ((def_ability == ABILITY_MARVEL_SCALE) and def_has_status_bool
-                           and is_physical and not has_mold_fc)
+    marvel_scale_active = (
+        (def_ability == ABILITY_MARVEL_SCALE)
+        and def_has_status_bool
+        and is_physical
+        and not has_mold_fc
+    )
     if marvel_scale_active:
         _def_chain.chain(6144, 4096)
 
@@ -1600,7 +2146,7 @@ def calc_damage_gen9(
     # at this point so the check is just `bp <= 60`. The 1.5x is folded into
     # the BP chain accumulator below, NOT applied directly to bp here, to
     # avoid double-rounding vs Showdown's single finalModify.
-    _technician_active = (atk_ability == ABILITY_TECHNICIAN and bp <= 60 and bp > 0)
+    _technician_active = atk_ability == ABILITY_TECHNICIAN and bp <= 60 and bp > 0
     if move_id == MOVE_FACADE and atk_has_status:
         bp = bp * 2
 
@@ -1746,7 +2292,10 @@ def calc_damage_gen9(
     is_solar = move_id in (MOVE_SOLAR_BEAM, MOVE_SOLAR_BLADE)
     _solar_atk_eff_weather = weather
     if atk_item_live == ITEM_UTILITY_UMBRELLA and weather in (
-        WEATHER_SUN, WEATHER_RAIN, WEATHER_PRIMORDIAL_SEA, WEATHER_DESOLATE_LAND
+        WEATHER_SUN,
+        WEATHER_RAIN,
+        WEATHER_PRIMORDIAL_SEA,
+        WEATHER_DESOLATE_LAND,
     ):
         _solar_atk_eff_weather = WEATHER_NONE
     non_sun_weather = (
@@ -1757,32 +2306,46 @@ def calc_damage_gen9(
     _solar_weak = is_solar and non_sun_weather
 
     # Expanding Force: chainModify(1.5) on Psychic Terrain (folded into BP chain).
-    _expanding_force_boost = (move_id == MOVE_EXPANDING_FORCE and terrain == TERRAIN_PSYCHIC)
+    _expanding_force_boost = (
+        move_id == MOVE_EXPANDING_FORCE and terrain == TERRAIN_PSYCHIC
+    )
     if move_id == MOVE_RISING_VOLTAGE and terrain == TERRAIN_ELECTRIC:
         bp = bp * 2
     # Misty Explosion: chainModify(1.5) on Misty Terrain (folded into BP chain).
-    _misty_explosion_boost = (move_id == MOVE_MISTY_EXPLOSION and terrain == TERRAIN_MISTY)
+    _misty_explosion_boost = (
+        move_id == MOVE_MISTY_EXPLOSION and terrain == TERRAIN_MISTY
+    )
 
     # STAB
     has_stab = (move_type == atk_type1) or (move_type == atk_type2)
     atk_flags_stab = int(battle[atk_offset + 15])
     is_terad = (atk_flags_stab & 8) != 0
     atk_is_side0 = atk_offset < OFF_SIDE1
-    orig_types_field = int(battle[OFF_META + (M_TERA_ORIG_TYPES_0 if atk_is_side0 else M_TERA_ORIG_TYPES_1)])
+    orig_types_field = int(
+        battle[
+            OFF_META + (M_TERA_ORIG_TYPES_0 if atk_is_side0 else M_TERA_ORIG_TYPES_1)
+        ]
+    )
     orig_type1 = orig_types_field & 0xFF
     orig_type2 = (orig_types_field >> 8) & 0xFF
-    has_orig_stab = is_terad and ((move_type == orig_type1) or (move_type == orig_type2))
+    has_orig_stab = is_terad and (
+        (move_type == orig_type1) or (move_type == orig_type2)
+    )
     has_stab = has_stab or has_orig_stab
 
     tera_type_from_boosts = (int(battle[atk_offset + 14]) >> 12) & 0xF
     move_is_tera_type = move_type == tera_type_from_boosts
-    tera_matches_original = (tera_type_from_boosts == orig_type1) or (tera_type_from_boosts == orig_type2)
+    tera_matches_original = (tera_type_from_boosts == orig_type1) or (
+        tera_type_from_boosts == orig_type2
+    )
     tera_double_stab = is_terad and move_is_tera_type and tera_matches_original
 
     adaptability_active = atk_ability == ABILITY_ADAPTABILITY
     if has_stab:
         if adaptability_active and tera_double_stab:
-            stab_mult = 2.25  # both → 2.25x (Showdown adapt boost on top of tera double STAB)
+            stab_mult = (
+                2.25  # both → 2.25x (Showdown adapt boost on top of tera double STAB)
+            )
         elif adaptability_active or tera_double_stab:
             stab_mult = 2.0
         else:
@@ -1819,7 +2382,9 @@ def calc_damage_gen9(
     # Showdown source: data/abilities.ts toughclaws → chainModify([5325, 4096])
     # which is 1.3x (NOT 1.33x). Pokepy used to write 1.33 here which mapped
     # to the Aura modifier (5448) in _chain_bp.
-    tough_claws_mult = 1.3 if (atk_ability == ABILITY_TOUGH_CLAWS and is_contact) else 1.0
+    tough_claws_mult = (
+        1.3 if (atk_ability == ABILITY_TOUGH_CLAWS and is_contact) else 1.0
+    )
 
     is_punch = (move_flags & FLAG_PUNCH) != 0
     iron_fist_mult = 1.2 if (atk_ability == ABILITY_IRON_FIST and is_punch) else 1.0
@@ -1831,7 +2396,9 @@ def calc_damage_gen9(
     strong_jaw_mult = 1.5 if (atk_ability == ABILITY_STRONG_JAW and is_bite) else 1.0
 
     is_pulse = (move_flags & FLAG_PULSE) != 0
-    mega_launcher_mult = 1.5 if (atk_ability == ABILITY_MEGA_LAUNCHER and is_pulse) else 1.0
+    mega_launcher_mult = (
+        1.5 if (atk_ability == ABILITY_MEGA_LAUNCHER and is_pulse) else 1.0
+    )
 
     punk_rock_atk_mult = 1.3 if (atk_ability == ABILITY_PUNK_ROCK and is_sound) else 1.0
 
@@ -1842,14 +2409,26 @@ def calc_damage_gen9(
     #   if (move.recoil || move.hasCrashDamage) return chainModify([4915,4096]);
     _HAS_CRASH_DAMAGE_MOVES = (26, 136, 916)
     is_crash_move = move_id in _HAS_CRASH_DAMAGE_MOVES
-    reckless_mult = 1.2 if (atk_ability == ABILITY_RECKLESS and (is_recoil_move or is_crash_move)) else 1.0
+    reckless_mult = (
+        1.2
+        if (atk_ability == ABILITY_RECKLESS and (is_recoil_move or is_crash_move))
+        else 1.0
+    )
 
-    steelworker_mult = 1.5 if (atk_ability == ABILITY_STEELWORKER and move_type == TYPE_STEEL) else 1.0
+    steelworker_mult = (
+        1.5 if (atk_ability == ABILITY_STEELWORKER and move_type == TYPE_STEEL) else 1.0
+    )
 
-    flash_fire_activated = (atk_ability == ABILITY_FLASH_FIRE) and ((atk_flags_stab & 0x200) != 0) and (move_type == TYPE_FIRE)
+    flash_fire_activated = (
+        (atk_ability == ABILITY_FLASH_FIRE)
+        and ((atk_flags_stab & 0x200) != 0)
+        and (move_type == TYPE_FIRE)
+    )
     flash_fire_mult = 1.5 if flash_fire_activated else 1.0
 
-    neuroforce_mult = 1.25 if (atk_ability == ABILITY_NEUROFORCE and type_mult > 1.0) else 1.0
+    neuroforce_mult = (
+        1.25 if (atk_ability == ABILITY_NEUROFORCE and type_mult > 1.0) else 1.0
+    )
 
     moving_last = bool(is_moving_last)
     analytic_mult = 1.3 if (atk_ability == ABILITY_ANALYTIC and moving_last) else 1.0
@@ -1858,14 +2437,16 @@ def calc_damage_gen9(
     atk_max_hp = int(battle[atk_offset + 2])
     is_pinch = (atk_hp * 3) < atk_max_hp
     pinch_active = (
-        (atk_ability == ABILITY_OVERGROW and is_pinch and move_type == TYPE_GRASS) or
-        (atk_ability == ABILITY_BLAZE and is_pinch and move_type == TYPE_FIRE) or
-        (atk_ability == ABILITY_TORRENT and is_pinch and move_type == TYPE_WATER) or
-        (atk_ability == ABILITY_SWARM and is_pinch and move_type == TYPE_BUG)
+        (atk_ability == ABILITY_OVERGROW and is_pinch and move_type == TYPE_GRASS)
+        or (atk_ability == ABILITY_BLAZE and is_pinch and move_type == TYPE_FIRE)
+        or (atk_ability == ABILITY_TORRENT and is_pinch and move_type == TYPE_WATER)
+        or (atk_ability == ABILITY_SWARM and is_pinch and move_type == TYPE_BUG)
     )
     pinch_mult = 1.5 if pinch_active else 1.0
 
-    gorilla_tactics_mult = 1.5 if (atk_ability == ABILITY_GORILLA_TACTICS and is_physical) else 1.0
+    gorilla_tactics_mult = (
+        1.5 if (atk_ability == ABILITY_GORILLA_TACTICS and is_physical) else 1.0
+    )
 
     # Supreme Overlord — Showdown's exact BP table:
     # data/abilities.ts:supremeoverlord powMod = [4096, 4506, 4915, 5325, 5734, 6144]
@@ -1879,35 +2460,66 @@ def calc_damage_gen9(
         _so_num = _so_table[min(fainted_count, 5) - 1]
     else:
         _so_num = 4096
-    supreme_mult = 1.0  # Disabled — applied via _show_modify below using exact numerator.
+    supreme_mult = (
+        1.0  # Disabled — applied via _show_modify below using exact numerator.
+    )
 
-    water_bubble_atk_mult = 2.0 if (atk_ability == ABILITY_WATER_BUBBLE and move_type == TYPE_WATER) else 1.0
+    water_bubble_atk_mult = (
+        2.0
+        if (atk_ability == ABILITY_WATER_BUBBLE and move_type == TYPE_WATER)
+        else 1.0
+    )
 
-    sand_force_active = (atk_ability == ABILITY_SAND_FORCE and weather == WEATHER_SAND and
-                         move_type in (TYPE_ROCK, TYPE_GROUND, TYPE_STEEL))
+    sand_force_active = (
+        atk_ability == ABILITY_SAND_FORCE
+        and weather == WEATHER_SAND
+        and move_type in (TYPE_ROCK, TYPE_GROUND, TYPE_STEEL)
+    )
     sand_force_mult = 1.3 if sand_force_active else 1.0
 
-    transistor_mult = 1.3 if (atk_ability == ABILITY_TRANSISTOR and move_type == TYPE_ELECTRIC) else 1.0
-    dragons_maw_mult = 1.5 if (atk_ability == ABILITY_DRAGONS_MAW and move_type == TYPE_DRAGON) else 1.0
-    rocky_payload_mult = 1.5 if (atk_ability == ABILITY_ROCKY_PAYLOAD and move_type == TYPE_ROCK) else 1.0
+    transistor_mult = (
+        1.3
+        if (atk_ability == ABILITY_TRANSISTOR and move_type == TYPE_ELECTRIC)
+        else 1.0
+    )
+    dragons_maw_mult = (
+        1.5
+        if (atk_ability == ABILITY_DRAGONS_MAW and move_type == TYPE_DRAGON)
+        else 1.0
+    )
+    rocky_payload_mult = (
+        1.5
+        if (atk_ability == ABILITY_ROCKY_PAYLOAD and move_type == TYPE_ROCK)
+        else 1.0
+    )
 
     def_is_side0_so = def_offset < OFF_SIDE1
-    def_last_move_off = (OFF_FIELD + F_LAST_MOVE_0) if def_is_side0_so else (OFF_FIELD + F_LAST_MOVE_1)
+    def_last_move_off = (
+        (OFF_FIELD + F_LAST_MOVE_0) if def_is_side0_so else (OFF_FIELD + F_LAST_MOVE_1)
+    )
     def_just_switched = int(battle[def_last_move_off]) < 0
-    stakeout_mult = 2.0 if (atk_ability == ABILITY_STAKEOUT and def_just_switched) else 1.0
+    stakeout_mult = (
+        2.0 if (atk_ability == ABILITY_STAKEOUT and def_just_switched) else 1.0
+    )
 
     # Dark Aura / Fairy Aura — Showdown data/abilities.ts darkaura L836,
     # fairyaura L1230. onAnyBasePower, return chainModify([5448, 4096]) for
     # normal case, or [3072, 4096] (0.75x) if move.hasAuraBreak is true.
     # Aura Break (ability 188, L302) sets hasAuraBreak when either side has it.
     _ABILITY_AURA_BREAK = 188
-    _aura_break_active = (atk_ability == _ABILITY_AURA_BREAK) or (def_ability == _ABILITY_AURA_BREAK)
-    any_dark_aura = (atk_ability == ABILITY_DARK_AURA) or (def_ability == ABILITY_DARK_AURA)
+    _aura_break_active = (atk_ability == _ABILITY_AURA_BREAK) or (
+        def_ability == _ABILITY_AURA_BREAK
+    )
+    any_dark_aura = (atk_ability == ABILITY_DARK_AURA) or (
+        def_ability == ABILITY_DARK_AURA
+    )
     if any_dark_aura and move_type == TYPE_DARK:
         dark_aura_mult = 0.75 if _aura_break_active else 1.33
     else:
         dark_aura_mult = 1.0
-    any_fairy_aura = (atk_ability == ABILITY_FAIRY_AURA) or (def_ability == ABILITY_FAIRY_AURA)
+    any_fairy_aura = (atk_ability == ABILITY_FAIRY_AURA) or (
+        def_ability == ABILITY_FAIRY_AURA
+    )
     if any_fairy_aura and move_type == TYPE_FAIRY:
         fairy_aura_mult = 0.75 if _aura_break_active else 1.33
     else:
@@ -1922,66 +2534,133 @@ def calc_damage_gen9(
     had_item_at_start = (atk_flags_p & 0x80) != 0
     if suppress_attacker_item:
         had_item_at_start = False
-    booster_consumed = has_paradox and (
-        (atk_flags_p & FLAG_BOOSTER_ENERGY_ACTIVE) != 0
-    )
+    booster_consumed = has_paradox and ((atk_flags_p & FLAG_BOOSTER_ENERGY_ACTIVE) != 0)
     paradox_active = (
-        (atk_ability == ABILITY_PROTOSYNTHESIS and weather_for_paradox == 1) or
-        (atk_ability == ABILITY_QUARK_DRIVE and terrain_for_paradox == TERRAIN_ELECTRIC) or
-        booster_consumed
+        (atk_ability == ABILITY_PROTOSYNTHESIS and weather_for_paradox == 1)
+        or (
+            atk_ability == ABILITY_QUARK_DRIVE
+            and terrain_for_paradox == TERRAIN_ELECTRIC
+        )
+        or booster_consumed
     )
     _atk_paradox_best = _get_paradox_best_stat(battle, atk_offset)
-    paradox_atk_mult = 1.3 if (
-        paradox_active
-        and ((_atk_paradox_best == "atk" and is_physical) or (_atk_paradox_best == "spa" and not is_physical))
-    ) else 1.0
+    paradox_atk_mult = (
+        1.3
+        if (
+            paradox_active
+            and (
+                (_atk_paradox_best == "atk" and is_physical)
+                or (_atk_paradox_best == "spa" and not is_physical)
+            )
+        )
+        else 1.0
+    )
 
     # Defender abilities
-    dry_skin_fire_mult = 1.25 if ((def_ability == ABILITY_DRY_SKIN) and move_type == TYPE_FIRE and not has_mold_breaker) else 1.0
-    water_bubble_def_mult = 0.5 if ((def_ability == ABILITY_WATER_BUBBLE) and move_type == TYPE_FIRE and not has_mold_breaker) else 1.0
-    thick_fat_active = (def_ability == ABILITY_THICK_FAT) and not has_mold_breaker and move_type in (TYPE_FIRE, TYPE_ICE)
+    dry_skin_fire_mult = (
+        1.25
+        if (
+            (def_ability == ABILITY_DRY_SKIN)
+            and move_type == TYPE_FIRE
+            and not has_mold_breaker
+        )
+        else 1.0
+    )
+    water_bubble_def_mult = (
+        0.5
+        if (
+            (def_ability == ABILITY_WATER_BUBBLE)
+            and move_type == TYPE_FIRE
+            and not has_mold_breaker
+        )
+        else 1.0
+    )
+    thick_fat_active = (
+        (def_ability == ABILITY_THICK_FAT)
+        and not has_mold_breaker
+        and move_type in (TYPE_FIRE, TYPE_ICE)
+    )
     thick_fat_mult = 0.5 if thick_fat_active else 1.0
-    filter_active = ((def_ability in (ABILITY_FILTER, ABILITY_SOLID_ROCK, ABILITY_PRISM_ARMOR)) and not has_mold_breaker and type_mult > 1.0)
+    filter_active = (
+        (def_ability in (ABILITY_FILTER, ABILITY_SOLID_ROCK, ABILITY_PRISM_ARMOR))
+        and not has_mold_breaker
+        and type_mult > 1.0
+    )
     filter_mult = 0.75 if filter_active else 1.0
-    ice_scales_mult = 0.5 if ((def_ability == ABILITY_ICE_SCALES) and not is_physical and not has_mold_breaker) else 1.0
-    fluffy_contact = (def_ability == ABILITY_FLUFFY) and is_contact and not has_mold_breaker
-    fluffy_fire = (def_ability == ABILITY_FLUFFY) and move_type == TYPE_FIRE and not has_mold_breaker
+    ice_scales_mult = (
+        0.5
+        if (
+            (def_ability == ABILITY_ICE_SCALES)
+            and not is_physical
+            and not has_mold_breaker
+        )
+        else 1.0
+    )
+    fluffy_contact = (
+        (def_ability == ABILITY_FLUFFY) and is_contact and not has_mold_breaker
+    )
+    fluffy_fire = (
+        (def_ability == ABILITY_FLUFFY)
+        and move_type == TYPE_FIRE
+        and not has_mold_breaker
+    )
     fluffy_mult = (0.5 if fluffy_contact else 1.0) * (2.0 if fluffy_fire else 1.0)
-    punk_rock_def_mult = 0.5 if ((def_ability == ABILITY_PUNK_ROCK) and is_sound and not has_mold_breaker) else 1.0
-    tinted_lens_mult = 2.0 if ((atk_ability == ABILITY_TINTED_LENS) and 0.0 < type_mult < 1.0) else 1.0
+    punk_rock_def_mult = (
+        0.5
+        if ((def_ability == ABILITY_PUNK_ROCK) and is_sound and not has_mold_breaker)
+        else 1.0
+    )
+    tinted_lens_mult = (
+        2.0 if ((atk_ability == ABILITY_TINTED_LENS) and 0.0 < type_mult < 1.0) else 1.0
+    )
 
     # Choice Band/Specs are now applied as atk/spa stat modifiers above —
     # set choice_mult to 1.0 here so they don't double-apply via bp_item_mult.
     choice_mult = 1.0
     life_orb_mult = 1.3 if atk_item == ITEM_LIFE_ORB else 1.0
-    expert_belt_mult = 1.2 if (atk_item == ITEM_EXPERT_BELT and type_mult > 1.0) else 1.0
+    expert_belt_mult = (
+        1.2 if (atk_item == ITEM_EXPERT_BELT and type_mult > 1.0) else 1.0
+    )
 
     type_boost = (
-        (atk_item == ITEM_CHARCOAL and move_type == TYPE_FIRE) or
-        (atk_item == ITEM_MYSTIC_WATER and move_type == TYPE_WATER) or
-        (atk_item == ITEM_MAGNET and move_type == TYPE_ELECTRIC) or
-        (atk_item in (ITEM_MIRACLE_SEED, ITEM_ROSE_INCENSE) and move_type == TYPE_GRASS) or
-        (atk_item == ITEM_NEVER_MELT_ICE and move_type == TYPE_ICE) or
-        (atk_item == ITEM_BLACK_BELT and move_type == TYPE_FIGHTING) or
-        (atk_item == ITEM_POISON_BARB and move_type == TYPE_POISON) or
-        (atk_item == ITEM_SOFT_SAND and move_type == TYPE_GROUND) or
-        (atk_item == ITEM_SHARP_BEAK and move_type == TYPE_FLYING) or
-        (atk_item == ITEM_TWISTED_SPOON and move_type == TYPE_PSYCHIC) or
-        (atk_item == ITEM_SILVER_POWDER and move_type == TYPE_BUG) or
-        (atk_item == ITEM_HARD_STONE and move_type == TYPE_ROCK) or
-        (atk_item == ITEM_SPELL_TAG and move_type == TYPE_GHOST) or
-        (atk_item == ITEM_DRAGON_FANG and move_type == TYPE_DRAGON) or
-        (atk_item == ITEM_BLACK_GLASSES and move_type == TYPE_DARK) or
-        (atk_item == ITEM_METAL_COAT and move_type == TYPE_STEEL) or
-        (atk_item == ITEM_FAIRY_FEATHER and move_type == TYPE_FAIRY) or
-        (atk_item == ITEM_SILK_SCARF and move_type == TYPE_NORMAL) or
-        (atk_item in _TYPE_BOOST_PLATES.get(move_type, ())) or
+        (atk_item == ITEM_CHARCOAL and move_type == TYPE_FIRE)
+        or (atk_item == ITEM_MYSTIC_WATER and move_type == TYPE_WATER)
+        or (atk_item == ITEM_MAGNET and move_type == TYPE_ELECTRIC)
+        or (
+            atk_item in (ITEM_MIRACLE_SEED, ITEM_ROSE_INCENSE)
+            and move_type == TYPE_GRASS
+        )
+        or (atk_item == ITEM_NEVER_MELT_ICE and move_type == TYPE_ICE)
+        or (atk_item == ITEM_BLACK_BELT and move_type == TYPE_FIGHTING)
+        or (atk_item == ITEM_POISON_BARB and move_type == TYPE_POISON)
+        or (atk_item == ITEM_SOFT_SAND and move_type == TYPE_GROUND)
+        or (atk_item == ITEM_SHARP_BEAK and move_type == TYPE_FLYING)
+        or (atk_item == ITEM_TWISTED_SPOON and move_type == TYPE_PSYCHIC)
+        or (atk_item == ITEM_SILVER_POWDER and move_type == TYPE_BUG)
+        or (atk_item == ITEM_HARD_STONE and move_type == TYPE_ROCK)
+        or (atk_item == ITEM_SPELL_TAG and move_type == TYPE_GHOST)
+        or (atk_item == ITEM_DRAGON_FANG and move_type == TYPE_DRAGON)
+        or (atk_item == ITEM_BLACK_GLASSES and move_type == TYPE_DARK)
+        or (atk_item == ITEM_METAL_COAT and move_type == TYPE_STEEL)
+        or (atk_item == ITEM_FAIRY_FEATHER and move_type == TYPE_FAIRY)
+        or (atk_item == ITEM_SILK_SCARF and move_type == TYPE_NORMAL)
+        or (atk_item in _TYPE_BOOST_PLATES.get(move_type, ()))
+        or
         # Ogerpon masks boost ALL attacks (not just their type), gated by
         # species. Showdown data/items.ts: onBasePower checks
         # user.baseSpecies.name.startsWith('Ogerpon-*'), NOT move.type.
-        (atk_item == ITEM_WELLSPRING_MASK and int(battle[atk_offset + 0]) == SPECIES_OGERPON_WELLSPRING) or
-        (atk_item == ITEM_CORNERSTONE_MASK and int(battle[atk_offset + 0]) == SPECIES_OGERPON_CORNERSTONE) or
-        (atk_item == ITEM_HEARTHFLAME_MASK and int(battle[atk_offset + 0]) == SPECIES_OGERPON_HEARTHFLAME)
+        (
+            atk_item == ITEM_WELLSPRING_MASK
+            and int(battle[atk_offset + 0]) == SPECIES_OGERPON_WELLSPRING
+        )
+        or (
+            atk_item == ITEM_CORNERSTONE_MASK
+            and int(battle[atk_offset + 0]) == SPECIES_OGERPON_CORNERSTONE
+        )
+        or (
+            atk_item == ITEM_HEARTHFLAME_MASK
+            and int(battle[atk_offset + 0]) == SPECIES_OGERPON_HEARTHFLAME
+        )
     )
     # Most type-boosting items (Charcoal, Mystic Water, etc.) give 1.2x in
     # Gen 9. Polkadot Bow (item 444) is a Gen-2 Silk Scarf variant that
@@ -2001,15 +2680,27 @@ def calc_damage_gen9(
     # ModifyDamage chain accumulator with their exact Showdown numerators.
 
     move_effect = int(move_effects.effect_type[move_id])
-    ko_unremovable = is_take_item_blocked_by_item_rule(def_item, int(battle[def_offset + 0]))
+    ko_unremovable = is_take_item_blocked_by_item_rule(
+        def_item, int(battle[def_offset + 0])
+    )
     # Sticky Hold (ability 60) blocks Knock Off from removing the item AND
     # from getting the 1.5x BP boost. Showdown abilities.ts:4549.
     # Sticky Hold has flags.breakable, so Mold Breaker / Teravolt / Turboblaze
     # bypass it.
     _ABILITY_STICKY_HOLD_KO = 60
-    ko_blocked_by_sticky = (def_ability == _ABILITY_STICKY_HOLD_KO) and not has_mold_breaker
-    knock_off_mult = 1.5 if (move_effect == EFFECT_KNOCK_OFF and def_item > 0
-                             and not ko_unremovable and not ko_blocked_by_sticky) else 1.0
+    ko_blocked_by_sticky = (
+        def_ability == _ABILITY_STICKY_HOLD_KO
+    ) and not has_mold_breaker
+    knock_off_mult = (
+        1.5
+        if (
+            move_effect == EFFECT_KNOCK_OFF
+            and def_item > 0
+            and not ko_unremovable
+            and not ko_blocked_by_sticky
+        )
+        else 1.0
+    )
 
     # Multi-hit count (hoisted up from after the damage roll to match
     # Showdown's PRNG frame order). Showdown's tryMoveHit samples the hit
@@ -2088,8 +2779,12 @@ def calc_damage_gen9(
     _MOVE_FLOWER_TRICK_AC = 870
     _MOVE_ZIPPY_ZAP_AC = 729
     is_always_crit = move_id in (
-        MOVE_FROST_BREATH, MOVE_STORM_THROW, MOVE_WICKED_BLOW,
-        MOVE_SURGING_STRIKES, _MOVE_FLOWER_TRICK_AC, _MOVE_ZIPPY_ZAP_AC,
+        MOVE_FROST_BREATH,
+        MOVE_STORM_THROW,
+        MOVE_WICKED_BLOW,
+        MOVE_SURGING_STRIKES,
+        _MOVE_FLOWER_TRICK_AC,
+        _MOVE_ZIPPY_ZAP_AC,
     )
     # Fixed-damage / callback-damage / OHKO moves: Showdown's getDamage returns
     # the damage value BEFORE the crit check and randomizer steps in the main
@@ -2099,15 +2794,21 @@ def calc_damage_gen9(
     # Source: sim/battle-actions.ts:1603-1609 (getDamage early returns for
     # move.ohko, move.damageCallback, move.damage === 'level', move.damage).
     _is_fixed_damage_move = (
-        move_id in (MOVE_SEISMIC_TOSS, MOVE_NIGHT_SHADE)   # damage: 'level'
-        or move_id in (MOVE_SUPER_FANG, MOVE_RUINATION)      # damageCallback (50% HP)
-        or move_id == MOVE_ENDEAVOR                          # damageCallback
-        or move_id in (MOVE_FISSURE, MOVE_GUILLOTINE, MOVE_HORN_DRILL, MOVE_SHEER_COLD)  # ohko
-        or move_id == MOVE_FINAL_GAMBIT                      # damageCallback
-        or move_id == MOVE_PSYWAVE                           # damageCallback
-        or move_id in (MOVE_COUNTER, MOVE_MIRROR_COAT, MOVE_METAL_BURST)  # damageCallback (retaliation)
-        or move_id == 894                                    # Comeuppance damageCallback
-        or move_id == 698                                    # Guardian of Alola damageCallback
+        move_id in (MOVE_SEISMIC_TOSS, MOVE_NIGHT_SHADE)  # damage: 'level'
+        or move_id in (MOVE_SUPER_FANG, MOVE_RUINATION)  # damageCallback (50% HP)
+        or move_id == MOVE_ENDEAVOR  # damageCallback
+        or move_id
+        in (MOVE_FISSURE, MOVE_GUILLOTINE, MOVE_HORN_DRILL, MOVE_SHEER_COLD)  # ohko
+        or move_id == MOVE_FINAL_GAMBIT  # damageCallback
+        or move_id == MOVE_PSYWAVE  # damageCallback
+        or move_id
+        in (
+            MOVE_COUNTER,
+            MOVE_MIRROR_COAT,
+            MOVE_METAL_BURST,
+        )  # damageCallback (retaliation)
+        or move_id == 894  # Comeuppance damageCallback
+        or move_id == 698  # Guardian of Alola damageCallback
     )
     # Showdown sim/battle-actions.ts:1635-1640: `moveHit.crit = move.willCrit
     # || false`, then ONLY if `move.willCrit === undefined` does it call
@@ -2128,8 +2829,10 @@ def calc_damage_gen9(
     # before the damage formula, independent of move.willCrit).
     _ABILITY_BATTLE_ARMOR = 4
     _ABILITY_SHELL_ARMOR_ID = 75
-    if (def_ability in (_ABILITY_BATTLE_ARMOR, _ABILITY_SHELL_ARMOR_ID)
-            and not has_mold_breaker):
+    if (
+        def_ability in (_ABILITY_BATTLE_ARMOR, _ABILITY_SHELL_ARMOR_ID)
+        and not has_mold_breaker
+    ):
         is_crit = False
     # Sniper applies via onModifyDamage chainModify(1.5) (data/abilities.ts:4278),
     # NOT as a crit mult bump. Crit itself is a plain trunc(damage*1.5) per
@@ -2146,16 +2849,28 @@ def calc_damage_gen9(
         def_stat_no_boost = int(def_stat_base * float(get_boost_multiplier(0)))
         _crit_def_chain = _ChainAccum()
         # Ruin abilities (chainModify(0.75) on def for physical, on spd for special)
-        if atk_ability == ABILITY_SWORD_OF_RUIN and is_physical and def_ability != ABILITY_SWORD_OF_RUIN:
+        if (
+            atk_ability == ABILITY_SWORD_OF_RUIN
+            and is_physical
+            and def_ability != ABILITY_SWORD_OF_RUIN
+        ):
             _crit_def_chain.chain(3072, 4096)
-        if atk_ability == ABILITY_BEADS_OF_RUIN and not is_physical and def_ability != ABILITY_BEADS_OF_RUIN:
+        if (
+            atk_ability == ABILITY_BEADS_OF_RUIN
+            and not is_physical
+            and def_ability != ABILITY_BEADS_OF_RUIN
+        ):
             _crit_def_chain.chain(3072, 4096)
         if def_item == ITEM_ASSAULT_VEST and not uses_physical_def:
             _crit_def_chain.chain(6144, 4096)
         if def_ability == ABILITY_FUR_COAT and uses_physical_def and not has_mold_fc:
             _crit_def_chain.chain(8192, 4096)
-        if (def_ability == _ABILITY_GRASS_PELT and uses_physical_def
-                and current_terrain_gp == TERRAIN_GRASSY and not has_mold_fc):
+        if (
+            def_ability == _ABILITY_GRASS_PELT
+            and uses_physical_def
+            and current_terrain_gp == TERRAIN_GRASSY
+            and not has_mold_fc
+        ):
             _crit_def_chain.chain(6144, 4096)
         if def_item == ITEM_EVIOLITE:
             _crit_def_chain.chain(6144, 4096)
@@ -2192,7 +2907,7 @@ def calc_damage_gen9(
     # (getDamage returns before the randomizer step). Skip the PRNG frame
     # here to match Showdown's frame schedule.
     if _is_fixed_damage_move:
-        rand_pct = 100.0   # No random factor for fixed-damage moves
+        rand_pct = 100.0  # No random factor for fixed-damage moves
     else:
         rand_roll = gen5_prng.random(16)
         rand_pct = float(100 - rand_roll)
@@ -2204,10 +2919,7 @@ def calc_damage_gen9(
     # already KO'd the target.
     _per_hit_rolls: list = [(is_crit, rand_pct)]
     _MOVE_TRIPLE_KICK = 167
-    _defer_extra_multihit_rolls = (
-        num_hits_pre > 1
-        and move_id != MOVE_BEAT_UP
-    )
+    _defer_extra_multihit_rolls = num_hits_pre > 1 and move_id != MOVE_BEAT_UP
     if num_hits_pre > 1 and not _defer_extra_multihit_rolls:
         for _extra_hit in range(num_hits_pre - 1):
             if is_always_crit:
@@ -2217,8 +2929,10 @@ def calc_damage_gen9(
                 _extra_is_crit = _extra_crit_roll == 0
                 # Shell Armor / Battle Armor block crits (including
                 # per-hit rerolls). Matches the single-hit block above.
-                if (def_ability in (_ABILITY_BATTLE_ARMOR, _ABILITY_SHELL_ARMOR_ID)
-                        and not has_mold_breaker):
+                if (
+                    def_ability in (_ABILITY_BATTLE_ARMOR, _ABILITY_SHELL_ARMOR_ID)
+                    and not has_mold_breaker
+                ):
                     _extra_is_crit = False
             _extra_r = gen5_prng.random(16)
             _per_hit_rolls.append((_extra_is_crit, float(100 - _extra_r)))
@@ -2233,7 +2947,12 @@ def calc_damage_gen9(
     # holder's `effectiveWeather()`), and for absorbing rain/sun weather
     # damage on the attacker — but NOT for sun/rain BP modifiers on its
     # own moves.
-    UMBRELLA_WEATHERS = (WEATHER_SUN, WEATHER_RAIN, WEATHER_DESOLATE_LAND, WEATHER_PRIMORDIAL_SEA)
+    UMBRELLA_WEATHERS = (
+        WEATHER_SUN,
+        WEATHER_RAIN,
+        WEATHER_DESOLATE_LAND,
+        WEATHER_PRIMORDIAL_SEA,
+    )
     atk_has_umbrella = atk_item == ITEM_UTILITY_UMBRELLA
     def_has_umbrella = def_item == ITEM_UTILITY_UMBRELLA
     weather_mult_dmg = _get_weather_type_multiplier(weather, move_type)
@@ -2250,7 +2969,9 @@ def calc_damage_gen9(
     if move_id == MOVE_HYDRO_STEAM and weather == WEATHER_SUN and not atk_has_umbrella:
         weather_mult_dmg = 1.5
 
-    terrain_mult = _get_terrain_type_multiplier(battle, move_type, atk_offset, def_offset, move_id)
+    terrain_mult = _get_terrain_type_multiplier(
+        battle, move_type, atk_offset, def_offset, move_id
+    )
 
     # Showdown's runEvent('BasePower', ...) accumulates ALL chainModify hooks
     # (attacker abilities, defender abilities, item BP boosts, type-resist
@@ -2280,16 +3001,25 @@ def calc_damage_gen9(
     if move_id in (MOVE_COLLISION_COURSE, MOVE_ELECTRO_DRIFT) and type_mult > 1.0:
         _bp_chain.chain(5461, 4096)
 
-    for _m in (sheer_force_mult, tough_claws_mult, reckless_mult,
-               analytic_mult,
-               iron_fist_mult, strong_jaw_mult, mega_launcher_mult,
-               punk_rock_atk_mult,
-               supreme_mult,
-               sharpness_mult,
-               dark_aura_mult, fairy_aura_mult, sand_force_mult,
-               dry_skin_fire_mult,  # defender's onSourceBasePower
-               terrain_mult,        # Showdown: terrain BP boost via onBasePower
-               bp_item_mult, knock_off_mult):
+    for _m in (
+        sheer_force_mult,
+        tough_claws_mult,
+        reckless_mult,
+        analytic_mult,
+        iron_fist_mult,
+        strong_jaw_mult,
+        mega_launcher_mult,
+        punk_rock_atk_mult,
+        supreme_mult,
+        sharpness_mult,
+        dark_aura_mult,
+        fairy_aura_mult,
+        sand_force_mult,
+        dry_skin_fire_mult,  # defender's onSourceBasePower
+        terrain_mult,  # Showdown: terrain BP boost via onBasePower
+        bp_item_mult,
+        knock_off_mult,
+    ):
         _bp_chain_add_to(_bp_chain, _m)
     # 1.1x item BP boosts with explicit numerators (Wise Glasses, Muscle Band: 4505;
     # Punching Glove: 4506). Showdown items.ts onBasePower hooks.
@@ -2313,13 +3043,20 @@ def calc_damage_gen9(
     _SPECIES_LATIAS = 380
     _SPECIES_LATIOS = 381
     _atk_species_sd = int(battle[atk_offset + 0])
-    if (atk_item == 459 and _atk_species_sd in (_SPECIES_LATIAS, _SPECIES_LATIOS)
-            and move_type in (TYPE_DRAGON, TYPE_PSYCHIC)):
+    if (
+        atk_item == 459
+        and _atk_species_sd in (_SPECIES_LATIAS, _SPECIES_LATIOS)
+        and move_type in (TYPE_DRAGON, TYPE_PSYCHIC)
+    ):
         _bp_chain.chain(4915, 4096)
     # Psyblade: 1.5x BP if user is grounded and Electric Terrain is up.
     # Showdown moves.ts psyblade.onBasePower.
     _MOVE_PSYBLADE = 875
-    if move_id == _MOVE_PSYBLADE and is_grounded(battle, atk_offset, def_offset) and terrain == TERRAIN_ELECTRIC:
+    if (
+        move_id == _MOVE_PSYBLADE
+        and is_grounded(battle, atk_offset, def_offset)
+        and terrain == TERRAIN_ELECTRIC
+    ):
         _bp_chain.chain(6144, 4096)
     # Fickle Beam: Showdown moves.ts ficklebeam.onBasePower uses
     # randomChance(3, 10) -> random(10), doubling BP on a successful "all out"
@@ -2356,7 +3093,7 @@ def calc_damage_gen9(
     is_burned = atk_status == STATUS_BURN
     has_guts = atk_ability == ABILITY_GUTS
     is_facade = move_id == MOVE_FACADE
-    _burn_halves = (is_burned and is_physical and not has_guts and not is_facade)
+    _burn_halves = is_burned and is_physical and not has_guts and not is_facade
     # Burn — Showdown applies burn AFTER STAB + type, BEFORE the ModifyDamage
     # event (sim/battle-actions.ts:1814-1818). Physical attacks halved unless
     # Guts or Facade. Must precede Multiscale/Filter/Life Orb etc.
@@ -2366,11 +3103,24 @@ def calc_damage_gen9(
     # Type-resist berries: 0.5x final damage if move type matches AND
     # type effectiveness > 0 (super-effective). Chilan triggers on any Normal hit.
     BERRY_TYPE_RESIST = {
-        311: TYPE_FIRE, 329: TYPE_WATER, 526: TYPE_ELECTRIC, 409: TYPE_GRASS,
-        567: TYPE_ICE, 71: TYPE_FIGHTING, 234: TYPE_POISON, 443: TYPE_GROUND,
-        62: TYPE_FLYING, 233: TYPE_PSYCHIC, 487: TYPE_BUG, 76: TYPE_ROCK,
-        185: TYPE_DRAGON, 78: TYPE_DARK, 17: TYPE_STEEL, 603: TYPE_FAIRY,
-        330: TYPE_PSYCHIC, 66: TYPE_NORMAL,
+        311: TYPE_FIRE,
+        329: TYPE_WATER,
+        526: TYPE_ELECTRIC,
+        409: TYPE_GRASS,
+        567: TYPE_ICE,
+        71: TYPE_FIGHTING,
+        234: TYPE_POISON,
+        443: TYPE_GROUND,
+        62: TYPE_FLYING,
+        233: TYPE_PSYCHIC,
+        487: TYPE_BUG,
+        76: TYPE_ROCK,
+        185: TYPE_DRAGON,
+        78: TYPE_DARK,
+        17: TYPE_STEEL,
+        603: TYPE_FAIRY,
+        330: TYPE_PSYCHIC,
+        66: TYPE_NORMAL,
     }
 
     def _resist_berry_reduces(live_def_item: int) -> bool:
@@ -2385,10 +3135,14 @@ def calc_damage_gen9(
     # Screens — Reflect / Light Screen / Aurora Veil all use chainModify(0.5)
     # in singles via onAnyModifyDamage. Crits + Infiltrator bypass.
     def_is_side0 = def_offset < OFF_SIDE1
-    def_screens_off = (OFF_FIELD + F_SCREENS_0) if def_is_side0 else (OFF_FIELD + F_SCREENS_1)
+    def_screens_off = (
+        (OFF_FIELD + F_SCREENS_0) if def_is_side0 else (OFF_FIELD + F_SCREENS_1)
+    )
     def_screens = int(battle[def_screens_off])
     has_reflect = ((def_screens >> SCREEN_REFLECT_SHIFT) & SCREEN_MASK_3BIT) > 0
-    has_light_screen = ((def_screens >> SCREEN_LIGHTSCREEN_SHIFT) & SCREEN_MASK_3BIT) > 0
+    has_light_screen = (
+        (def_screens >> SCREEN_LIGHTSCREEN_SHIFT) & SCREEN_MASK_3BIT
+    ) > 0
     has_aurora_veil = ((def_screens >> SCREEN_AURORAVEIL_SHIFT) & SCREEN_MASK_3BIT) > 0
     has_infiltrator = atk_ability == ABILITY_INFILTRATOR
 
@@ -2407,15 +3161,14 @@ def calc_damage_gen9(
             and (live_def_hp >= def_max_hp)
             and not has_mold_breaker
         )
-        _live_shadow_shield_active = (
-            (def_ability == _ABILITY_SHADOW_SHIELD)
-            and (live_def_hp >= def_max_hp)
+        _live_shadow_shield_active = (def_ability == _ABILITY_SHADOW_SHIELD) and (
+            live_def_hp >= def_max_hp
         )
         _hit_dmg_chain = _ChainAccum()
         _hit_dmg_chain.chain_if(
             _live_multiscale_active or _live_shadow_shield_active, 2048, 4096
         )  # 0.5x
-        _hit_dmg_chain.chain_if(filter_mult != 1.0, 3072, 4096)      # 0.75x
+        _hit_dmg_chain.chain_if(filter_mult != 1.0, 3072, 4096)  # 0.75x
         _hit_dmg_chain.chain_if(ice_scales_mult != 1.0, 2048, 4096)  # 0.5x
         # Fluffy can be 0.5 (contact only), 2.0 (fire only), or 1.0 (contact+fire);
         # apply each multiplicative factor as its own chain entry to preserve
@@ -2447,7 +3200,9 @@ def calc_damage_gen9(
             and not hit_crit
             and not has_infiltrator
         )
-        if (_screen_reduces_phys or _screen_reduces_spec) and effect_type != EFFECT_SCREEN_BREAK:
+        if (
+            _screen_reduces_phys or _screen_reduces_spec
+        ) and effect_type != EFFECT_SCREEN_BREAK:
             _hit_dmg_chain.chain(2048, 4096)
         if life_orb_mult != 1.0:
             _hit_dmg_chain.chain(5324, 4096)
@@ -2519,7 +3274,11 @@ def calc_damage_gen9(
         rb = math.floor(math.floor(rb * hit_rand_pct) / 100)
         rb = _show_modify(rb, stab_mult)
         rb = math.floor(rb * type_mult)
-        _burned_for_hit = is_burned if attacker_status_code is None else attacker_status_code == STATUS_BURN
+        _burned_for_hit = (
+            is_burned
+            if attacker_status_code is None
+            else attacker_status_code == STATUS_BURN
+        )
         if _burned_for_hit and is_physical and not has_guts and not is_facade:
             rb = _show_modify(rb, 0.5)
         return float(
@@ -2540,14 +3299,26 @@ def calc_damage_gen9(
         hit_damage: int,
     ) -> tuple[int, int, bool, bool, bool]:
         if hit_damage <= 0:
-            return remaining_hp, remaining_sub_hp, sash_ready, sturdy_ready, disguise_ready
+            return (
+                remaining_hp,
+                remaining_sub_hp,
+                sash_ready,
+                sturdy_ready,
+                disguise_ready,
+            )
         if disguise_ready:
             chip = max(1, int(battle[def_offset + 2]) // 8)
             remaining_hp = max(0, remaining_hp - chip)
             return remaining_hp, remaining_sub_hp, sash_ready, sturdy_ready, False
         if remaining_sub_hp > 0:
             remaining_sub_hp = max(0, remaining_sub_hp - hit_damage)
-            return remaining_hp, remaining_sub_hp, sash_ready, sturdy_ready, disguise_ready
+            return (
+                remaining_hp,
+                remaining_sub_hp,
+                sash_ready,
+                sturdy_ready,
+                disguise_ready,
+            )
         next_hp = max(0, remaining_hp - hit_damage)
         if next_hp == 0 and sash_ready:
             return 1, remaining_sub_hp, False, sturdy_ready, disguise_ready
@@ -2560,11 +3331,11 @@ def calc_damage_gen9(
         _live_sub = int(
             battle[OFF_FIELD + (F_SUBSTITUTE_0 if def_side == 0 else F_SUBSTITUTE_1)]
         )
-        _live_sash_ready = (
-            def_item == ITEM_FOCUS_SASH and _live_hp == int(battle[def_offset + 2])
+        _live_sash_ready = def_item == ITEM_FOCUS_SASH and _live_hp == int(
+            battle[def_offset + 2]
         )
-        _live_sturdy_ready = (
-            def_ability == ABILITY_STURDY and _live_hp == int(battle[def_offset + 2])
+        _live_sturdy_ready = def_ability == ABILITY_STURDY and _live_hp == int(
+            battle[def_offset + 2]
         )
         _live_disguise_ready = (
             not has_mold_breaker
@@ -2669,10 +3440,9 @@ def calc_damage_gen9(
 
         _total_damage = damage  # hit 1 already finalized above
         if _defer_extra_multihit_rolls:
-            _multihit_updates_tied = (
-                int(_strict_speed_multihit(battle, atk_offset))
-                == int(_strict_speed_multihit(battle, def_offset))
-            )
+            _multihit_updates_tied = int(
+                _strict_speed_multihit(battle, atk_offset)
+            ) == int(_strict_speed_multihit(battle, def_offset))
             (
                 _def_hp_live,
                 _def_sub_live,
@@ -2693,9 +3463,11 @@ def calc_damage_gen9(
                 and atk_item != ITEM_LOADED_DICE
                 and not accuracy_bypassed
             )
-            _atk_status_live = get_status(int(_multihit_contact_shadow[atk_offset + 12])) if (
-                _multihit_contact_shadow is not None
-            ) else get_status(int(battle[atk_offset + 12]))
+            _atk_status_live = (
+                get_status(int(_multihit_contact_shadow[atk_offset + 12]))
+                if (_multihit_contact_shadow is not None)
+                else get_status(int(battle[atk_offset + 12]))
+            )
             _def_item_live = _maybe_consume_multihit_resist_berry(
                 _def_item_live,
                 damage,
@@ -2704,15 +3476,19 @@ def calc_damage_gen9(
             )
             _def_sub_before_hit = _def_sub_live
             _def_disguise_before_hit = _def_disguise_ready
-            _def_hp_live, _def_sub_live, _def_sash_ready, _def_sturdy_ready, _def_disguise_ready = (
-                _advance_multihit_target_state(
-                    _def_hp_live,
-                    _def_sub_live,
-                    _def_sash_ready,
-                    _def_sturdy_ready,
-                    _def_disguise_ready,
-                    damage,
-                )
+            (
+                _def_hp_live,
+                _def_sub_live,
+                _def_sash_ready,
+                _def_sturdy_ready,
+                _def_disguise_ready,
+            ) = _advance_multihit_target_state(
+                _def_hp_live,
+                _def_sub_live,
+                _def_sash_ready,
+                _def_sturdy_ready,
+                _def_disguise_ready,
+                damage,
             )
             _atk_status_live = _maybe_apply_multihit_contact_status(
                 damage,
@@ -2736,13 +3512,18 @@ def calc_damage_gen9(
                     _hit_crit = True
                 else:
                     _hit_crit = gen5_prng.random(crit_denom) == 0
-                    if (def_ability in (4, 75) and not has_mold_breaker):
+                    if def_ability in (4, 75) and not has_mold_breaker:
                         _hit_crit = False
                 _rp = float(100 - gen5_prng.random(16))
-                _actual_bp = float(bp * _next_hit) if move_id in (
-                    MOVE_TRIPLE_AXEL,
-                    _MOVE_TRIPLE_KICK,
-                ) else float(bp)
+                _actual_bp = (
+                    float(bp * _next_hit)
+                    if move_id
+                    in (
+                        MOVE_TRIPLE_AXEL,
+                        _MOVE_TRIPLE_KICK,
+                    )
+                    else float(bp)
+                )
                 _d = _rebuild_hit(
                     _actual_bp,
                     _hit_crit,
@@ -2761,15 +3542,19 @@ def calc_damage_gen9(
                 )
                 _def_sub_before_hit = _def_sub_live
                 _def_disguise_before_hit = _def_disguise_ready
-                _def_hp_live, _def_sub_live, _def_sash_ready, _def_sturdy_ready, _def_disguise_ready = (
-                    _advance_multihit_target_state(
-                        _def_hp_live,
-                        _def_sub_live,
-                        _def_sash_ready,
-                        _def_sturdy_ready,
-                        _def_disguise_ready,
-                        _d,
-                    )
+                (
+                    _def_hp_live,
+                    _def_sub_live,
+                    _def_sash_ready,
+                    _def_sturdy_ready,
+                    _def_disguise_ready,
+                ) = _advance_multihit_target_state(
+                    _def_hp_live,
+                    _def_sub_live,
+                    _def_sash_ready,
+                    _def_sturdy_ready,
+                    _def_disguise_ready,
+                    _d,
                 )
                 _atk_status_live = _maybe_apply_multihit_contact_status(
                     _d,
@@ -2797,15 +3582,19 @@ def calc_damage_gen9(
                 _def_sub_live,
                 _def_disguise_ready,
             )
-            _def_hp_live, _def_sub_live, _def_sash_ready, _def_sturdy_ready, _def_disguise_ready = (
-                _advance_multihit_target_state(
-                    _def_hp_live,
-                    _def_sub_live,
-                    _def_sash_ready,
-                    _def_sturdy_ready,
-                    _def_disguise_ready,
-                    damage,
-                )
+            (
+                _def_hp_live,
+                _def_sub_live,
+                _def_sash_ready,
+                _def_sturdy_ready,
+                _def_disguise_ready,
+            ) = _advance_multihit_target_state(
+                _def_hp_live,
+                _def_sub_live,
+                _def_sash_ready,
+                _def_sturdy_ready,
+                _def_disguise_ready,
+                damage,
             )
             _actual_hits = 1
             for _hit_crit, _rp in _per_hit_rolls[1:]:
@@ -2824,15 +3613,19 @@ def calc_damage_gen9(
                     _def_sub_live,
                     _def_disguise_ready,
                 )
-                _def_hp_live, _def_sub_live, _def_sash_ready, _def_sturdy_ready, _def_disguise_ready = (
-                    _advance_multihit_target_state(
-                        _def_hp_live,
-                        _def_sub_live,
-                        _def_sash_ready,
-                        _def_sturdy_ready,
-                        _def_disguise_ready,
-                        _d,
-                    )
+                (
+                    _def_hp_live,
+                    _def_sub_live,
+                    _def_sash_ready,
+                    _def_sturdy_ready,
+                    _def_disguise_ready,
+                ) = _advance_multihit_target_state(
+                    _def_hp_live,
+                    _def_sub_live,
+                    _def_sash_ready,
+                    _def_sturdy_ready,
+                    _def_disguise_ready,
+                    _d,
                 )
                 if _def_hp_live <= 0:
                     break
@@ -2845,7 +3638,12 @@ def calc_damage_gen9(
     # Special damage moves
     is_level_damage = move_id in (MOVE_SEISMIC_TOSS, MOVE_NIGHT_SHADE)
     is_super_fang = move_id in (MOVE_SUPER_FANG, MOVE_RUINATION)
-    is_ohko = move_id in (MOVE_FISSURE, MOVE_GUILLOTINE, MOVE_HORN_DRILL, MOVE_SHEER_COLD)
+    is_ohko = move_id in (
+        MOVE_FISSURE,
+        MOVE_GUILLOTINE,
+        MOVE_HORN_DRILL,
+        MOVE_SHEER_COLD,
+    )
     is_endeavor = move_id == MOVE_ENDEAVOR
 
     if is_level_damage:
@@ -2908,15 +3706,25 @@ def calc_damage_gen9(
             _rb_bp_chain.chain(6144, 4096)
         if move_id in (MOVE_COLLISION_COURSE, MOVE_ELECTRO_DRIFT) and type_mult > 1.0:
             _rb_bp_chain.chain(5461, 4096)
-        for _m in (sheer_force_mult, tough_claws_mult, reckless_mult,
-                   analytic_mult,
-                   iron_fist_mult, strong_jaw_mult, mega_launcher_mult,
-                   punk_rock_atk_mult,
-                   supreme_mult, sharpness_mult,
-                   dark_aura_mult, fairy_aura_mult, sand_force_mult,
-                   dry_skin_fire_mult,
-                   terrain_mult,
-                   bp_item_mult, knock_off_mult):
+        for _m in (
+            sheer_force_mult,
+            tough_claws_mult,
+            reckless_mult,
+            analytic_mult,
+            iron_fist_mult,
+            strong_jaw_mult,
+            mega_launcher_mult,
+            punk_rock_atk_mult,
+            supreme_mult,
+            sharpness_mult,
+            dark_aura_mult,
+            fairy_aura_mult,
+            sand_force_mult,
+            dry_skin_fire_mult,
+            terrain_mult,
+            bp_item_mult,
+            knock_off_mult,
+        ):
             _bp_chain_add_to(_rb_bp_chain, _m)
         if _so_num != 4096:
             _rb_bp_chain.chain(_so_num, 4096)
@@ -2951,6 +3759,7 @@ def calc_damage_gen9(
     # `_get_effective_speed` left here only for backward compat with
     # older callers (currently unused in the BP path).
     from pokepy.effects import get_effective_speed as _strict_speed
+
     atk_speed_base = float(_strict_speed(battle, atk_offset))
     def_speed_base = float(_strict_speed(battle, def_offset))
 
@@ -2961,7 +3770,9 @@ def calc_damage_gen9(
         if atk_speed_base <= 0:
             gyro_bp = 1.0
         else:
-            gyro_bp = float(min(150, math.floor(25.0 * def_speed_base / atk_speed_base) + 1))
+            gyro_bp = float(
+                min(150, math.floor(25.0 * def_speed_base / atk_speed_base) + 1)
+            )
         damage = _rebuild(gyro_bp)
 
     if move_id == MOVE_ELECTROBALL:
@@ -2981,7 +3792,12 @@ def calc_damage_gen9(
         damage = _rebuild(eball_bp)
 
     if move_id in (MOVE_LOW_KICK, MOVE_GRASS_KNOT):
-        def_species_clip = max(0, min(int(game_data.species_weight.shape[0]) - 1, int(battle[def_offset + 0])))
+        def_species_clip = max(
+            0,
+            min(
+                int(game_data.species_weight.shape[0]) - 1, int(battle[def_offset + 0])
+            ),
+        )
         def_weight = float(game_data.species_weight[def_species_clip])
         if def_weight < 10.0:
             lk_bp = 20.0
@@ -2998,8 +3814,18 @@ def calc_damage_gen9(
         damage = _rebuild(lk_bp)
 
     if move_id in (MOVE_HEAVY_SLAM, MOVE_HEAT_CRASH):
-        atk_species_clip = max(0, min(int(game_data.species_weight.shape[0]) - 1, int(battle[atk_offset + 0])))
-        def_species_clip = max(0, min(int(game_data.species_weight.shape[0]) - 1, int(battle[def_offset + 0])))
+        atk_species_clip = max(
+            0,
+            min(
+                int(game_data.species_weight.shape[0]) - 1, int(battle[atk_offset + 0])
+            ),
+        )
+        def_species_clip = max(
+            0,
+            min(
+                int(game_data.species_weight.shape[0]) - 1, int(battle[def_offset + 0])
+            ),
+        )
         atk_weight = float(game_data.species_weight[atk_species_clip])
         def_weight = float(game_data.species_weight[def_species_clip])
         weight_ratio = atk_weight / max(1.0, def_weight)
@@ -3026,7 +3852,9 @@ def calc_damage_gen9(
     if move_id in (MOVE_WATER_SPOUT, MOVE_ERUPTION, MOVE_DRAGON_ENERGY):
         # Showdown basePowerCallback: floor(150 * hp / maxhp), min 1
         atk_max_hp_f = float(battle[atk_offset + 2])
-        hp_scaled_bp = max(1.0, math.floor(150.0 * float(atk_hp) / max(1.0, atk_max_hp_f)))
+        hp_scaled_bp = max(
+            1.0, math.floor(150.0 * float(atk_hp) / max(1.0, atk_max_hp_f))
+        )
         damage = _rebuild(hp_scaled_bp)
 
     # Hard Press: BP scales with target's remaining HP fraction (max 100).
@@ -3152,27 +3980,36 @@ def calc_damage_gen9(
                 _def_sub_live,
                 _def_disguise_ready,
             )
-            _def_hp_live, _def_sub_live, _def_sash_ready, _def_sturdy_ready, _def_disguise_ready = (
-                _advance_multihit_target_state(
-                    _def_hp_live,
-                    _def_sub_live,
-                    _def_sash_ready,
-                    _def_sturdy_ready,
-                    _def_disguise_ready,
-                    _d,
-                )
+            (
+                _def_hp_live,
+                _def_sub_live,
+                _def_sash_ready,
+                _def_sturdy_ready,
+                _def_disguise_ready,
+            ) = _advance_multihit_target_state(
+                _def_hp_live,
+                _def_sub_live,
+                _def_sash_ready,
+                _def_sturdy_ready,
+                _def_disguise_ready,
+                _d,
             )
             if _def_hp_live <= 0:
                 break
         num_hits = _actual_hits
-    elif (move_id == MOVE_TRIPLE_AXEL or move_id == _MOVE_TRIPLE_KICK) and not _defer_extra_multihit_rolls:
+    elif (
+        move_id == MOVE_TRIPLE_AXEL or move_id == _MOVE_TRIPLE_KICK
+    ) and not _defer_extra_multihit_rolls:
         # Legacy fallback for non-deferred callers. The normal strict-parity
         # path now handles Triple Axel/Kick inside the deferred per-hit loop
         # above so later-hit accuracy and early KOs stop PRNG consumption
         # exactly where Showdown's hitStepMoveHitLoop stops.
-        if (hits and num_hits > 1
-                and not _skill_link_removes_multiaccuracy
-                and not (has_no_guard or has_lock_on)):
+        if (
+            hits
+            and num_hits > 1
+            and not _skill_link_removes_multiaccuracy
+            and not (has_no_guard or has_lock_on)
+        ):
             landed = 1  # first hit already rolled via `hits`
             for _hit_idx in range(2, num_hits + 1):
                 _extra_roll = gen5_prng.random(100)
@@ -3213,11 +4050,11 @@ def calc_damage_gen9(
         # Expose final hit count to the engine. Triple Kick / Triple Axel
         # may have been reduced by per-hit accuracy rolls above; record the
         # post-rollback value so the engine doesn't over-fire Rocky Helmet.
-        out_meta['num_hits'] = int(num_hits)
+        out_meta["num_hits"] = int(num_hits)
         if _multihit_contact_prng_consumed:
-            out_meta['contact_status_consumed'] = True
-            out_meta['contact_status_packed'] = _multihit_contact_resolved_status_field
-            out_meta['contact_status_apply_attract'] = _multihit_contact_apply_attract
+            out_meta["contact_status_consumed"] = True
+            out_meta["contact_status_packed"] = _multihit_contact_resolved_status_field
+            out_meta["contact_status_apply_attract"] = _multihit_contact_apply_attract
 
     if not hits:
         damage = 0
@@ -3250,6 +4087,7 @@ def calc_damage_gen9(
     if target_semi_invul:
         from pokepy.core.constants import M_CHARGING_0, M_CHARGING_1
         from pokepy.core.constants import MOVE_DIG, MOVE_DIVE, MOVE_FLY, MOVE_BOUNCE
+
         _MOVE_GUST = 16
         _MOVE_TWISTER = 239
         _MOVE_SKY_UPPERCUT = 327
@@ -3262,9 +4100,15 @@ def calc_damage_gen9(
         charge_meta_off = OFF_META + (M_CHARGING_0 if def_side == 0 else M_CHARGING_1)
         charging_move = int(battle[charge_meta_off])
         _FLY_LIKE = (MOVE_FLY, MOVE_BOUNCE)
-        _AIR_HIT = (_MOVE_GUST, _MOVE_TWISTER, _MOVE_SKY_UPPERCUT,
-                    _MOVE_THUNDER, _MOVE_HURRICANE, _MOVE_SMACK_DOWN,
-                    _MOVE_THOUSAND_ARROWS)
+        _AIR_HIT = (
+            _MOVE_GUST,
+            _MOVE_TWISTER,
+            _MOVE_SKY_UPPERCUT,
+            _MOVE_THUNDER,
+            _MOVE_HURRICANE,
+            _MOVE_SMACK_DOWN,
+            _MOVE_THOUSAND_ARROWS,
+        )
         if charging_move in _FLY_LIKE:
             can_hit = move_id in _AIR_HIT
         elif charging_move == MOVE_DIG:

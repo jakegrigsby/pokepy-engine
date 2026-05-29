@@ -12,13 +12,16 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import List
 
+
 def clean_name(name: str) -> str:
     """Lowercase + strip non-alphanumerics. Matches metamon str_parsing.clean_name."""
     return "".join(c for c in str(name) if c.isalnum()).lower()
 
+
 def clean_no_numbers(name: str) -> str:
     """Lowercase + strip non-alpha (no digits). Matches metamon clean_no_numbers."""
     return "".join(c for c in str(name) if c.isalpha()).lower()
+
 
 @dataclass
 class UniversalMove:
@@ -44,11 +47,12 @@ class UniversalMove:
             max_pp=0,
         )
 
+
 @dataclass
 class UniversalPokemon:
     name: str
     hp_pct: float
-    types: str            # space-joined sorted type names ("fire grass")
+    types: str  # space-joined sorted type names ("fire grass")
     item: str
     ability: str
     lvl: int
@@ -87,6 +91,7 @@ class UniversalPokemon:
             effect="noeffect",
             moves=[UniversalMove.blank() for _ in range(4)],
         )
+
 
 @dataclass
 class UniversalState:

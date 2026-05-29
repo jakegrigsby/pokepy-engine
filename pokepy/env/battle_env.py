@@ -18,13 +18,34 @@ import numpy as np
 
 from pokepy.core.state import MultiFormatState
 from pokepy.core.constants import (
-    OFF_SIDE0, OFF_SIDE1, OFF_FIELD, OFF_META, POKEMON_SIZE,
-    M_ACTIVE0, M_ACTIVE1,
-    F_CHOICE_LOCK_0, F_CHOICE_LOCK_1, F_LAST_MOVE_0, F_LAST_MOVE_1,
-    F_DISABLE_0, F_DISABLE_1,
-    PHASE_BATTLE, PHASE_FORCED_SWITCH, NUM_BATTLE_ACTIONS, FORMAT_GEN9OU,
+    OFF_SIDE0,
+    OFF_SIDE1,
+    OFF_FIELD,
+    OFF_META,
+    POKEMON_SIZE,
+    M_ACTIVE0,
+    M_ACTIVE1,
+    F_CHOICE_LOCK_0,
+    F_CHOICE_LOCK_1,
+    F_LAST_MOVE_0,
+    F_LAST_MOVE_1,
+    F_DISABLE_0,
+    F_DISABLE_1,
+    F_WEATHER,
+    F_TERRAIN,
+    PHASE_BATTLE,
+    PHASE_FORCED_SWITCH,
+    NUM_BATTLE_ACTIONS,
+    FORMAT_GEN9OU,
 )
-from pokepy.data.loader import GameData, IDMappings, load_game_data, load_id_mappings, load_move_effect_data, MoveEffectData
+from pokepy.data.loader import (
+    GameData,
+    IDMappings,
+    load_game_data,
+    load_id_mappings,
+    load_move_effect_data,
+    MoveEffectData,
+)
 from pokepy.data.type_charts import MODERN_TYPE_CHART
 from pokepy.engine.battle_gen9 import step_battle_gen9, step_forced_switch
 from pokepy.engine.action_mask import get_action_mask
@@ -35,13 +56,14 @@ from pokepy.obs.state_to_universal import state_to_universal_state
 
 # A trivially valid 1-pokemon team for smoke testing.
 DEFAULT_TEAM: Dict[str, Any] = dict(
-    species=[1],            # bulbasaur
+    species=[1],  # bulbasaur
     moves=[[33, 14, 22, 75]],  # tackle, growl, vine whip, razor leaf-ish
     abilities=[0],
     items=[0],
-    tera_types=[4],         # grass
+    tera_types=[4],  # grass
     levels=[100],
 )
+
 
 def _stats_from_resolved_inputs(
     species_id: int,
@@ -66,6 +88,7 @@ def _stats_from_resolved_inputs(
         for i in range(6)
     ]
 
+
 def _resolve_stats_inputs(
     evs: Optional[List[int]] = None,
     ivs: Optional[List[int]] = None,
@@ -82,7 +105,9 @@ def _resolve_stats_inputs(
         target_mods = _nature_to_mods(nature) if nature is not None else None
         if target_mods is not None:
             mask = np.all(
-                np.isclose(NATURE_MODS_ARRAY, np.asarray(target_mods, dtype=np.float32)),
+                np.isclose(
+                    NATURE_MODS_ARRAY, np.asarray(target_mods, dtype=np.float32)
+                ),
                 axis=1,
             )
             if np.any(mask):
@@ -97,6 +122,7 @@ def _resolve_stats_inputs(
     if ivs is None:
         ivs = [31] * 6
     return list(snapped_evs), list(ivs), list(nature_mods)
+
 
 def _stats_for_pokemon(
     species_id: int,
@@ -119,7 +145,9 @@ def _stats_for_pokemon(
     otherwise returns the wrong nature when multiple rows share the same
     L1 distance from the input EV tuple.
     """
-    snapped_evs, ivs, nature_mods = _resolve_stats_inputs(evs=evs, ivs=ivs, nature=nature)
+    snapped_evs, ivs, nature_mods = _resolve_stats_inputs(
+        evs=evs, ivs=ivs, nature=nature
+    )
     return _stats_from_resolved_inputs(
         species_id,
         level,
@@ -129,35 +157,37 @@ def _stats_for_pokemon(
         nature_mods,
     )
 
+
 # Showdown nature table (HP / Atk / Def / SpA / SpD / Spe multipliers).
 # Source: pokemon-showdown/data/natures.ts.
 _NATURE_TABLE: Dict[str, Tuple[float, float, float, float, float, float]] = {
-    "hardy":   (1.0, 1.0, 1.0, 1.0, 1.0, 1.0),
-    "lonely":  (1.0, 1.1, 0.9, 1.0, 1.0, 1.0),
-    "brave":   (1.0, 1.1, 1.0, 1.0, 1.0, 0.9),
+    "hardy": (1.0, 1.0, 1.0, 1.0, 1.0, 1.0),
+    "lonely": (1.0, 1.1, 0.9, 1.0, 1.0, 1.0),
+    "brave": (1.0, 1.1, 1.0, 1.0, 1.0, 0.9),
     "adamant": (1.0, 1.1, 1.0, 0.9, 1.0, 1.0),
     "naughty": (1.0, 1.1, 1.0, 1.0, 0.9, 1.0),
-    "bold":    (1.0, 0.9, 1.1, 1.0, 1.0, 1.0),
-    "docile":  (1.0, 1.0, 1.0, 1.0, 1.0, 1.0),
+    "bold": (1.0, 0.9, 1.1, 1.0, 1.0, 1.0),
+    "docile": (1.0, 1.0, 1.0, 1.0, 1.0, 1.0),
     "relaxed": (1.0, 1.0, 1.1, 1.0, 1.0, 0.9),
-    "impish":  (1.0, 1.0, 1.1, 0.9, 1.0, 1.0),
-    "lax":     (1.0, 1.0, 1.1, 1.0, 0.9, 1.0),
-    "timid":   (1.0, 0.9, 1.0, 1.0, 1.0, 1.1),
-    "hasty":   (1.0, 1.0, 0.9, 1.0, 1.0, 1.1),
+    "impish": (1.0, 1.0, 1.1, 0.9, 1.0, 1.0),
+    "lax": (1.0, 1.0, 1.1, 1.0, 0.9, 1.0),
+    "timid": (1.0, 0.9, 1.0, 1.0, 1.0, 1.1),
+    "hasty": (1.0, 1.0, 0.9, 1.0, 1.0, 1.1),
     "serious": (1.0, 1.0, 1.0, 1.0, 1.0, 1.0),
-    "jolly":   (1.0, 1.0, 1.0, 0.9, 1.0, 1.1),
-    "naive":   (1.0, 1.0, 1.0, 1.0, 0.9, 1.1),
-    "modest":  (1.0, 0.9, 1.0, 1.1, 1.0, 1.0),
-    "mild":    (1.0, 1.0, 0.9, 1.1, 1.0, 1.0),
-    "quiet":   (1.0, 1.0, 1.0, 1.1, 1.0, 0.9),
+    "jolly": (1.0, 1.0, 1.0, 0.9, 1.0, 1.1),
+    "naive": (1.0, 1.0, 1.0, 1.0, 0.9, 1.1),
+    "modest": (1.0, 0.9, 1.0, 1.1, 1.0, 1.0),
+    "mild": (1.0, 1.0, 0.9, 1.1, 1.0, 1.0),
+    "quiet": (1.0, 1.0, 1.0, 1.1, 1.0, 0.9),
     "bashful": (1.0, 1.0, 1.0, 1.0, 1.0, 1.0),
-    "rash":    (1.0, 1.0, 1.0, 1.1, 0.9, 1.0),
-    "calm":    (1.0, 0.9, 1.0, 1.0, 1.1, 1.0),
-    "gentle":  (1.0, 1.0, 0.9, 1.0, 1.1, 1.0),
-    "sassy":   (1.0, 1.0, 1.0, 1.0, 1.1, 0.9),
+    "rash": (1.0, 1.0, 1.0, 1.1, 0.9, 1.0),
+    "calm": (1.0, 0.9, 1.0, 1.0, 1.1, 1.0),
+    "gentle": (1.0, 1.0, 0.9, 1.0, 1.1, 1.0),
+    "sassy": (1.0, 1.0, 1.0, 1.0, 1.1, 0.9),
     "careful": (1.0, 1.0, 1.0, 0.9, 1.1, 1.0),
-    "quirky":  (1.0, 1.0, 1.0, 1.0, 1.0, 1.0),
+    "quirky": (1.0, 1.0, 1.0, 1.0, 1.0, 1.0),
 }
+
 
 def _nature_to_mods(nature: Any) -> Optional[Tuple[float, ...]]:
     """Normalize a nature spec (name string or 6-tuple) to a mults tuple."""
@@ -173,14 +203,25 @@ def _nature_to_mods(nature: Any) -> Optional[Tuple[float, ...]]:
         return None
     return mods
 
-def _write_pokemon(battle: np.ndarray, side_base: int, slot: int, *,
-                   species_id: int, level: int, type1: int, type2: int,
-                   ability_id: int, item_id: int, stats: List[int],
-                   tera_type: int = 0) -> None:
+
+def _write_pokemon(
+    battle: np.ndarray,
+    side_base: int,
+    slot: int,
+    *,
+    species_id: int,
+    level: int,
+    type1: int,
+    type2: int,
+    ability_id: int,
+    item_id: int,
+    stats: List[int],
+    tera_type: int = 0,
+) -> None:
     p = side_base + slot * POKEMON_SIZE
     battle[p + 0] = species_id
-    battle[p + 1] = stats[0]                            # current_hp
-    battle[p + 2] = stats[0]                            # max_hp
+    battle[p + 1] = stats[0]  # current_hp
+    battle[p + 2] = stats[0]  # max_hp
     battle[p + 3] = level
     # Single-typed pokemon: store type2 = type1 so the damage calc's
     # `if def_type2 == def_type1: eff2 = 1.0` path is taken.
@@ -194,13 +235,15 @@ def _write_pokemon(battle: np.ndarray, side_base: int, slot: int, *,
     battle[p + 9] = stats[3]
     battle[p + 10] = stats[4]
     battle[p + 11] = stats[5]
-    battle[p + 12] = 0                                  # status / status_turns
-    battle[p + 13] = 0x6666                             # neutral boosts (atk/def/spa/spd)
+    battle[p + 12] = 0  # status / status_turns
+    battle[p + 13] = 0x6666  # neutral boosts (atk/def/spa/spd)
     # Pack neutral boosts (spe/acc/eva) into bits 0-11 and tera_type into bits 12-15.
     # Tera_type 0-17 fits in 4 bits if we mask it; some types like Stellar (18) won't fit.
     tera_nibble = (int(tera_type) & 0xF) if tera_type >= 0 else 0
     boosts14_raw = 0x0666 | (tera_nibble << 12)
-    battle[p + 14] = np.int16(boosts14_raw if boosts14_raw < 0x8000 else boosts14_raw - 0x10000)
+    battle[p + 14] = np.int16(
+        boosts14_raw if boosts14_raw < 0x8000 else boosts14_raw - 0x10000
+    )
     # Pokemon flags layout :
     #   bit 0 (0x1):  fainted
     #   bit 1 (0x2):  is_active (unused at init)
@@ -214,12 +257,14 @@ def _write_pokemon(battle: np.ndarray, side_base: int, slot: int, *,
     # NOTE: Showdown does NOT use a separate "has_tera" bit (0x4); tera
     # availability is inferred from `tera_used` not being set.
     from pokepy.core.constants import ABILITY_DISGUISE
+
     flags = 0
     if ability_id == ABILITY_DISGUISE:
         flags |= 0x40  # disguise intact (only on Disguise users)
     if item_id > 0:
         flags |= 0x80  # had_item at start
     battle[p + 15] = flags
+
 
 def init_battle_state(
     team0: Dict[str, Any],
@@ -236,7 +281,17 @@ def init_battle_state(
     state.gen5_seed = np.uint64(seed)
 
     def _write_team(team: Dict[str, Any], state_team_arrs, side_base: int):
-        species, moves, items, abilities, tera, pp_arr, evs_full, ivs_full, nature_mods_full = state_team_arrs
+        (
+            species,
+            moves,
+            items,
+            abilities,
+            tera,
+            pp_arr,
+            evs_full,
+            ivs_full,
+            nature_mods_full,
+        ) = state_team_arrs
         team_evs = team.get("evs")
         team_ivs = team.get("ivs")
         team_natures = team.get("natures")
@@ -254,7 +309,11 @@ def init_battle_state(
             level = team["levels"][i]
             evs_i = team_evs[i] if team_evs is not None and i < len(team_evs) else None
             ivs_i = team_ivs[i] if team_ivs is not None and i < len(team_ivs) else None
-            nat_i = team_natures[i] if team_natures is not None and i < len(team_natures) else None
+            nat_i = (
+                team_natures[i]
+                if team_natures is not None and i < len(team_natures)
+                else None
+            )
             resolved_evs, resolved_ivs, resolved_nature_mods = _resolve_stats_inputs(
                 evs=evs_i,
                 ivs=ivs_i,
@@ -274,22 +333,49 @@ def init_battle_state(
             types = game_data.species_types[sp]
             type1, type2 = int(types[0]), int(types[1])
             _write_pokemon(
-                state.battle_state, side_base, i,
-                species_id=sp, level=level, type1=type1, type2=type2,
-                ability_id=team["abilities"][i], item_id=team["items"][i],
-                stats=stats, tera_type=team["tera_types"][i],
+                state.battle_state,
+                side_base,
+                i,
+                species_id=sp,
+                level=level,
+                type1=type1,
+                type2=type2,
+                ability_id=team["abilities"][i],
+                item_id=team["items"][i],
+                stats=stats,
+                tera_type=team["tera_types"][i],
             )
 
-    _write_team(team0,
-                (state.team_species, state.team_moves, state.team_items,
-                 state.team_abilities, state.team_tera, state.team_pp,
-                 state.team_evs_full, state.team_ivs_full, state.team_nature_mods),
-                OFF_SIDE0)
-    _write_team(team1,
-                (state.opp_species, state.opp_moves, state.opp_items,
-                 state.opp_abilities, state.opp_tera, state.opp_pp,
-                 state.opp_evs_full, state.opp_ivs_full, state.opp_nature_mods),
-                OFF_SIDE1)
+    _write_team(
+        team0,
+        (
+            state.team_species,
+            state.team_moves,
+            state.team_items,
+            state.team_abilities,
+            state.team_tera,
+            state.team_pp,
+            state.team_evs_full,
+            state.team_ivs_full,
+            state.team_nature_mods,
+        ),
+        OFF_SIDE0,
+    )
+    _write_team(
+        team1,
+        (
+            state.opp_species,
+            state.opp_moves,
+            state.opp_items,
+            state.opp_abilities,
+            state.opp_tera,
+            state.opp_pp,
+            state.opp_evs_full,
+            state.opp_ivs_full,
+            state.opp_nature_mods,
+        ),
+        OFF_SIDE1,
+    )
 
     bs = state.battle_state
     bs[OFF_META + M_ACTIVE0] = 0
@@ -297,13 +383,19 @@ def init_battle_state(
     # Charging-move sentinel = -1 (not charging). Default 0 would make the
     # engine think the pokemon was charging move 0 last turn.
     from pokepy.core.constants import (
-        M_CHARGING_0, M_CHARGING_1,
-        M_LOCKED_MOVE_0, M_LOCKED_MOVE_1,
-        M_LOCKED_TURNS_0, M_LOCKED_TURNS_1,
-        M_RECHARGE_0, M_RECHARGE_1,
-        M_ACTIVE_MOVE_ACTIONS_0, M_ACTIVE_MOVE_ACTIONS_1,
+        M_CHARGING_0,
+        M_CHARGING_1,
+        M_LOCKED_MOVE_0,
+        M_LOCKED_MOVE_1,
+        M_LOCKED_TURNS_0,
+        M_LOCKED_TURNS_1,
+        M_RECHARGE_0,
+        M_RECHARGE_1,
+        M_ACTIVE_MOVE_ACTIONS_0,
+        M_ACTIVE_MOVE_ACTIONS_1,
         OFF_MOVES,
     )
+
     bs[OFF_META + M_CHARGING_0] = -1
     bs[OFF_META + M_CHARGING_1] = -1
     # Lockedmove (Outrage / Petal Dance / Thrash / Raging Fury) and
@@ -317,8 +409,14 @@ def init_battle_state(
     bs[OFF_MOVES + M_ACTIVE_MOVE_ACTIONS_0] = 0
     bs[OFF_MOVES + M_ACTIVE_MOVE_ACTIONS_1] = 0
     # Side-condition sentinel fields also default to -1
-    for off in (F_CHOICE_LOCK_0, F_CHOICE_LOCK_1, F_LAST_MOVE_0, F_LAST_MOVE_1,
-                F_DISABLE_0, F_DISABLE_1):
+    for off in (
+        F_CHOICE_LOCK_0,
+        F_CHOICE_LOCK_1,
+        F_LAST_MOVE_0,
+        F_LAST_MOVE_1,
+        F_DISABLE_0,
+        F_DISABLE_1,
+    ):
         bs[OFF_FIELD + off] = -1
 
     # Trigger switch-in abilities for the leadoff active mons. This sets
@@ -368,12 +466,70 @@ def init_battle_state(
         p0_first = startup_switch_roll == 0
     else:
         p0_first = sp0 > sp1
+    # Fog of war: reveal a lead's ability if its switch-in handler announced
+    # (set weather/terrain, changed its own boosts/ability/paradox state, or
+    # dropped the opponent's Attack via Intimidate). Mirrors the in-battle
+    # reveal logic in battle_gen9. Leads are slot 0 of each side.
+    from pokepy.core.bitpack import extract_boost as _extract_boost
+
+    def _lead_sig(off: int) -> tuple:
+        return (
+            int(bs[off + 13]),
+            int(bs[off + 14]) & 0x0FFF,
+            int(bs[off + 5]),
+            int(bs[off + 1]),
+            int(bs[off + 12]),
+            int(bs[off + 15]) & 0x7210,
+        )
+
+    def _lead_boosts(off: int) -> tuple:
+        return (int(bs[off + 13]), int(bs[off + 14]))
+
+    def _lead_boost_changed(before: tuple, after: tuple, *, raised: bool) -> bool:
+        for shift in (0, 4, 8, 12):
+            b, a = _extract_boost(before[0], shift), _extract_boost(after[0], shift)
+            if (a > b) if raised else (a < b):
+                return True
+        for shift in (0, 4, 8):
+            b, a = _extract_boost(before[1], shift), _extract_boost(after[1], shift)
+            if (a > b) if raised else (a < b):
+                return True
+        return False
+
+    def _lead_abil_arr(off: int):
+        return (
+            state.team_abilities_revealed
+            if off < OFF_SIDE1
+            else state.opp_abilities_revealed
+        )
+
+    def _apply_lead_ability(switcher_off: int, opp_off: int) -> None:
+        field_b = (int(bs[OFF_FIELD + F_WEATHER]), int(bs[OFF_FIELD + F_TERRAIN]))
+        sw_b = _lead_sig(switcher_off)
+        opp_b = _lead_boosts(opp_off)
+        apply_switch_in_ability(
+            bs, switcher_off, opp_off, did_switch=True, gen5_prng=startup_prng
+        )
+        field_a = (int(bs[OFF_FIELD + F_WEATHER]), int(bs[OFF_FIELD + F_TERRAIN]))
+        sw_a = _lead_sig(switcher_off)
+        opp_a = _lead_boosts(opp_off)
+        if (
+            field_a != field_b
+            or sw_a != sw_b
+            or _lead_boost_changed(opp_b, opp_a, raised=False)
+        ):
+            _lead_abil_arr(switcher_off)[0] = True
+        if sw_a[2] != sw_b[2]:
+            _lead_abil_arr(opp_off)[0] = True
+        if _lead_boost_changed(opp_b, opp_a, raised=True):
+            _lead_abil_arr(opp_off)[0] = True
+
     if p0_first:
-        apply_switch_in_ability(bs, p0_off, p1_off, did_switch=True, gen5_prng=startup_prng)
-        apply_switch_in_ability(bs, p1_off, p0_off, did_switch=True, gen5_prng=startup_prng)
+        _apply_lead_ability(p0_off, p1_off)
+        _apply_lead_ability(p1_off, p0_off)
     else:
-        apply_switch_in_ability(bs, p1_off, p0_off, did_switch=True, gen5_prng=startup_prng)
-        apply_switch_in_ability(bs, p0_off, p1_off, did_switch=True, gen5_prng=startup_prng)
+        _apply_lead_ability(p1_off, p0_off)
+        _apply_lead_ability(p0_off, p1_off)
     if sp0 == sp1:
         startup_prng.random(0, 2)
     state.startup_prng_calls = tuple(startup_prng.calls)
@@ -386,13 +542,17 @@ def init_battle_state(
 
     return state
 
+
 class BattleEnv:
     """Single-battle gymnasium-style env wrapper."""
 
-    def __init__(self, game_data: Optional[GameData] = None,
-                 mappings: Optional[IDMappings] = None,
-                 move_effects: Optional[MoveEffectData] = None,
-                 seed: int = 12345):
+    def __init__(
+        self,
+        game_data: Optional[GameData] = None,
+        mappings: Optional[IDMappings] = None,
+        move_effects: Optional[MoveEffectData] = None,
+        seed: int = 12345,
+    ):
         self.game_data = game_data or load_game_data()
         self.mappings = mappings or load_id_mappings()
         self.move_effects = move_effects or load_move_effect_data()
@@ -401,9 +561,12 @@ class BattleEnv:
         self.prng = Gen5PRNG((seed & 0xFFFF, (seed >> 16) & 0xFFFF, 0, 0))
         self.state: Optional[MultiFormatState] = None
 
-    def reset(self, team0: Dict[str, Any] = DEFAULT_TEAM,
-              team1: Dict[str, Any] = DEFAULT_TEAM,
-              seed: Optional[int] = None) -> Dict[str, np.ndarray]:
+    def reset(
+        self,
+        team0: Dict[str, Any] = DEFAULT_TEAM,
+        team1: Dict[str, Any] = DEFAULT_TEAM,
+        seed: Optional[int] = None,
+    ) -> Dict[str, np.ndarray]:
         """Build a fresh battle state.
 
         Showdown `Battle.start()` creates a fresh PRNG from the battle seed
@@ -413,22 +576,24 @@ class BattleEnv:
         """
         if seed is not None:
             self.seed = int(seed)
-        self.prng = Gen5PRNG(
-            (self.seed & 0xFFFF, (self.seed >> 16) & 0xFFFF, 0, 0)
-        )
+        self.prng = Gen5PRNG((self.seed & 0xFFFF, (self.seed >> 16) & 0xFFFF, 0, 0))
         self.state = init_battle_state(team0, team1, self.game_data, self.seed)
         return self.observe(side=0)
 
     def observe(self, side: int = 0) -> Dict[str, np.ndarray]:
         assert self.state is not None
-        us = state_to_universal_state(self.state, self.game_data, self.mappings, player_side=side)
+        us = state_to_universal_state(
+            self.state, self.game_data, self.mappings, player_side=side
+        )
         mask = get_action_mask(self.state, side, self.game_data)
         # Pad to 13-action space (Kakuna's DefaultActionSpace)
         illegal13 = np.ones(13, dtype=np.bool_)
         illegal13[:NUM_BATTLE_ACTIONS] = ~mask  # legal -> not illegal
         return build_kakuna_obs(us, illegal_actions=illegal13)
 
-    def step(self, action0: int, action1: int, *, tera0: bool = False, tera1: bool = False) -> Tuple[Dict[str, np.ndarray], float, float, bool]:
+    def step(
+        self, action0: int, action1: int, *, tera0: bool = False, tera1: bool = False
+    ) -> Tuple[Dict[str, np.ndarray], float, float, bool]:
         """Step the env. If `state.phase` is FORCED_SWITCH, action0 must be a
         switch action (4..9); the engine handles it via `step_forced_switch`
         and stays on the same turn (no opponent action consumed).
@@ -436,15 +601,25 @@ class BattleEnv:
         assert self.state is not None
         if int(self.state.phase) == PHASE_FORCED_SWITCH:
             r0, r1, done = step_forced_switch(
-                self.state, action0, side=0,
-                game_data=self.game_data, move_effects=self.move_effects,
-                type_chart=self.type_chart, gen5_prng=self.prng,
+                self.state,
+                action0,
+                side=0,
+                game_data=self.game_data,
+                move_effects=self.move_effects,
+                type_chart=self.type_chart,
+                gen5_prng=self.prng,
             )
         else:
             r0, r1, done = step_battle_gen9(
-                self.state, action0, action1,
-                self.game_data, self.move_effects, self.type_chart, self.prng,
-                wants_tera0=tera0, wants_tera1=tera1,
+                self.state,
+                action0,
+                action1,
+                self.game_data,
+                self.move_effects,
+                self.type_chart,
+                self.prng,
+                wants_tera0=tera0,
+                wants_tera1=tera1,
             )
         obs = self.observe(side=0)
         return obs, float(r0), float(r1), bool(done)

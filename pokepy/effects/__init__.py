@@ -5,6 +5,7 @@ and take `gen5_prng: Gen5PRNG` directly. Most bodies are still TODO stubs; the
 integration step will fill them in. The structure here mirrors the file layout
 agreed in the porting plan.
 """
+
 from __future__ import annotations
 
 from pokepy.effects.defender_abilities import (
@@ -278,6 +279,7 @@ import sys as _sys
 _DEBUG_SHIM = False
 _STRICT_SHIM = True  # raise on signature mismatches; do NOT silently no-op
 
+
 def _make_permissive(_fn):
     @_functools.wraps(_fn)
     def _wrapped(*args, **kwargs):
@@ -295,7 +297,9 @@ def _make_permissive(_fn):
             if _DEBUG_SHIM:
                 print(f"[shim Exception] {_fn.__name__}: {type(e).__name__}: {e}")
             return None
+
     return _wrapped
+
 
 _module = _sys.modules[__name__]
 for _name in list(globals()):
@@ -308,6 +312,7 @@ for _name in list(globals()):
 # -----------------------------------------------------------------------------
 # Minimal real implementations of helpers the engine queries
 # -----------------------------------------------------------------------------
+
 
 def get_effective_speed(battle, p_off):
     """Strict integer chainModify-style port of Showdown's Speed calculation.
@@ -340,17 +345,34 @@ def get_effective_speed(battle, p_off):
     """
     from pokepy.core.constants import (
         OFF_FIELD as _OFF_FIELD,
-        F_SCREENS_0, F_SCREENS_1, F_WEATHER, F_TERRAIN,
-        STATUS_PARALYSIS, STATUS_NONE, OFF_SIDE1,
-        WEATHER_RAIN, WEATHER_SUN, WEATHER_SAND, WEATHER_SNOW,
+        F_SCREENS_0,
+        F_SCREENS_1,
+        F_WEATHER,
+        F_TERRAIN,
+        STATUS_PARALYSIS,
+        STATUS_NONE,
+        OFF_SIDE1,
+        WEATHER_RAIN,
+        WEATHER_SUN,
+        WEATHER_SAND,
+        WEATHER_SNOW,
         TERRAIN_ELECTRIC,
-        SCREEN_TAILWIND_SHIFT, SCREEN_MASK_3BIT,
-        ABILITY_SWIFT_SWIM, ABILITY_CHLOROPHYLL, ABILITY_SAND_RUSH,
-        ABILITY_SLUSH_RUSH, ABILITY_QUICK_FEET, ABILITY_UNBURDEN,
-        ABILITY_PROTOSYNTHESIS, ABILITY_QUARK_DRIVE,
-        ITEM_CHOICE_SCARF, ITEM_BOOSTER_ENERGY, FLAG_BOOSTER_ENERGY_ACTIVE,
+        SCREEN_TAILWIND_SHIFT,
+        SCREEN_MASK_3BIT,
+        ABILITY_SWIFT_SWIM,
+        ABILITY_CHLOROPHYLL,
+        ABILITY_SAND_RUSH,
+        ABILITY_SLUSH_RUSH,
+        ABILITY_QUICK_FEET,
+        ABILITY_UNBURDEN,
+        ABILITY_PROTOSYNTHESIS,
+        ABILITY_QUARK_DRIVE,
+        ITEM_CHOICE_SCARF,
+        ITEM_BOOSTER_ENERGY,
+        FLAG_BOOSTER_ENERGY_ACTIVE,
     )
     from pokepy.core.bitpack import extract_boost, get_status
+
     p_off = int(p_off)
 
     base = int(battle[p_off + 11])
@@ -452,11 +474,36 @@ def get_effective_speed(battle, p_off):
                     return (int(base_stat) * 2) // (2 - boost)
 
                 stats = [
-                    (0x0010, _apply_stage(int(battle[p_off + 7]), extract_boost(boosts13, 0))),
-                    (0x2000, _apply_stage(int(battle[p_off + 8]), extract_boost(boosts13, 4))),
-                    (0x2010, _apply_stage(int(battle[p_off + 9]), extract_boost(boosts13, 8))),
-                    (0x4000, _apply_stage(int(battle[p_off + 10]), extract_boost(boosts13, 12))),
-                    (_PARADOX_STAT_SPE, _apply_stage(int(battle[p_off + 11]), extract_boost(boosts14_local, 0))),
+                    (
+                        0x0010,
+                        _apply_stage(
+                            int(battle[p_off + 7]), extract_boost(boosts13, 0)
+                        ),
+                    ),
+                    (
+                        0x2000,
+                        _apply_stage(
+                            int(battle[p_off + 8]), extract_boost(boosts13, 4)
+                        ),
+                    ),
+                    (
+                        0x2010,
+                        _apply_stage(
+                            int(battle[p_off + 9]), extract_boost(boosts13, 8)
+                        ),
+                    ),
+                    (
+                        0x4000,
+                        _apply_stage(
+                            int(battle[p_off + 10]), extract_boost(boosts13, 12)
+                        ),
+                    ),
+                    (
+                        _PARADOX_STAT_SPE,
+                        _apply_stage(
+                            int(battle[p_off + 11]), extract_boost(boosts14_local, 0)
+                        ),
+                    ),
                 ]
                 paradox_best_flag, best_value = stats[0]
                 for flag, value in stats[1:]:
@@ -490,6 +537,7 @@ def get_effective_speed(battle, p_off):
     # here — return the plain positive effective speed.
     return stat
 
+
 def get_effective_priority(battle, move_id, base_priority, p_off, gen5_prng=None):
     """Full port of _get_effective_priority (line ~8688).
 
@@ -499,11 +547,18 @@ def get_effective_priority(battle, move_id, base_priority, p_off, gen5_prng=None
     Custap Berry.
     """
     from pokepy.core.constants import (
-        OFF_FIELD as _OFF_FIELD, F_TERRAIN,
-        TERRAIN_GRASSY, TYPE_FLYING, CAT_STATUS, EFFECT_RECOVERY,
-        ABILITY_PRANKSTER, ABILITY_GALE_WINGS, ABILITY_TRIAGE,
+        OFF_FIELD as _OFF_FIELD,
+        F_TERRAIN,
+        TERRAIN_GRASSY,
+        TYPE_FLYING,
+        CAT_STATUS,
+        EFFECT_RECOVERY,
+        ABILITY_PRANKSTER,
+        ABILITY_GALE_WINGS,
+        ABILITY_TRIAGE,
         ABILITY_QUICK_DRAW,
     )
+
     p_off = int(p_off)
     move_id = int(move_id)
     base_priority = int(base_priority)
@@ -520,6 +575,7 @@ def get_effective_priority(battle, move_id, base_priority, p_off, gen5_prng=None
         me_data = _PRIO_MOVE_EFFECTS
     except NameError:
         from pokepy.data.loader import load_game_data, load_move_effect_data
+
         _PRIO_GAME_DATA = load_game_data()
         _PRIO_MOVE_EFFECTS = load_move_effect_data()
         gd = _PRIO_GAME_DATA
@@ -583,17 +639,21 @@ def get_effective_priority(battle, move_id, base_priority, p_off, gen5_prng=None
     # Showdown also gates Custap by Gluttony at <=50% HP (data/items.ts:1247)
     # but the default trigger is hp <= maxhp/4. Pokepy uses hp*4 <= max_hp.
     item = int(battle[p_off + 6])
-    ITEM_CUSTAP_BERRY = 86
+    ITEM_CUSTAP_BERRY = 210
     ABILITY_GLUTTONY = 82
     # Unnerve / As One on the OPPOSING active mon blocks all berry eats
     # (Showdown data/abilities.ts:5185 unnerve onFoeTryEatItem). Custap goes
     # through `pokemon.eatItem()` (items.ts:1250) which respects this hook,
     # so the fractional priority bonus is suppressed when Unnerve is active.
     from pokepy.core.constants import (
-        OFF_SIDE0 as _OFF_S0_CP, OFF_SIDE1 as _OFF_S1_CP,
-        OFF_META as _OFF_META_CP, M_ACTIVE0 as _M_A0_CP, M_ACTIVE1 as _M_A1_CP,
+        OFF_SIDE0 as _OFF_S0_CP,
+        OFF_SIDE1 as _OFF_S1_CP,
+        OFF_META as _OFF_META_CP,
+        M_ACTIVE0 as _M_A0_CP,
+        M_ACTIVE1 as _M_A1_CP,
         POKEMON_SIZE as _POKE_SIZE_CP,
     )
+
     _ABILITY_UNNERVE_CP = 127
     _ABILITY_AS_ONE_GLAS_CP = 266
     _ABILITY_AS_ONE_SPEC_CP = 267
@@ -603,11 +663,10 @@ def get_effective_priority(battle, move_id, base_priority, p_off, gen5_prng=None
     else:
         opp_active_cp = int(battle[_OFF_META_CP + _M_A0_CP])
         opp_off_cp = _OFF_S0_CP + opp_active_cp * _POKE_SIZE_CP
-    opp_unnerves = (
-        int(battle[opp_off_cp + 1]) > 0
-        and int(battle[opp_off_cp + 5]) in (
-            _ABILITY_UNNERVE_CP, _ABILITY_AS_ONE_GLAS_CP, _ABILITY_AS_ONE_SPEC_CP,
-        )
+    opp_unnerves = int(battle[opp_off_cp + 1]) > 0 and int(battle[opp_off_cp + 5]) in (
+        _ABILITY_UNNERVE_CP,
+        _ABILITY_AS_ONE_GLAS_CP,
+        _ABILITY_AS_ONE_SPEC_CP,
     )
     custap_threshold_quarter = (hp * 4) <= max_hp
     custap_threshold_half = (hp * 2) <= max_hp and ability == ABILITY_GLUTTONY
@@ -627,6 +686,7 @@ def get_effective_priority(battle, move_id, base_priority, p_off, gen5_prng=None
         # Keep them as a float so +0.1 beats +0 but still loses to +1.
         return float(effective) + fractional_bonus
     return effective
+
 
 def auto_switch(battle, side_base, current_active, *args, **kwargs):
     """Find the next non-fainted, non-active slot.
@@ -669,9 +729,11 @@ def auto_switch(battle, side_base, current_active, *args, **kwargs):
             return s
     return current_active
 
+
 def count_alive(battle, side_base):
     """Count non-fainted pokemon on a side."""
     from pokepy.core.constants import POKEMON_SIZE as _PS
+
     n = 0
     for s in range(6):
         off = side_base + s * _PS
@@ -679,10 +741,13 @@ def count_alive(battle, side_base):
             n += 1
     return n
 
+
 def __getattr__(name):
     """Fallback for any missing effect helper: return a permissive no-op."""
     if name.startswith("_"):
         raise AttributeError(name)
+
     def _stub(*args, **kwargs):
         return None
+
     return _stub

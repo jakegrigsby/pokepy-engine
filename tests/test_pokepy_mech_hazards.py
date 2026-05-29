@@ -53,24 +53,32 @@ from pokepy.core.bitpack import (
 SWITCH_TO_SLOT1 = 5
 SWITCH_TO_SLOT2 = 6
 
+
 def _hazards_word(state, side: int) -> int:
-    return int(state.battle_state[OFF_FIELD + (F_HAZARDS_0 if side == 0 else F_HAZARDS_1)])
+    return int(
+        state.battle_state[OFF_FIELD + (F_HAZARDS_0 if side == 0 else F_HAZARDS_1)]
+    )
+
 
 def _hp_slot(state, side: int, slot: int) -> int:
     base = OFF_SIDE0 if side == 0 else OFF_SIDE1
     return int(state.battle_state[base + slot * POKEMON_SIZE + 1])
 
+
 def _max_hp_slot(state, side: int, slot: int) -> int:
     base = OFF_SIDE0 if side == 0 else OFF_SIDE1
     return int(state.battle_state[base + slot * POKEMON_SIZE + 2])
+
 
 def _status_slot(state, side: int, slot: int) -> int:
     base = OFF_SIDE0 if side == 0 else OFF_SIDE1
     return int(state.battle_state[base + slot * POKEMON_SIZE + 12]) & 0xFF
 
+
 # ---------------------------------------------------------------------------
 # 1. Stealth Rock sets the hazard layer
 # ---------------------------------------------------------------------------
+
 
 def test_stealth_rock_sets_layer(fresh_battle, step_turn):
     state, prng = fresh_battle(
@@ -81,9 +89,11 @@ def test_stealth_rock_sets_layer(fresh_battle, step_turn):
     step_turn(state, prng, 0, 0)
     assert get_stealth_rock(_hazards_word(state, 1)) == 1
 
+
 # ---------------------------------------------------------------------------
 # 2. SR damage scales with rock-type effectiveness
 # ---------------------------------------------------------------------------
+
 
 def test_sr_damage_neutral_one_eighth(fresh_battle, step_turn):
     # Snorlax (Normal) takes 1/8 from Stealth Rock.
@@ -97,6 +107,7 @@ def test_sr_damage_neutral_one_eighth(fresh_battle, step_turn):
     step_turn(state, prng, 0, SWITCH_TO_SLOT1)
     hp_after = _hp_slot(state, 1, 1)
     assert hp_after == max_hp - max(max_hp // 8, 1)
+
 
 def test_sr_damage_resist_one_sixteenth(fresh_battle, step_turn):
     # Garchomp (Dragon/Ground) → 0.5x rock → 1/16.
@@ -112,6 +123,7 @@ def test_sr_damage_resist_one_sixteenth(fresh_battle, step_turn):
     expected = max(int(max_hp * 0.5 / 8), 1)
     assert hp_after == max_hp - expected
 
+
 def test_sr_damage_4x_weak_one_half(fresh_battle, step_turn):
     # Volcarona (Bug/Fire) → 4x rock → 1/2.
     state, prng = fresh_battle(
@@ -126,9 +138,11 @@ def test_sr_damage_4x_weak_one_half(fresh_battle, step_turn):
     expected = max(int(max_hp * 4.0 / 8), 1)
     assert hp_after == max_hp - expected
 
+
 # ---------------------------------------------------------------------------
 # 3. SR vs Heavy Duty Boots — no damage
 # ---------------------------------------------------------------------------
+
 
 def test_sr_blocked_by_heavy_duty_boots(fresh_battle, step_turn):
     state, prng = fresh_battle(
@@ -144,9 +158,11 @@ def test_sr_blocked_by_heavy_duty_boots(fresh_battle, step_turn):
     step_turn(state, prng, 0, SWITCH_TO_SLOT1)
     assert _hp_slot(state, 1, 1) == max_hp
 
+
 # ---------------------------------------------------------------------------
 # 4. SR vs Magic Guard — no damage
 # ---------------------------------------------------------------------------
+
 
 def test_sr_blocked_by_magic_guard(fresh_battle, step_turn):
     state, prng = fresh_battle(
@@ -162,9 +178,11 @@ def test_sr_blocked_by_magic_guard(fresh_battle, step_turn):
     step_turn(state, prng, 0, SWITCH_TO_SLOT1)
     assert _hp_slot(state, 1, 1) == max_hp
 
+
 # ---------------------------------------------------------------------------
 # 5-7. Spikes layer-count damage
 # ---------------------------------------------------------------------------
+
 
 def _setup_spikes_then_switch(fresh_battle, step_turn, layers: int, seed: int):
     moves = ["spikes", "tackle", "tackle", "tackle"]
@@ -179,21 +197,26 @@ def _setup_spikes_then_switch(fresh_battle, step_turn, layers: int, seed: int):
     step_turn(state, prng, 0, SWITCH_TO_SLOT1)
     return max_hp, _hp_slot(state, 1, 1)
 
+
 def test_spikes_one_layer(fresh_battle, step_turn):
     max_hp, hp = _setup_spikes_then_switch(fresh_battle, step_turn, 1, seed=10)
     assert hp == max_hp - max(max_hp // 8, 1)
+
 
 def test_spikes_two_layers(fresh_battle, step_turn):
     max_hp, hp = _setup_spikes_then_switch(fresh_battle, step_turn, 2, seed=11)
     assert hp == max_hp - max(max_hp // 6, 1)
 
+
 def test_spikes_three_layers(fresh_battle, step_turn):
     max_hp, hp = _setup_spikes_then_switch(fresh_battle, step_turn, 3, seed=12)
     assert hp == max_hp - max(max_hp // 4, 1)
 
+
 # ---------------------------------------------------------------------------
 # 8-10. Spikes immunities (Flying, Levitate, Heavy Duty Boots)
 # ---------------------------------------------------------------------------
+
 
 def test_spikes_ignores_flying_type(fresh_battle, step_turn):
     state, prng = fresh_battle(
@@ -209,6 +232,7 @@ def test_spikes_ignores_flying_type(fresh_battle, step_turn):
     step_turn(state, prng, 0, SWITCH_TO_SLOT1)
     assert _hp_slot(state, 1, 1) == max_hp
 
+
 def test_spikes_ignores_levitate(fresh_battle, step_turn):
     state, prng = fresh_battle(
         [MonSpec("blissey", ["spikes", "tackle", "tackle", "tackle"])],
@@ -222,6 +246,7 @@ def test_spikes_ignores_levitate(fresh_battle, step_turn):
     max_hp = _max_hp_slot(state, 1, 1)
     step_turn(state, prng, 0, SWITCH_TO_SLOT1)
     assert _hp_slot(state, 1, 1) == max_hp
+
 
 def test_spikes_blocked_by_heavy_duty_boots(fresh_battle, step_turn):
     state, prng = fresh_battle(
@@ -237,9 +262,11 @@ def test_spikes_blocked_by_heavy_duty_boots(fresh_battle, step_turn):
     step_turn(state, prng, 0, SWITCH_TO_SLOT1)
     assert _hp_slot(state, 1, 1) == max_hp
 
+
 # ---------------------------------------------------------------------------
 # 11-12. Toxic Spikes layer count → poison vs toxic
 # ---------------------------------------------------------------------------
+
 
 def test_toxic_spikes_one_layer_poisons(fresh_battle, step_turn):
     state, prng = fresh_battle(
@@ -250,6 +277,7 @@ def test_toxic_spikes_one_layer_poisons(fresh_battle, step_turn):
     step_turn(state, prng, 0, 0)
     step_turn(state, prng, 0, SWITCH_TO_SLOT1)
     assert _status_slot(state, 1, 1) == STATUS_POISON
+
 
 def test_toxic_spikes_two_layers_badly_poisons(fresh_battle, step_turn):
     state, prng = fresh_battle(
@@ -262,9 +290,11 @@ def test_toxic_spikes_two_layers_badly_poisons(fresh_battle, step_turn):
     step_turn(state, prng, 0, SWITCH_TO_SLOT1)
     assert _status_slot(state, 1, 1) == STATUS_TOXIC
 
+
 # ---------------------------------------------------------------------------
 # 13. Toxic Spikes absorbed by grounded Poison-type switch-in
 # ---------------------------------------------------------------------------
+
 
 def test_toxic_spikes_absorbed_by_grounded_poison(fresh_battle, step_turn):
     state, prng = fresh_battle(
@@ -280,9 +310,11 @@ def test_toxic_spikes_absorbed_by_grounded_poison(fresh_battle, step_turn):
     assert _status_slot(state, 1, 1) != STATUS_TOXIC
     assert get_toxic_spikes_layers(_hazards_word(state, 1)) == 0
 
+
 # ---------------------------------------------------------------------------
 # 14. Toxic Spikes ignores Flying / Levitate / Steel
 # ---------------------------------------------------------------------------
+
 
 def test_toxic_spikes_ignores_steel(fresh_battle, step_turn):
     state, prng = fresh_battle(
@@ -294,6 +326,7 @@ def test_toxic_spikes_ignores_steel(fresh_battle, step_turn):
     step_turn(state, prng, 0, SWITCH_TO_SLOT1)
     assert _status_slot(state, 1, 1) not in (STATUS_POISON, STATUS_TOXIC)
 
+
 def test_toxic_spikes_ignores_flying(fresh_battle, step_turn):
     state, prng = fresh_battle(
         [MonSpec("blissey", ["toxicspikes", "tackle", "tackle", "tackle"])],
@@ -304,9 +337,11 @@ def test_toxic_spikes_ignores_flying(fresh_battle, step_turn):
     step_turn(state, prng, 0, SWITCH_TO_SLOT1)
     assert _status_slot(state, 1, 1) not in (STATUS_POISON, STATUS_TOXIC)
 
+
 # ---------------------------------------------------------------------------
 # 15-16. Sticky Web -1 Speed; ignores Flying / HDB
 # ---------------------------------------------------------------------------
+
 
 def test_sticky_web_drops_speed(fresh_battle, step_turn, boost_of):
     state, prng = fresh_battle(
@@ -318,6 +353,7 @@ def test_sticky_web_drops_speed(fresh_battle, step_turn, boost_of):
     step_turn(state, prng, 0, SWITCH_TO_SLOT1)
     assert boost_of(state, 1, "spe") == -1
 
+
 def test_sticky_web_ignores_flying(fresh_battle, step_turn, boost_of):
     state, prng = fresh_battle(
         [MonSpec("blissey", ["stickyweb", "tackle", "tackle", "tackle"])],
@@ -327,6 +363,7 @@ def test_sticky_web_ignores_flying(fresh_battle, step_turn, boost_of):
     step_turn(state, prng, 0, 0)
     step_turn(state, prng, 0, SWITCH_TO_SLOT1)
     assert boost_of(state, 1, "spe") == 0
+
 
 def test_sticky_web_blocked_by_heavy_duty_boots(fresh_battle, step_turn, boost_of):
     state, prng = fresh_battle(
@@ -341,9 +378,11 @@ def test_sticky_web_blocked_by_heavy_duty_boots(fresh_battle, step_turn, boost_o
     step_turn(state, prng, 0, SWITCH_TO_SLOT1)
     assert boost_of(state, 1, "spe") == 0
 
+
 # ---------------------------------------------------------------------------
 # 17. Rapid Spin removes user-side hazards
 # ---------------------------------------------------------------------------
+
 
 def test_rapid_spin_removes_user_side_hazards(fresh_battle, step_turn):
     state, prng = fresh_battle(
@@ -358,9 +397,11 @@ def test_rapid_spin_removes_user_side_hazards(fresh_battle, step_turn):
     step_turn(state, prng, 2, 1)
     assert get_spikes_layers(_hazards_word(state, 1)) == 0
 
+
 # ---------------------------------------------------------------------------
 # 18. Defog removes hazards on BOTH sides
 # ---------------------------------------------------------------------------
+
 
 def test_defog_clears_both_sides(fresh_battle, step_turn):
     state, prng = fresh_battle(
@@ -377,9 +418,11 @@ def test_defog_clears_both_sides(fresh_battle, step_turn):
     assert get_stealth_rock(_hazards_word(state, 0)) == 0
     assert get_stealth_rock(_hazards_word(state, 1)) == 0
 
+
 # ---------------------------------------------------------------------------
 # 19. Court Change swaps hazards across sides
 # ---------------------------------------------------------------------------
+
 
 def test_court_change_swaps_hazards(fresh_battle, step_turn):
     state, prng = fresh_battle(
@@ -397,9 +440,11 @@ def test_court_change_swaps_hazards(fresh_battle, step_turn):
     assert get_stealth_rock(_hazards_word(state, 0)) == 1
     assert get_spikes_layers(_hazards_word(state, 1)) == 1
 
+
 # ---------------------------------------------------------------------------
 # 20. Tidy Up removes all hazards on user's side AND opponent's
 # ---------------------------------------------------------------------------
+
 
 def test_tidy_up_clears_hazards(fresh_battle, step_turn):
     state, prng = fresh_battle(
@@ -413,11 +458,15 @@ def test_tidy_up_clears_hazards(fresh_battle, step_turn):
     assert get_stealth_rock(_hazards_word(state, 1)) == 0
     assert get_stealth_rock(_hazards_word(state, 0)) == 0
 
+
 # ---------------------------------------------------------------------------
 # 21. Magic Bounce reflects hazard moves back at the setter
 # ---------------------------------------------------------------------------
 
-@pytest.mark.xfail(strict=False, reason="magic bounce blocks but does not yet reflect hazards")
+
+@pytest.mark.xfail(
+    strict=False, reason="magic bounce blocks but does not yet reflect hazards"
+)
 def test_magic_bounce_reflects_stealth_rock(fresh_battle, step_turn):
     state, prng = fresh_battle(
         [MonSpec("blissey", ["stealthrock", "tackle", "tackle", "tackle"])],
@@ -429,9 +478,11 @@ def test_magic_bounce_reflects_stealth_rock(fresh_battle, step_turn):
     assert get_stealth_rock(_hazards_word(state, 1)) == 0
     assert get_stealth_rock(_hazards_word(state, 0)) == 1
 
+
 # ---------------------------------------------------------------------------
 # 22. Hazard layer caps (3 spikes max, 2 toxic spikes max)
 # ---------------------------------------------------------------------------
+
 
 def test_spikes_caps_at_three_layers(fresh_battle, step_turn):
     state, prng = fresh_battle(
@@ -443,6 +494,7 @@ def test_spikes_caps_at_three_layers(fresh_battle, step_turn):
         step_turn(state, prng, 0, 0)
     assert get_spikes_layers(_hazards_word(state, 1)) == 3
 
+
 def test_toxic_spikes_caps_at_two_layers(fresh_battle, step_turn):
     state, prng = fresh_battle(
         [MonSpec("blissey", ["toxicspikes", "tackle", "tackle", "tackle"])],
@@ -452,6 +504,7 @@ def test_toxic_spikes_caps_at_two_layers(fresh_battle, step_turn):
     for _ in range(4):
         step_turn(state, prng, 0, 0)
     assert get_toxic_spikes_layers(_hazards_word(state, 1)) == 2
+
 
 def test_stealth_rock_single_layer_only(fresh_battle, step_turn):
     state, prng = fresh_battle(

@@ -2,6 +2,7 @@
 
 10907-10974.
 """
+
 from __future__ import annotations
 
 from pokepy.effects._common import np, MultiFormatState, Gen5PRNG
@@ -20,6 +21,7 @@ from pokepy.core.constants import (
 
 # Liquid Ooze ability ID — not in constants.py.
 ABILITY_LIQUID_OOZE = 64
+
 
 def apply_recoil_drain_from_move(
     battle: np.ndarray,
@@ -72,7 +74,12 @@ def apply_recoil_drain_from_move(
     _MOVE_JUMP_KICK = 26
     _MOVE_SUPERCELL_SLAM = 916
     _MOVE_AXE_KICK = 853
-    if move_id in (_MOVE_HIGH_JUMP_KICK, _MOVE_JUMP_KICK, _MOVE_SUPERCELL_SLAM, _MOVE_AXE_KICK):
+    if move_id in (
+        _MOVE_HIGH_JUMP_KICK,
+        _MOVE_JUMP_KICK,
+        _MOVE_SUPERCELL_SLAM,
+        _MOVE_AXE_KICK,
+    ):
         return
 
     _MIND_BLOWN_RECOIL_MOVES = {720, 796}  # Mind Blown, Steel Beam
@@ -91,11 +98,14 @@ def apply_recoil_drain_from_move(
     # AWAY-FROM-ZERO for positive values; Python's round() is banker's
     # (half-to-even). Use floor(x + 0.5) to match JS.
     import math as _math
+
     recoil_amount = int(_math.floor(recoil_base * abs(recoil_pct) / 100.0 + 0.5))
     if move_id in _FIXED_MAXHP_RECOIL_MOVES:
         recoil_amount = int(_math.floor(float(max_hp) / 2.0 + 0.5))
 
-    if (damage_dealt > 0) and ((recoil_pct != 0) or (move_id in _FIXED_MAXHP_RECOIL_MOVES)):
+    if (damage_dealt > 0) and (
+        (recoil_pct != 0) or (move_id in _FIXED_MAXHP_RECOIL_MOVES)
+    ):
         recoil_amount = max(recoil_amount, 1)
 
     is_mind_blown_recoil = move_id in _MIND_BLOWN_RECOIL_MOVES
@@ -103,7 +113,10 @@ def apply_recoil_drain_from_move(
     is_drain = recoil_pct < 0
 
     target_for_user_ability = target_offset
-    if target_for_user_ability is not None and int(battle[int(target_for_user_ability) + 1]) <= 0:
+    if (
+        target_for_user_ability is not None
+        and int(battle[int(target_for_user_ability) + 1]) <= 0
+    ):
         target_for_user_ability = None
     user_ability = effective_ability(battle, uoff, target_for_user_ability)
     has_rock_head = user_ability == ABILITY_ROCK_HEAD
@@ -120,7 +133,7 @@ def apply_recoil_drain_from_move(
     # Big Root (item 29) — drain heals 1.3x. Showdown items.ts:bigroot
     # `onTryHealPriority: 1, onTryHeal(damage)`. Pokepy used to ignore it.
     user_item = int(battle[uoff + 6])
-    ITEM_BIG_ROOT = 29
+    ITEM_BIG_ROOT = 296
     drain_heal_amount = recoil_amount
     if is_drain and user_item == ITEM_BIG_ROOT:
         drain_heal_amount = (recoil_amount * 5325) // 4096  # chainModify(1.3)
@@ -151,16 +164,15 @@ def apply_recoil_drain_from_move(
     else:
         new_hp = current_hp
 
-    should_apply = (
-        is_mind_blown_recoil and move_attempted
-    ) or (
-        hit and (damage_dealt > 0) and (
-            (recoil_pct != 0) or (move_id in _FIXED_MAXHP_RECOIL_MOVES)
-        )
+    should_apply = (is_mind_blown_recoil and move_attempted) or (
+        hit
+        and (damage_dealt > 0)
+        and ((recoil_pct != 0) or (move_id in _FIXED_MAXHP_RECOIL_MOVES))
     )
     final_hp = new_hp if should_apply else current_hp
 
     battle[uoff + 1] = final_hp
+
 
 def apply_life_orb_recoil(
     battle: np.ndarray,
@@ -186,6 +198,7 @@ def apply_life_orb_recoil(
         move_id=move_id,
         move_effects=move_effects,
     )
+
 
 def apply_contact_damage(
     battle: np.ndarray,
@@ -225,7 +238,9 @@ def apply_contact_damage(
     def_ability = effective_ability(battle, doff, aoff)
     def_item = int(battle[doff + 6])
 
-    has_rough_skin = (def_ability == ABILITY_ROUGH_SKIN) or (def_ability == ABILITY_IRON_BARBS)
+    has_rough_skin = (def_ability == ABILITY_ROUGH_SKIN) or (
+        def_ability == ABILITY_IRON_BARBS
+    )
     has_rocky_helmet = def_item == ITEM_ROCKY_HELMET
 
     atk_hp = int(battle[aoff + 1])

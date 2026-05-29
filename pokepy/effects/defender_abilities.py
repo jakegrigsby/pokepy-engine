@@ -26,17 +26,33 @@ import numpy as np
 
 from pokepy.effects.misc import is_take_item_blocked_by_item_rule
 from pokepy.core.constants import (
-    OFF_SIDE0, OFF_SIDE1, POKEMON_SIZE,
+    OFF_SIDE0,
+    OFF_SIDE1,
+    POKEMON_SIZE,
     OFF_MOVES,
-    OFF_FIELD, F_HAZARDS_0, F_HAZARDS_1,
-    F_DISABLE_0, F_DISABLE_1,
-    F_DISABLE_TURNS_0, F_DISABLE_TURNS_1,
-    F_VOLATILE_0, F_VOLATILE_1,
-    M_ACTIVE_MOVE_ACTIONS_0, M_ACTIVE_MOVE_ACTIONS_1,
+    OFF_FIELD,
+    F_HAZARDS_0,
+    F_HAZARDS_1,
+    F_DISABLE_0,
+    F_DISABLE_1,
+    F_DISABLE_TURNS_0,
+    F_DISABLE_TURNS_1,
+    F_VOLATILE_0,
+    F_VOLATILE_1,
+    M_ACTIVE_MOVE_ACTIONS_0,
+    M_ACTIVE_MOVE_ACTIONS_1,
     ACTIVE_MOVE_ACTIONS_SEMI_INVUL,
     FLAG_CHARGE,
-    STATUS_NONE, STATUS_TOXIC, STATUS_PARALYSIS,
-    TYPE_FIRE, TYPE_WATER, TYPE_DARK, TYPE_BUG, TYPE_GHOST, TYPE_POISON, TYPE_STEEL,
+    STATUS_NONE,
+    STATUS_TOXIC,
+    STATUS_PARALYSIS,
+    TYPE_FIRE,
+    TYPE_WATER,
+    TYPE_DARK,
+    TYPE_BUG,
+    TYPE_GHOST,
+    TYPE_POISON,
+    TYPE_STEEL,
     FLAG_CONTACT,
 )
 from pokepy.core.bitpack import (
@@ -92,14 +108,16 @@ ABILITY_ELECTROMORPHOSIS = 280
 ABILITY_SEED_SOWER = 269  # already wired in engine but re-listed
 ABILITY_GULP_MISSILE = 241
 ABILITY_SHIELD_DUST = 19
-ITEM_COVERT_CLOAK = 816
-ITEM_PROTECTIVE_PADS = 663
+ITEM_COVERT_CLOAK = 1885
+ITEM_PROTECTIVE_PADS = 880
+
 
 def _to_int16(val: int) -> int:
     val = int(val) & 0xFFFF
     if val >= 0x8000:
         val -= 0x10000
     return val
+
 
 def apply_toxic_chain_on_damaging_hit(
     battle: np.ndarray,
@@ -131,7 +149,9 @@ def apply_toxic_chain_on_damaging_hit(
     if tc_def_ab == ABILITY_SHIELD_DUST or tc_def_item == ITEM_COVERT_CLOAK:
         return True
 
-    roll = int(prerolled_roll) if prerolled_roll is not None else int(gen5_prng.random(10))
+    roll = (
+        int(prerolled_roll) if prerolled_roll is not None else int(gen5_prng.random(10))
+    )
     if int(battle[def_off + 1]) <= 0:
         return True
 
@@ -150,6 +170,7 @@ def apply_toxic_chain_on_damaging_hit(
             is_status_move=False,
         )
     return True
+
 
 def apply_immediate_defender_ability_state_changes(
     battle: np.ndarray,
@@ -255,9 +276,13 @@ def apply_immediate_defender_ability_state_changes(
         battle[def_off + 13] = _to_int16(apply_boost_to_packed(b13, 4, -1))
         battle[def_off + 14] = _to_int16(apply_boost_to_packed(b14, 0, 2))
 
-    _ITEM_ABILITY_SHIELD = 746
+    _ITEM_ABILITY_SHIELD = 1881
     atk_hp_live = int(battle[atk_off + 1])
-    if def_ab in (ABILITY_MUMMY, ABILITY_LINGERING_AROMA) and is_contact and atk_hp_live > 0:
+    if (
+        def_ab in (ABILITY_MUMMY, ABILITY_LINGERING_AROMA)
+        and is_contact
+        and atk_hp_live > 0
+    ):
         atk_item_live = int(battle[atk_off + 6])
         if atk_item_live != _ITEM_ABILITY_SHIELD:
             battle[atk_off + 5] = np.int16(def_ab)
@@ -292,7 +317,7 @@ def apply_immediate_defender_ability_state_changes(
         _CLEAR_BODY_SET = (29, 73, 230)
         _CONTRARY = 126
         _SIMPLE = 86
-        _ITEM_CLEAR_AMULET = 747
+        _ITEM_CLEAR_AMULET = 1882
         if atk_ab_gt not in _CLEAR_BODY_SET and atk_item_gt != _ITEM_CLEAR_AMULET:
             drop = 1
             if atk_ab_gt == _CONTRARY:
@@ -308,6 +333,7 @@ def apply_immediate_defender_ability_state_changes(
         t2 = (cur_types >> 8) & 0xFF
         if not (t1 == move_type and t2 == move_type):
             battle[def_off + 4] = np.int16(move_type | (move_type << 8))
+
 
 def apply_cursed_body_on_damaging_hit(
     battle: np.ndarray,
@@ -353,11 +379,14 @@ def apply_cursed_body_on_damaging_hit(
     if cur_dis_slot >= 0 and cur_dis_turns > 0:
         return True
 
-    roll_cb = int(prerolled_roll) if prerolled_roll is not None else int(gen5_prng.random(10))
+    roll_cb = (
+        int(prerolled_roll) if prerolled_roll is not None else int(gen5_prng.random(10))
+    )
     if roll_cb < 3:
         battle[OFF_FIELD + cb_side_base_dis] = np.int16(move_idx)
         battle[OFF_FIELD + cb_side_base_dt] = np.int16(4)
     return True
+
 
 def apply_defender_abilities(
     battle: np.ndarray,
@@ -410,24 +439,53 @@ def apply_defender_abilities(
         is_contact1 = False
 
     pairs = [
-        (int(user0_off), int(target0_off), bool(hit0), int(damage0),
-         move_type0, move_cat0, is_contact0, 0, int(move_id0), int(move_idx0)),
-        (int(user1_off), int(target1_off), bool(hit1), int(damage1),
-         move_type1, move_cat1, is_contact1, 1, int(move_id1), int(move_idx1)),
+        (
+            int(user0_off),
+            int(target0_off),
+            bool(hit0),
+            int(damage0),
+            move_type0,
+            move_cat0,
+            is_contact0,
+            0,
+            int(move_id0),
+            int(move_idx0),
+        ),
+        (
+            int(user1_off),
+            int(target1_off),
+            bool(hit1),
+            int(damage1),
+            move_type1,
+            move_cat1,
+            is_contact1,
+            1,
+            int(move_id1),
+            int(move_idx1),
+        ),
     ]
 
-    for atk_off, def_off, did_hit, dmg, mtype, mcat, is_contact, atk_side, mid, midx in pairs:
+    for (
+        atk_off,
+        def_off,
+        did_hit,
+        dmg,
+        mtype,
+        mcat,
+        is_contact,
+        atk_side,
+        mid,
+        midx,
+    ) in pairs:
         if not did_hit or dmg <= 0:
             continue
         def_ab = int(battle[def_off + 5])
         def_hp = int(battle[def_off + 1])
-        skip_immediate_stateful = (
-            (atk_side == 0 and skip_immediate_stateful_move0)
-            or (atk_side == 1 and skip_immediate_stateful_move1)
+        skip_immediate_stateful = (atk_side == 0 and skip_immediate_stateful_move0) or (
+            atk_side == 1 and skip_immediate_stateful_move1
         )
-        skip_cursed_body = (
-            (atk_side == 0 and skip_cursed_body0)
-            or (atk_side == 1 and skip_cursed_body1)
+        skip_cursed_body = (atk_side == 0 and skip_cursed_body0) or (
+            atk_side == 1 and skip_cursed_body1
         )
 
         # Toxic Debris — physical hit lays Toxic Spikes on attacker's side
@@ -467,10 +525,14 @@ def apply_defender_abilities(
             # Damp on either active mon suppresses Aftermath. Showdown checks
             # `getAllActive` for the Damp holder via onAnyDamage.
             from pokepy.core.constants import (
-                OFF_SIDE0 as _OS0_AF, OFF_SIDE1 as _OS1_AF,
-                OFF_META as _OM_AF, M_ACTIVE0 as _MA0_AF, M_ACTIVE1 as _MA1_AF,
+                OFF_SIDE0 as _OS0_AF,
+                OFF_SIDE1 as _OS1_AF,
+                OFF_META as _OM_AF,
+                M_ACTIVE0 as _MA0_AF,
+                M_ACTIVE1 as _MA1_AF,
                 POKEMON_SIZE as _PS_AF,
             )
+
             _a0_af = int(battle[_OM_AF + _MA0_AF])
             _a1_af = int(battle[_OM_AF + _MA1_AF])
             _ab0_af = int(battle[_OS0_AF + _a0_af * _PS_AF + 5])
@@ -481,11 +543,20 @@ def apply_defender_abilities(
                 or atk_item_aft == ITEM_PROTECTIVE_PADS
                 or damp_active
             )
-            if def_ab == ABILITY_AFTERMATH and is_contact and atk_hp_aft > 0 and not blocked_aft:
+            if (
+                def_ab == ABILITY_AFTERMATH
+                and is_contact
+                and atk_hp_aft > 0
+                and not blocked_aft
+            ):
                 aftermath_dmg = max(int(atk_maxhp_aft / 4), 1)
                 new_atk_hp = max(0, atk_hp_aft - aftermath_dmg)
                 battle[atk_off + 1] = np.int16(new_atk_hp)
-            elif def_ab == ABILITY_INNARDS_OUT and atk_hp_aft > 0 and atk_ab_aft != ABILITY_MAGIC_GUARD:
+            elif (
+                def_ab == ABILITY_INNARDS_OUT
+                and atk_hp_aft > 0
+                and atk_ab_aft != ABILITY_MAGIC_GUARD
+            ):
                 # Innards Out is NOT blocked by Protective Pads (it's not
                 # contact damage — it returns the actual HP overflow).
                 innards_dmg = max(int(dmg), 1)
@@ -501,7 +572,9 @@ def apply_defender_abilities(
         if def_ab == ABILITY_GULP_MISSILE and gulp_state != GULP_MISSILE_NONE:
             atk_hp_gm = int(battle[atk_off + 1])
             def_actions_off = OFF_MOVES + (
-                M_ACTIVE_MOVE_ACTIONS_0 if def_off < OFF_SIDE1 else M_ACTIVE_MOVE_ACTIONS_1
+                M_ACTIVE_MOVE_ACTIONS_0
+                if def_off < OFF_SIDE1
+                else M_ACTIVE_MOVE_ACTIONS_1
             )
             def_is_semi_invul = (
                 int(battle[def_actions_off]) & ACTIVE_MOVE_ACTIONS_SEMI_INVUL
@@ -546,9 +619,8 @@ def apply_defender_abilities(
                 gen5_prng,
             )
 
-        skip_toxic_chain = (
-            (atk_side == 0 and skip_toxic_chain0)
-            or (atk_side == 1 and skip_toxic_chain1)
+        skip_toxic_chain = (atk_side == 0 and skip_toxic_chain0) or (
+            atk_side == 1 and skip_toxic_chain1
         )
         if not skip_toxic_chain:
             apply_toxic_chain_on_damaging_hit(
@@ -587,7 +659,18 @@ def apply_defender_abilities(
     # Wimp Out / Emergency Exit — defender HP crosses 50% → force switch.
     # Track separately because we need to know which side switched.
     p0_needs_switch = False
-    for atk_off, def_off, did_hit, dmg, mtype, mcat, is_contact, atk_side, mid, midx in pairs:
+    for (
+        atk_off,
+        def_off,
+        did_hit,
+        dmg,
+        mtype,
+        mcat,
+        is_contact,
+        atk_side,
+        mid,
+        midx,
+    ) in pairs:
         if not did_hit or dmg <= 0:
             continue
         def_ab = int(battle[def_off + 5])
@@ -631,16 +714,27 @@ def apply_defender_abilities(
             from pokepy.effects.hazards import (
                 apply_hazard_damage_on_switch as _hazard_wo,
             )
+
             _regen_wo(battle, def_off, True)
             _natcure_wo(battle, def_off, True)
             from pokepy.effects import auto_switch as _auto_switch_fn
             from pokepy.core.constants import (
-                OFF_META, M_ACTIVE0, M_ACTIVE1,
-                F_CHOICE_LOCK_1, F_LAST_MOVE_1, F_VOLATILE_1, F_LEECH_SEED_1,
-                F_EXTENDED_VOLATILE_1, F_DESTINY_BOND_1, F_SUBSTITUTE_1,
-                F_YAWN_TURNS_1, F_PERISH_COUNT_1,
-                NEUTRAL_BOOSTS_13, NEUTRAL_BOOSTS_14,
+                OFF_META,
+                M_ACTIVE0,
+                M_ACTIVE1,
+                F_CHOICE_LOCK_1,
+                F_LAST_MOVE_1,
+                F_VOLATILE_1,
+                F_LEECH_SEED_1,
+                F_EXTENDED_VOLATILE_1,
+                F_DESTINY_BOND_1,
+                F_SUBSTITUTE_1,
+                F_YAWN_TURNS_1,
+                F_PERISH_COUNT_1,
+                NEUTRAL_BOOSTS_13,
+                NEUTRAL_BOOSTS_14,
             )
+
             active1 = int(battle[OFF_META + M_ACTIVE1])
             new_active1 = _auto_switch_fn(battle, OFF_SIDE1, active1)
             if new_active1 != active1:
@@ -653,9 +747,16 @@ def apply_defender_abilities(
                 for off in (F_CHOICE_LOCK_1, F_LAST_MOVE_1, F_DISABLE_1):
                     battle[OFF_FIELD + off] = -1
                 battle[OFF_MOVES + M_ACTIVE_MOVE_ACTIONS_1] = 0
-                for off in (F_VOLATILE_1, F_LEECH_SEED_1, F_DISABLE_TURNS_1,
-                            F_EXTENDED_VOLATILE_1, F_DESTINY_BOND_1, F_SUBSTITUTE_1,
-                            F_YAWN_TURNS_1, F_PERISH_COUNT_1):
+                for off in (
+                    F_VOLATILE_1,
+                    F_LEECH_SEED_1,
+                    F_DISABLE_TURNS_1,
+                    F_EXTENDED_VOLATILE_1,
+                    F_DESTINY_BOND_1,
+                    F_SUBSTITUTE_1,
+                    F_YAWN_TURNS_1,
+                    F_PERISH_COUNT_1,
+                ):
                     battle[OFF_FIELD + off] = 0
                 new_p1 = OFF_SIDE1 + new_active1 * POKEMON_SIZE
                 _reset_switch_in_wo(battle, new_p1, game_data)
@@ -676,5 +777,7 @@ def apply_defender_abilities(
                     )
                 _hazard_wo(battle, new_p1, OFF_FIELD + F_HAZARDS_1)
                 active0_now = int(battle[OFF_META + M_ACTIVE0])
-                _switch_in_wo(battle, new_p1, OFF_SIDE0 + active0_now * POKEMON_SIZE, True)
+                _switch_in_wo(
+                    battle, new_p1, OFF_SIDE0 + active0_now * POKEMON_SIZE, True
+                )
     return p0_needs_switch

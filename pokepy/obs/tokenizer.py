@@ -15,6 +15,7 @@ import numpy as np
 
 UNKNOWN_TOKEN = -1
 
+
 class PokemonTokenizer:
     """Whitespace-split + dict-lookup tokenizer."""
 
@@ -33,8 +34,10 @@ class PokemonTokenizer:
     def tokenize(self, text: str) -> np.ndarray:
         return self.tokenize_words(text.split())
 
+
 _DEFAULT_VOCAB_PATH = Path(__file__).parent / "data" / "DefaultObservationSpace-v1.json"
 _default_tokenizer: PokemonTokenizer | None = None
+
 
 def load_default_tokenizer() -> PokemonTokenizer:
     global _default_tokenizer

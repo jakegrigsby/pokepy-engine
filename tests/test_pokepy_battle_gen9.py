@@ -8,10 +8,13 @@ pokepy/effects/.
 import importlib
 import pytest
 
+
 def test_battle_gen9_module_imports():
     mod = importlib.import_module("pokepy.engine.battle_gen9")
     assert hasattr(mod, "step_battle_gen9")
+    assert hasattr(mod, "step_battle_gen9_iter")
     assert hasattr(mod, "step_forced_switch")
+
 
 def test_engine_package_exports():
     pkg = importlib.import_module("pokepy.engine")
@@ -21,6 +24,7 @@ def test_engine_package_exports():
     bg9 = importlib.import_module("pokepy.engine.battle_gen9")
     assert callable(bg9.step_battle_gen9)
     assert callable(bg9.step_forced_switch)
+
 
 def test_runtime_step_battle_gen9():
     """Real one-turn step. Skipped until effects + damage helpers exist."""

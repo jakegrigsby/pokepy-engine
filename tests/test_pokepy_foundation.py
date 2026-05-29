@@ -16,6 +16,7 @@ from pokepy.data.type_charts import MODERN_TYPE_CHART
 from pokepy.data.loader import load_game_data
 from pokepy.utils.gen5_prng import Gen5PRNG
 
+
 def test_state_create_empty():
     s = MultiFormatState.create_empty(format_id=1)
     assert int(s.format_id) == 1
@@ -29,6 +30,7 @@ def test_state_create_empty():
     assert int(s.turn) == 0
     assert int(s.winner) == -1
 
+
 def test_state_byte_layout_consistent():
     """The flat buffer accommodates 6+6 pokemon + field + meta + reserved."""
     needed = C.OFF_SIDE0 + 0  # start
@@ -38,9 +40,11 @@ def test_state_byte_layout_consistent():
     needed = max(needed, C.OFF_MOVES + 16)
     assert needed <= C.STATE_SIZE
 
+
 # -----------------------------------------------------------------------------
 # Bitpack: boost packing
 # -----------------------------------------------------------------------------
+
 
 def test_boost_pack_roundtrip():
     """Pack -6..+6 in each of 4 slots, extract, assert equal."""
@@ -52,12 +56,14 @@ def test_boost_pack_roundtrip():
     assert bp.extract_boost(packed, 8) == 6
     assert bp.extract_boost(packed, 12) == -6
 
+
 def test_boost_clamps_to_range():
     packed = C.NEUTRAL_BOOSTS_13
     packed = bp.apply_boost_to_packed(packed, 0, 100)
     assert bp.extract_boost(packed, 0) == 6
     packed = bp.apply_boost_to_packed(packed, 0, -100)
     assert bp.extract_boost(packed, 0) == -6
+
 
 def test_boost_independent_slots():
     packed = C.NEUTRAL_BOOSTS_13
@@ -67,14 +73,17 @@ def test_boost_independent_slots():
     assert bp.extract_boost(packed, 8) == 0
     assert bp.extract_boost(packed, 12) == 0
 
+
 # -----------------------------------------------------------------------------
 # Bitpack: status, hazards, protect, volatiles
 # -----------------------------------------------------------------------------
+
 
 def test_status_pack_roundtrip():
     field = bp.set_status(C.STATUS_TOXIC, turns=5)
     assert bp.get_status(field) == C.STATUS_TOXIC
     assert bp.get_status_turns(field) == 5
+
 
 def test_hazards_pack_roundtrip():
     h = 0
@@ -88,9 +97,11 @@ def test_hazards_pack_roundtrip():
     assert bp.get_sticky_web(h) == 1
     assert bp.clear_hazards(h) == 0
 
+
 def test_hazards_layer_caps():
     assert bp.get_spikes_layers(bp.set_spikes(0, 99)) == 3
     assert bp.get_toxic_spikes_layers(bp.set_toxic_spikes(0, 99)) == 2
+
 
 def test_protect_pack_roundtrip():
     p = 0
@@ -103,6 +114,7 @@ def test_protect_pack_roundtrip():
     p2 = bp.clear_protect_active(p)
     assert bp.get_protect_active(p2) == 0
     assert bp.get_protect_consecutive(p2) == 4  # unchanged
+
 
 def test_volatile_pack_roundtrip():
     v = 0
@@ -119,9 +131,11 @@ def test_volatile_pack_roundtrip():
     # Other counters preserved
     assert bp.get_confusion_turns(cleared) == 3
 
+
 # -----------------------------------------------------------------------------
 # Type chart
 # -----------------------------------------------------------------------------
+
 
 def test_modern_type_chart_shape_and_neutrals():
     assert MODERN_TYPE_CHART.shape == (19, 19)
@@ -134,9 +148,11 @@ def test_modern_type_chart_shape_and_neutrals():
     assert MODERN_TYPE_CHART[C.TYPE_DRAGON, C.TYPE_FIRE] == 0.5
     assert MODERN_TYPE_CHART[C.TYPE_NORMAL, C.TYPE_NORMAL] == 1.0
 
+
 # -----------------------------------------------------------------------------
 # Data loader
 # -----------------------------------------------------------------------------
+
 
 def test_data_loader_loads():
     gd = load_game_data()
@@ -148,9 +164,11 @@ def test_data_loader_loads():
     # Move 0 (silent) typically has 0 base power; just verify dtype is small int
     assert gd.move_base_power.dtype.kind in ("i", "u")
 
+
 # -----------------------------------------------------------------------------
 # Gen 5 PRNG
 # -----------------------------------------------------------------------------
+
 
 def test_gen5_prng_deterministic():
     a = Gen5PRNG((1, 2, 3, 4))
@@ -158,15 +176,18 @@ def test_gen5_prng_deterministic():
     for _ in range(100):
         assert a.next() == b.next()
 
+
 def test_gen5_prng_damage_roll_in_range():
     p = Gen5PRNG((1, 2, 3, 4))
     for _ in range(1000):
         r = p.damage_roll()
         assert 0.85 <= r < 1.0
 
+
 def test_pokepy_has_no_jax_or_torch_dependency():
     """pokepy must remain pure-Python/numpy — no jax, torch, or tensorflow."""
     import sys
+
     BANNED = ("jax", "torch", "tensorflow", "flax")
     for k in list(sys.modules):
         if any(k == b or k.startswith(b + ".") for b in BANNED):
@@ -180,5 +201,8 @@ def test_pokepy_has_no_jax_or_torch_dependency():
     import pokepy.data.loader  # noqa: F401
     import pokepy.data.type_charts  # noqa: F401
     import pokepy.utils.gen5_prng  # noqa: F401
-    leaked = [k for k in sys.modules if any(k == b or k.startswith(b + ".") for b in BANNED)]
+
+    leaked = [
+        k for k in sys.modules if any(k == b or k.startswith(b + ".") for b in BANNED)
+    ]
     assert not leaked, f"pokepy leaked imports of a heavy dependency: {leaked}"

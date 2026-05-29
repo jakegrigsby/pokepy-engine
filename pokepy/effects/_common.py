@@ -7,6 +7,7 @@ fields is passed as `state: MultiFormatState`.
 NOTE: These ports are scaffolds — function signatures and module layout are
 in place but most bodies are TODO. Integration step will fill in real logic.
 """
+
 from __future__ import annotations
 
 import numpy as np

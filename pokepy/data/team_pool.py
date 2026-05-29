@@ -15,6 +15,7 @@ import numpy as np
 _NPZ_PATH = Path(__file__).parent / "teams_gen9ou.npz"
 _cache: Optional[Dict[str, np.ndarray]] = None
 
+
 def _load() -> Dict[str, np.ndarray]:
     global _cache
     if _cache is not None:
@@ -28,8 +29,10 @@ def _load() -> Dict[str, np.ndarray]:
     _cache = {k: data[k] for k in data.files}
     return _cache
 
+
 def num_teams() -> int:
     return int(_load()["species"].shape[0])
+
 
 def get_team(idx: int) -> Dict[str, Any]:
     """Return team `idx` as a dict in the format `init_battle_state` expects."""
@@ -51,11 +54,13 @@ def get_team(idx: int) -> Dict[str, Any]:
         ivs=[[int(i) for i in row] for row in d["ivs"][idx][valid]],
     )
 
+
 def sample_team(rng: Optional[np.random.Generator] = None) -> Dict[str, Any]:
     """Random team from the pool."""
     if rng is None:
         rng = np.random.default_rng()
     return get_team(int(rng.integers(0, num_teams())))
+
 
 def sample_team_pair(rng: Optional[np.random.Generator] = None):
     """Two random teams (one for each side)."""

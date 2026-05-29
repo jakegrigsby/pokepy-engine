@@ -17,11 +17,14 @@ import numpy as np
 
 from pokepy.core.constants import STATE_SIZE
 
+
 def _zeros(shape, dtype):
     return np.zeros(shape, dtype=dtype)
 
+
 def _full(shape, value, dtype):
     return np.full(shape, value, dtype=dtype)
+
 
 @dataclass
 class MultiFormatState:
@@ -42,7 +45,9 @@ class MultiFormatState:
     team_evs: np.ndarray = _f(default_factory=lambda: _zeros(6, np.int8))
     team_evs_full: np.ndarray = _f(default_factory=lambda: _zeros((6, 6), np.int16))
     team_ivs_full: np.ndarray = _f(default_factory=lambda: _full((6, 6), 31, np.int16))
-    team_nature_mods: np.ndarray = _f(default_factory=lambda: np.ones((6, 6), dtype=np.float32))
+    team_nature_mods: np.ndarray = _f(
+        default_factory=lambda: np.ones((6, 6), dtype=np.float32)
+    )
     team_tera: np.ndarray = _f(default_factory=lambda: _full(6, -1, np.int8))
     team_pp: np.ndarray = _f(default_factory=lambda: _zeros((6, 4), np.int8))
 
@@ -54,24 +59,47 @@ class MultiFormatState:
     opp_evs: np.ndarray = _f(default_factory=lambda: _zeros(6, np.int8))
     opp_evs_full: np.ndarray = _f(default_factory=lambda: _zeros((6, 6), np.int16))
     opp_ivs_full: np.ndarray = _f(default_factory=lambda: _full((6, 6), 31, np.int16))
-    opp_nature_mods: np.ndarray = _f(default_factory=lambda: np.ones((6, 6), dtype=np.float32))
+    opp_nature_mods: np.ndarray = _f(
+        default_factory=lambda: np.ones((6, 6), dtype=np.float32)
+    )
     opp_tera: np.ndarray = _f(default_factory=lambda: _full(6, -1, np.int8))
     opp_pp: np.ndarray = _f(default_factory=lambda: _zeros((6, 4), np.int8))
 
     # Opponent revealed (partial observability)
     opp_revealed: np.ndarray = _f(default_factory=lambda: _zeros(6, np.bool_))
-    opp_moves_revealed: np.ndarray = _f(default_factory=lambda: _zeros((6, 4), np.bool_))
+    opp_moves_revealed: np.ndarray = _f(
+        default_factory=lambda: _zeros((6, 4), np.bool_)
+    )
+    # Item / ability reveal flags (fog of war). Set once side-1's item/ability
+    # has activated in a way Showdown surfaces to the opponent (an `-item` /
+    # `-ability` / `[from] ...` protocol message). Persist across switches
+    # (once seen, always known). Read by the obs adapter so a side-0 observer
+    # only learns side-1's item/ability after it has actually been revealed.
+    opp_items_revealed: np.ndarray = _f(default_factory=lambda: _zeros(6, np.bool_))
+    opp_abilities_revealed: np.ndarray = _f(default_factory=lambda: _zeros(6, np.bool_))
 
     # Player revealed (symmetric partial observability, as seen by side 1).
     # Populated by the same engine reveal logic that drives opp_* above; used
     # when a side-1 agent (e.g. Kakuna-as-opponent) needs to observe which
     # side-0 moves have actually been used so far.
     team_revealed: np.ndarray = _f(default_factory=lambda: _zeros(6, np.bool_))
-    team_moves_revealed: np.ndarray = _f(default_factory=lambda: _zeros((6, 4), np.bool_))
+    team_moves_revealed: np.ndarray = _f(
+        default_factory=lambda: _zeros((6, 4), np.bool_)
+    )
+    # Symmetric item/ability reveal flags for side-0's mons (as seen by a
+    # side-1 observer). Mirror opp_items_revealed / opp_abilities_revealed.
+    team_items_revealed: np.ndarray = _f(default_factory=lambda: _zeros(6, np.bool_))
+    team_abilities_revealed: np.ndarray = _f(
+        default_factory=lambda: _zeros(6, np.bool_)
+    )
 
     # Per-slot consumed berry tracking for mechanics such as Harvest.
-    team_last_consumed_berry: np.ndarray = _f(default_factory=lambda: _zeros(6, np.int16))
-    opp_last_consumed_berry: np.ndarray = _f(default_factory=lambda: _zeros(6, np.int16))
+    team_last_consumed_berry: np.ndarray = _f(
+        default_factory=lambda: _zeros(6, np.int16)
+    )
+    opp_last_consumed_berry: np.ndarray = _f(
+        default_factory=lambda: _zeros(6, np.int16)
+    )
     # Showdown resets each active Pokemon's moveSlot.used flags on switch-in.
     # Last Resort reads those flags, so track the four move slots as a bitmask.
     team_move_used_masks: np.ndarray = _f(default_factory=lambda: _zeros(6, np.int8))
@@ -96,6 +124,8 @@ class MultiFormatState:
     forced_switch_hp: np.int16 = np.int16(0)
     forced_switch_original: np.int8 = np.int8(-1)
     forced_switch_action_speed: np.int16 = np.int16(0)
+    # Which side(s) owe a forced-switch decision: -1 none, 0/1 single, 2 both.
+    forced_switch_side: np.int8 = np.int8(-1)
     # When the opponent auto-switches in while player 0 is still fainted and
     # awaiting a forced replacement, defer that opponent's on-switch ability
     # until step_forced_switch can resolve against the real live target.

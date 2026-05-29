@@ -23,6 +23,7 @@ from pokepy.obs.universal import UniversalState
 from pokepy.obs.observation_space import state_to_obs
 from pokepy.obs.tokenizer import load_default_tokenizer
 
+
 def build_kakuna_obs(
     universal_state: UniversalState,
     illegal_actions: np.ndarray | None = None,
@@ -53,6 +54,7 @@ def build_kakuna_obs(
         "numbers": numbers,
         "illegal_actions": illegal_actions.astype(np.bool_),
     }
+
 
 def build_rl2_features(prev_reward: float, prev_action: int) -> np.ndarray:
     """RL2 history features for Kakuna's trajectory encoder.

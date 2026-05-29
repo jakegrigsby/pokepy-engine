@@ -27,6 +27,7 @@ Source line ranges (multi_format_fast_env.py):
 - _apply_curse_damage:            10838
 - _apply_salt_cure_damage:         8824
 """
+
 from __future__ import annotations
 
 from pokepy.effects._common import np, MultiFormatState, Gen5PRNG
@@ -140,9 +141,11 @@ from pokepy.core.constants import (
 # Helpers
 # -----------------------------------------------------------------------------
 
+
 def _side_field(side: int, off_a: int, off_b: int) -> int:
     """Pick OFF_FIELD-relative offset based on side (0/1)."""
     return OFF_FIELD + (off_a if int(side) == 0 else off_b)
+
 
 def _active_offset(battle: np.ndarray, side: int) -> int:
     if int(side) == 0:
@@ -152,6 +155,7 @@ def _active_offset(battle: np.ndarray, side: int) -> int:
         active = int(battle[OFF_META + M_ACTIVE1])
         return OFF_SIDE1 + active * POKEMON_SIZE
 
+
 def _to_int16(value: int) -> int:
     """Wrap an unsigned 16-bit value into the signed int16 range."""
     value = int(value) & 0xFFFF
@@ -159,9 +163,11 @@ def _to_int16(value: int) -> int:
         value -= 0x10000
     return value
 
+
 # -----------------------------------------------------------------------------
 # Leech Seed
 # -----------------------------------------------------------------------------
+
 
 def apply_leech_seed_damage(
     battle: np.ndarray,
@@ -176,7 +182,7 @@ def apply_leech_seed_damage(
     """
     p0 = int(pokemon0_offset)
     p1 = int(pokemon1_offset)
-    ITEM_BIG_ROOT = 29
+    ITEM_BIG_ROOT = 296
 
     player_seeded = int(battle[OFF_FIELD + F_LEECH_SEED_0]) > 0
     opp_seeded = int(battle[OFF_FIELD + F_LEECH_SEED_1]) > 0
@@ -196,6 +202,7 @@ def apply_leech_seed_damage(
     # Heal Block on the seed owner (the one who would heal) blocks the heal
     # but the drain still happens. Showdown: healblock condition.onTryHeal.
     from pokepy.core.constants import EXT_VOL_HEAL_BLOCK
+
     heal_block0 = (ext_vol0 & EXT_VOL_HEAL_BLOCK) != 0
     heal_block1 = (ext_vol1 & EXT_VOL_HEAL_BLOCK) != 0
 
@@ -213,8 +220,7 @@ def apply_leech_seed_damage(
     # into" when the source mon (the seeder, the opposing side's active in
     # 1v1) is fainted/hp<=0 — no drain happens. The seeder for side 0 is
     # side 1's active mon (p1).
-    should_drain0 = (player_seeded and (hp0 > 0)
-                     and (hp1 > 0) and (not has_magic_guard0))
+    should_drain0 = player_seeded and (hp0 > 0) and (hp1 > 0) and (not has_magic_guard0)
     if should_drain0:
         hp0 = hp0 - drain0
         if hp1 > 0 and not heal_block1:
@@ -222,8 +228,7 @@ def apply_leech_seed_damage(
 
     # Opponent (side 1) is seeded by player → drain p1, heal p0. Same
     # short-circuit: skip if the seeder (side 0's active = p0) is fainted.
-    should_drain1 = (opp_seeded and (hp1 > 0)
-                     and (hp0 > 0) and (not has_magic_guard1))
+    should_drain1 = opp_seeded and (hp1 > 0) and (hp0 > 0) and (not has_magic_guard1)
     if should_drain1:
         hp1 = hp1 - drain1
         if hp0 > 0 and not heal_block0:
@@ -231,6 +236,7 @@ def apply_leech_seed_damage(
 
     battle[p0 + 1] = max(0, hp0)
     battle[p1 + 1] = max(0, hp1)
+
 
 def apply_leech_seed_from_move(
     battle: np.ndarray,
@@ -279,9 +285,11 @@ def apply_leech_seed_from_move(
     if int(battle[leech_offset]) == 0:
         battle[leech_offset] = 1
 
+
 # -----------------------------------------------------------------------------
 # Substitute
 # -----------------------------------------------------------------------------
+
 
 def apply_substitute_from_move(
     battle: np.ndarray,
@@ -320,6 +328,7 @@ def apply_substitute_from_move(
     battle[user_offset + 1] = current_hp - sub_cost
     battle[sub_offset] = sub_cost
 
+
 def apply_damage_to_substitute(
     battle: np.ndarray,
     target_side: int,
@@ -344,9 +353,11 @@ def apply_damage_to_substitute(
         return 0
     return int(damage)
 
+
 # -----------------------------------------------------------------------------
 # Perish Song / Destiny Bond / Lock-On
 # -----------------------------------------------------------------------------
+
 
 def apply_perish_song_from_move(
     battle: np.ndarray,
@@ -387,6 +398,7 @@ def apply_perish_song_from_move(
     if perish1 == 0 and not block1:
         battle[OFF_FIELD + F_PERISH_COUNT_1] = 4
 
+
 def apply_destiny_bond_from_move(
     battle: np.ndarray,
     move_id: int,
@@ -411,6 +423,7 @@ def apply_destiny_bond_from_move(
         return
     battle[destiny_offset] = 1
 
+
 def apply_lock_on_from_move(
     battle: np.ndarray,
     move_id: int,
@@ -428,13 +441,17 @@ def apply_lock_on_from_move(
     if mid != MOVE_LOCK_ON and mid != MOVE_MIND_READER:
         return
 
-    ext_vol_offset = _side_field(user_side, F_EXTENDED_VOLATILE_0, F_EXTENDED_VOLATILE_1)
+    ext_vol_offset = _side_field(
+        user_side, F_EXTENDED_VOLATILE_0, F_EXTENDED_VOLATILE_1
+    )
     cur = int(battle[ext_vol_offset]) & 0xFFFF
     battle[ext_vol_offset] = _to_int16(cur | EXT_VOL_LOCK_ON)
+
 
 # -----------------------------------------------------------------------------
 # Ghost Curse / Pain Split
 # -----------------------------------------------------------------------------
+
 
 def apply_ghost_curse_from_move(
     battle: np.ndarray,
@@ -467,9 +484,12 @@ def apply_ghost_curse_from_move(
     hp_cost = max(1, max_hp // 2)
     battle[user_offset + 1] = max(0, current_hp - hp_cost)
 
-    ext_vol_offset = _side_field(target_side, F_EXTENDED_VOLATILE_0, F_EXTENDED_VOLATILE_1)
+    ext_vol_offset = _side_field(
+        target_side, F_EXTENDED_VOLATILE_0, F_EXTENDED_VOLATILE_1
+    )
     cur = int(battle[ext_vol_offset]) & 0xFFFF
     battle[ext_vol_offset] = _to_int16(cur | EXT_VOL_CURSE)
+
 
 def apply_pain_split_from_move(
     battle: np.ndarray,
@@ -501,9 +521,11 @@ def apply_pain_split_from_move(
     battle[user_offset + 1] = min(avg_hp, user_max)
     battle[target_offset + 1] = min(avg_hp, target_max)
 
+
 # -----------------------------------------------------------------------------
 # Confusion / Taunt / Encore
 # -----------------------------------------------------------------------------
+
 
 def apply_confusion_volatile(
     battle: np.ndarray,
@@ -518,7 +540,9 @@ def apply_confusion_volatile(
     checks and duration roll.
     """
     from pokepy.core.constants import (
-        ABILITY_OWN_TEMPO, TERRAIN_MISTY, F_TERRAIN,
+        ABILITY_OWN_TEMPO,
+        TERRAIN_MISTY,
+        F_TERRAIN,
     )
 
     target_offset = _active_offset(battle, int(target_side))
@@ -526,7 +550,10 @@ def apply_confusion_volatile(
     if target_ability == ABILITY_OWN_TEMPO:
         return False
 
-    if is_grounded(battle, target_offset) and int(battle[OFF_FIELD + F_TERRAIN]) == TERRAIN_MISTY:
+    if (
+        is_grounded(battle, target_offset)
+        and int(battle[OFF_FIELD + F_TERRAIN]) == TERRAIN_MISTY
+    ):
         return False
 
     volatile_offset = _side_field(target_side, F_VOLATILE_0, F_VOLATILE_1)
@@ -540,8 +567,11 @@ def apply_confusion_volatile(
     else:
         confusion_turns = int(gen5_prng.random(2, 6))
 
-    battle[volatile_offset] = _to_int16(set_confusion_turns(current_volatile, confusion_turns))
+    battle[volatile_offset] = _to_int16(
+        set_confusion_turns(current_volatile, confusion_turns)
+    )
     return True
+
 
 def apply_confusion_from_move(
     battle: np.ndarray,
@@ -578,6 +608,7 @@ def apply_confusion_from_move(
     if volatile_chance < 100:
         atk_offset = _active_offset(battle, 1 - int(target_side))
         from pokepy.core.constants import ABILITY_SHEER_FORCE as _ABILITY_SHEER_FORCE_VC
+
         if int(battle[atk_offset + 5]) == _ABILITY_SHEER_FORCE_VC:
             return
 
@@ -594,6 +625,7 @@ def apply_confusion_from_move(
         EFFECT_DAMAGE as _EFFECT_DAMAGE_VC,
         EFFECT_MULTI_HIT as _EFFECT_MULTI_HIT_VC,
     )
+
     _move_effect_vc = int(move_effects.effect_type[move_id])
     _is_damaging_vc = _move_effect_vc in (_EFFECT_DAMAGE_VC, _EFFECT_MULTI_HIT_VC)
     if _is_damaging_vc:
@@ -630,6 +662,7 @@ def apply_confusion_from_move(
         gen5_prng,
         prerolled_duration=prerolled_duration,
     )
+
 
 def apply_taunt_from_move(
     battle: np.ndarray,
@@ -678,6 +711,7 @@ def apply_taunt_from_move(
     # Oblivious blocks Taunt (+ Attract / Captivate). Showdown: abilities.ts
     # oblivious onTryHit -> return null when move is taunt.
     from pokepy.core.constants import ABILITY_OBLIVIOUS
+
     target_offset_t = _active_offset(battle, int(target_side))
     if int(battle[target_offset_t + 5]) == ABILITY_OBLIVIOUS:
         return
@@ -694,6 +728,7 @@ def apply_taunt_from_move(
         return
 
     battle[volatile_offset] = _to_int16(set_taunt_turns(current_volatile, 3))
+
 
 def apply_encore_from_move(
     battle: np.ndarray,
@@ -756,7 +791,11 @@ def apply_encore_from_move(
     # Me First / Sleep Talk / etc). Pokepy only has IDs for the most common
     # ones — gate those explicitly and let the others fall through.
     uncancellable = (
-        MOVE_STRUGGLE, MOVE_ENCORE, MOVE_MIMIC, MOVE_SKETCH, MOVE_TRANSFORM,
+        MOVE_STRUGGLE,
+        MOVE_ENCORE,
+        MOVE_MIMIC,
+        MOVE_SKETCH,
+        MOVE_TRANSFORM,
     )
     if last_move in uncancellable:
         return
@@ -768,6 +807,7 @@ def apply_encore_from_move(
         return
 
     battle[volatile_offset] = _to_int16(set_encore_turns(current_volatile, 3))
+
 
 def apply_throat_chop_from_move(
     battle: np.ndarray,
@@ -804,9 +844,11 @@ def apply_throat_chop_from_move(
     battle[volatile_offset] = _to_int16(set_throat_chop_turns(current_volatile, 2))
     return True
 
+
 # -----------------------------------------------------------------------------
 # Phazing (Roar / Whirlwind / Dragon Tail / Circle Throw)
 # -----------------------------------------------------------------------------
+
 
 def apply_phazing_from_move(
     battle: np.ndarray,
@@ -842,8 +884,11 @@ def apply_phazing_from_move(
     # DragOut blockers: Suction Cups / Guard Dog abilities, Ingrain volatile.
     # Showdown: abilities.ts suctioncups/guarddog onDragOut, moves.ts ingrain
     # condition.onDragOut -> return null.
-    target_active_off = OFF_SIDE0 + current_active * POKEMON_SIZE if is_side0 \
+    target_active_off = (
+        OFF_SIDE0 + current_active * POKEMON_SIZE
+        if is_side0
         else OFF_SIDE1 + current_active * POKEMON_SIZE
+    )
     # Dragon Tail / Circle Throw only drag a replacement when the target
     # survives the hit. If the target fainted to the move's damage, Showdown
     # skips the phazing effect and lets the normal faint replacement happen.
@@ -858,14 +903,24 @@ def apply_phazing_from_move(
     # (Whirlwind / Dragon Tail / Circle Throw are not sound moves so they
     # still work). The damage path already gates Soundproof for damaging sound
     # moves but status sound moves like Roar route through here.
-    from pokepy.core.constants import ABILITY_SOUNDPROOF as _ABILITY_SOUNDPROOF, FLAG_SOUND as _FLAG_SOUND
+    from pokepy.core.constants import (
+        ABILITY_SOUNDPROOF as _ABILITY_SOUNDPROOF,
+        FLAG_SOUND as _FLAG_SOUND,
+    )
+
     if target_ability == _ABILITY_SOUNDPROOF and game_data is not None:
         flags = int(game_data.move_flags[mid])
         if (flags & _FLAG_SOUND) != 0:
             return current_active
-    target_ext_vol = int(battle[OFF_FIELD + (
-        F_EXTENDED_VOLATILE_0 if is_side0 else F_EXTENDED_VOLATILE_1
-    )]) & 0xFFFF
+    target_ext_vol = (
+        int(
+            battle[
+                OFF_FIELD
+                + (F_EXTENDED_VOLATILE_0 if is_side0 else F_EXTENDED_VOLATILE_1)
+            ]
+        )
+        & 0xFFFF
+    )
     if (target_ext_vol & EXT_VOL_INGRAIN) != 0:
         return current_active
 
@@ -901,6 +956,7 @@ def apply_phazing_from_move(
         apply_natural_cure_on_switch_out as _apply_natural_cure_on_switch_out,
         apply_regenerator_on_switch_out as _apply_regenerator_on_switch_out,
     )
+
     _apply_regenerator_on_switch_out(battle, target_active_off, True)
     _apply_natural_cure_on_switch_out(battle, target_active_off, True)
 
@@ -924,9 +980,11 @@ def apply_phazing_from_move(
 
     return new_active
 
+
 # -----------------------------------------------------------------------------
 # Extended volatile bag (torment, attract, yawn, embargo, ...)
 # -----------------------------------------------------------------------------
+
 
 def apply_extended_volatile(
     battle: np.ndarray,
@@ -955,9 +1013,7 @@ def apply_extended_volatile(
     volatile_chance = int(move_effects.volatile_chance[move_id])
 
     has_extended_volatile = (
-        bool(hit)
-        and (volatile_chance > 0)
-        and (volatile_type >= VOLATILE_FOCUS_ENERGY)
+        bool(hit) and (volatile_chance > 0) and (volatile_type >= VOLATILE_FOCUS_ENERGY)
     )
     if not has_extended_volatile:
         return
@@ -1001,9 +1057,12 @@ def apply_extended_volatile(
         _target_offset_yawn = _active_offset(battle, _target_side_yawn)
         from pokepy.effects.status_apply import can_set_self_status
         from pokepy.core.constants import (
-            STATUS_SLEEP, F_SCREENS_0 as _FS0_YA, F_SCREENS_1 as _FS1_YA,
+            STATUS_SLEEP,
+            F_SCREENS_0 as _FS0_YA,
+            F_SCREENS_1 as _FS1_YA,
             SCREEN_SAFEGUARD_SHIFT as _SG_SHIFT_YA,
         )
+
         _cur_status_yawn = int(battle[_target_offset_yawn + 12]) & 0xFF
         if _cur_status_yawn != 0:
             return
@@ -1011,7 +1070,9 @@ def apply_extended_volatile(
             return
         # Safeguard on the target's side blocks opposing yawn.
         if int(attacker_side) != _target_side_yawn:
-            _screens_yawn = int(battle[OFF_FIELD + (_FS0_YA if _target_side_yawn == 0 else _FS1_YA)])
+            _screens_yawn = int(
+                battle[OFF_FIELD + (_FS0_YA if _target_side_yawn == 0 else _FS1_YA)]
+            )
             if ((_screens_yawn >> _SG_SHIFT_YA) & 0x3) > 0:
                 return
     is_embargo = volatile_type == VOLATILE_EMBARGO
@@ -1046,7 +1107,9 @@ def apply_extended_volatile(
         if target_hp_live <= 0 or (target_flags_live & 0x1) != 0:
             return
 
-    ext_vol_offset = _side_field(vol_target_side, F_EXTENDED_VOLATILE_0, F_EXTENDED_VOLATILE_1)
+    ext_vol_offset = _side_field(
+        vol_target_side, F_EXTENDED_VOLATILE_0, F_EXTENDED_VOLATILE_1
+    )
     current_ext_vol = int(battle[ext_vol_offset]) & 0xFFFF
     partial_trap_turns_offset = OFF_MOVES + (
         M_PARTIAL_TRAP_TURNS_0 if vol_target_side == 0 else M_PARTIAL_TRAP_TURNS_1
@@ -1063,6 +1126,7 @@ def apply_extended_volatile(
     # and onImmunity(type='attract'). Genderless mons (0 or 3) can't be
     # attracted either way.
     from pokepy.core.constants import ABILITY_OBLIVIOUS as _ABIL_OBLIV
+
     target_ability_xv = int(battle[target_offset + 5])
     atk_offset = _active_offset(battle, int(attacker_side))
     atk_flags = int(battle[atk_offset + 15])
@@ -1070,17 +1134,14 @@ def apply_extended_volatile(
     target_flags = int(battle[target_offset + 15])
     target_gender = (target_flags >> 4) & 0x3
     opposite_genders = (
-        (atk_gender == GENDER_MALE and target_gender == GENDER_FEMALE)
-        or (atk_gender == GENDER_FEMALE and target_gender == GENDER_MALE)
-    )
+        atk_gender == GENDER_MALE and target_gender == GENDER_FEMALE
+    ) or (atk_gender == GENDER_FEMALE and target_gender == GENDER_MALE)
     # Aroma Veil blocks Attract / Disable / Encore / Heal Block / Taunt /
     # Torment from opposing moves only. Showdown data/abilities.ts aromaveil
     # onAllyTryAddVolatile (singles: ally == self).
     _ABILITY_AROMA_VEIL_X = 165
     has_aroma_veil_xv = target_ability_xv == _ABILITY_AROMA_VEIL_X
-    is_aroma_blocked_vol = (
-        is_attract or is_torment or is_heal_block
-    )
+    is_aroma_blocked_vol = is_attract or is_torment or is_heal_block
     if has_aroma_veil_xv and is_aroma_blocked_vol and not is_self_target:
         return
     attract_succeeds = (
@@ -1127,12 +1188,14 @@ def apply_extended_volatile(
         return
     battle[ext_vol_offset] = _to_int16(current_ext_vol | bit_to_set)
     if is_partial_trap:
-        _ITEM_GRIP_CLAW = 179
+        _ITEM_GRIP_CLAW = 286
         if prerolled_duration is not None:
             trap_turns = int(prerolled_duration)
         else:
             attacker_item = int(battle[atk_offset + 6])
-            trap_turns = 8 if attacker_item == _ITEM_GRIP_CLAW else int(gen5_prng.random(5, 7))
+            trap_turns = (
+                8 if attacker_item == _ITEM_GRIP_CLAW else int(gen5_prng.random(5, 7))
+            )
         battle[partial_trap_turns_offset] = _to_int16(trap_turns)
     if is_heal_block:
         volatile_offset = _side_field(vol_target_side, F_VOLATILE_0, F_VOLATILE_1)
@@ -1141,21 +1204,28 @@ def apply_extended_volatile(
         # volatile came from Psychic Noise, otherwise 5.
         _MOVE_PSYCHIC_NOISE_HB = 917
         hb_turns = 2 if move_id == _MOVE_PSYCHIC_NOISE_HB else 5
-        battle[volatile_offset] = _to_int16(set_heal_block_turns(current_volatile, hb_turns))
+        battle[volatile_offset] = _to_int16(
+            set_heal_block_turns(current_volatile, hb_turns)
+        )
 
     # Yawn: also set the F_YAWN_TURNS counter so EOT can put the target to
     # sleep on the second turn. Showdown duration=2 → EOT decrements to 1
     # (drowsy), next EOT → trySetStatus 'slp'. We store 2 here.
     if is_yawn:
         from pokepy.core.constants import F_YAWN_TURNS_0, F_YAWN_TURNS_1
-        yawn_turns_off = OFF_FIELD + (F_YAWN_TURNS_0 if vol_target_side == 0 else F_YAWN_TURNS_1)
+
+        yawn_turns_off = OFF_FIELD + (
+            F_YAWN_TURNS_0 if vol_target_side == 0 else F_YAWN_TURNS_1
+        )
         # Only set if not already yawning
         if int(battle[yawn_turns_off]) == 0:
             battle[yawn_turns_off] = 2
 
+
 # -----------------------------------------------------------------------------
 # Confusion turn handling
 # -----------------------------------------------------------------------------
+
 
 def check_confusion_self_hit(
     battle: np.ndarray,
@@ -1209,6 +1279,7 @@ def check_confusion_self_hit(
     # BP is 40, Atk/Def use calculateStat('atk', boosts['atk']) — base stats
     # with stage BOOSTS applied. No burn halving, no STAB/crit.
     from pokepy.core.bitpack import extract_boost
+
     level = int(battle[pokemon_offset + 3])
     atk_base = int(battle[pokemon_offset + 7])
     def_base = max(1, int(battle[pokemon_offset + 8]))
@@ -1242,6 +1313,7 @@ def check_confusion_self_hit(
     battle[pokemon_offset + 1] = new_hp
     return True
 
+
 def decrement_confusion(battle: np.ndarray) -> None:
     """Port of _decrement_confusion (line ~10758).
 
@@ -1254,7 +1326,10 @@ def decrement_confusion(battle: np.ndarray) -> None:
         v = set_confusion_newly_applied(v, False)
         battle[vol_off] = _to_int16(v)
 
-def decrement_taunt_encore(battle: np.ndarray, gen5_prng: Gen5PRNG | None = None) -> None:
+
+def decrement_taunt_encore(
+    battle: np.ndarray, gen5_prng: Gen5PRNG | None = None
+) -> None:
     """Port of _decrement_taunt_encore (line ~10778).
 
     Decrements taunt, encore, heal block, Throat Chop and disable turns on
@@ -1292,10 +1367,10 @@ def decrement_taunt_encore(battle: np.ndarray, gen5_prng: Gen5PRNG | None = None
             ITEM_ASSAULT_VEST,
         )
 
-        active_slot = int(
-            battle[OFF_META + (M_ACTIVE0 if side == 0 else M_ACTIVE1)]
-        )
-        active_off = (OFF_SIDE0 if side == 0 else OFF_SIDE1) + active_slot * POKEMON_SIZE
+        active_slot = int(battle[OFF_META + (M_ACTIVE0 if side == 0 else M_ACTIVE1)])
+        active_off = (
+            OFF_SIDE0 if side == 0 else OFF_SIDE1
+        ) + active_slot * POKEMON_SIZE
         active_hp = int(battle[active_off + 1])
         active_flags = int(battle[active_off + 15])
         # Showdown rebuilds DisableMove handlers on the next move request. If
@@ -1347,8 +1422,16 @@ def decrement_taunt_encore(battle: np.ndarray, gen5_prng: Gen5PRNG | None = None
                 gen5_prng.random(start, group_size)
 
     for vol_off, ext_off, choice_off in (
-        (OFF_FIELD + F_VOLATILE_0, OFF_FIELD + F_EXTENDED_VOLATILE_0, OFF_FIELD + F_CHOICE_LOCK_0),
-        (OFF_FIELD + F_VOLATILE_1, OFF_FIELD + F_EXTENDED_VOLATILE_1, OFF_FIELD + F_CHOICE_LOCK_1),
+        (
+            OFF_FIELD + F_VOLATILE_0,
+            OFF_FIELD + F_EXTENDED_VOLATILE_0,
+            OFF_FIELD + F_CHOICE_LOCK_0,
+        ),
+        (
+            OFF_FIELD + F_VOLATILE_1,
+            OFF_FIELD + F_EXTENDED_VOLATILE_1,
+            OFF_FIELD + F_CHOICE_LOCK_1,
+        ),
     ):
         v = int(battle[vol_off])
         taunt = get_taunt_turns(v)
@@ -1401,9 +1484,11 @@ def decrement_taunt_encore(battle: np.ndarray, gen5_prng: Gen5PRNG | None = None
             if new_dt == 0:
                 battle[dis_off] = -1
 
+
 # -----------------------------------------------------------------------------
 # Perish Song / Curse end-of-turn
 # -----------------------------------------------------------------------------
+
 
 def process_perish_song(
     battle: np.ndarray,
@@ -1436,6 +1521,7 @@ def process_perish_song(
 
     battle[OFF_FIELD + F_PERISH_COUNT_0] = new_perish0
     battle[OFF_FIELD + F_PERISH_COUNT_1] = new_perish1
+
 
 def apply_curse_damage(
     battle: np.ndarray,
@@ -1471,9 +1557,11 @@ def apply_curse_damage(
         dmg1 = max(1, max_hp1 // 4)
         battle[p1 + 1] = max(0, cur_hp1 - dmg1)
 
+
 # -----------------------------------------------------------------------------
 # Salt Cure
 # -----------------------------------------------------------------------------
+
 
 def apply_salt_cure_damage(
     battle: np.ndarray,

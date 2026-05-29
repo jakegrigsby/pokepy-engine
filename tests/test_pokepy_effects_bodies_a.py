@@ -44,6 +44,7 @@ from pokepy.effects.status_apply import (
 )
 from pokepy.effects.stat_changes import apply_stat_changes_from_move
 
+
 def _hand_state():
     """Build a minimal battle buffer with two normal-type Pokemon (one per side)."""
     gd = load_game_data()
@@ -79,6 +80,7 @@ def _hand_state():
             bs[poff + 15] = 0  # flags
     return state, gd, me
 
+
 def test_apply_status_thunder_wave_paralyzes_target():
     state, gd, me = _hand_state()
     bs = state.battle_state
@@ -101,12 +103,11 @@ def test_apply_status_thunder_wave_paralyzes_target():
     )
 
     new_status = get_status(int(bs[target_offset + 12]))
-    assert new_status == STATUS_PARALYSIS, (
-        f"expected paralysis (2), got {new_status}"
-    )
+    assert new_status == STATUS_PARALYSIS, f"expected paralysis (2), got {new_status}"
 
     # User should remain unstatused (no synchronize)
     assert get_status(int(bs[user_offset + 12])) == STATUS_NONE
+
 
 def test_apply_status_no_overwrite_existing():
     state, gd, me = _hand_state()
@@ -128,6 +129,7 @@ def test_apply_status_no_overwrite_existing():
     )
     # Status should still be burn — Thunder Wave can't overwrite
     assert get_status(int(bs[target_offset + 12])) == STATUS_BURN
+
 
 def test_apply_stat_changes_growl_lowers_target_atk():
     state, gd, me = _hand_state()
@@ -152,11 +154,12 @@ def test_apply_stat_changes_growl_lowers_target_atk():
 
     after = int(bs[target_offset + 13])
     assert after != before, "growl should have changed packed boost"
-    assert extract_boost(after, 0) == -1, (
-        f"expected target atk -1, got {extract_boost(after, 0)}"
-    )
+    assert (
+        extract_boost(after, 0) == -1
+    ), f"expected target atk -1, got {extract_boost(after, 0)}"
     # User unaffected
     assert int(bs[user_offset + 13]) == NEUTRAL_BOOSTS_13
+
 
 def test_end_of_turn_burn_damages_one_sixteenth():
     state, gd, me = _hand_state()
