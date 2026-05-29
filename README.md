@@ -1,6 +1,6 @@
 # pokepy-engine
 
-This is a fork of a project begun by sethkarten/pokepy-engine, maintained and heavily extended by the metamon team.
+This is a fork of a project begun by `sethkarten/pokepy-engine`, which has been extended and tested by the `metamon` team.
 
 `pokepy-engine` is an experimental project that aims to serve an important niche for Pokémon RL projects like `metamon`, but probably should not be used for any other purpose.
 
