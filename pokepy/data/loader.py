@@ -1,9 +1,8 @@
 """Standalone .npy game data loader.
 
 Reads Pokemon Showdown data tables bundled with pokepy at
-`pokepy/data/extracted/`. Override the location with the
-`POKEPY_DATA_PATH` environment variable. Field names match the disk
-filenames so the loader is also a documentation of which tables exist.
+`pokepy/data/extracted/` (or per-gen subdirs `extracted/gen{N}/`).
+Override the location with the `POKEPY_DATA_PATH` environment variable.
 """
 
 from __future__ import annotations
@@ -74,33 +73,40 @@ class IDMappings:
     item_names: Dict[int, str]
 
 
-_cached: Optional[GameData] = None
-_cached_mappings: Optional[IDMappings] = None
-_cached_move_effects: Optional[MoveEffectData] = None
+_cached_by_gen: Dict[int, GameData] = {}
+_cached_mappings_by_gen: Dict[int, IDMappings] = {}
+_cached_move_effects_by_gen: Dict[int, MoveEffectData] = {}
 
 
-def get_data_path() -> Path:
-    """Pokemon Showdown data is bundled at pokepy/data/extracted/.
-
-    Override with the POKEPY_DATA_PATH environment variable.
-    """
+def get_data_path(gen: int = 9) -> Path:
+    """Return extracted data directory for ``gen`` (gen9 uses legacy root path)."""
     env = os.environ.get("POKEPY_DATA_PATH")
     if env:
-        return Path(env).expanduser().resolve()
-    return Path(__file__).resolve().parent / "extracted"
+        base = Path(env).expanduser().resolve()
+    else:
+        base = Path(__file__).resolve().parent / "extracted"
+    if int(gen) == 9:
+        return base
+    sub = base / f"gen{int(gen)}"
+    if sub.exists():
+        return sub
+    return sub
 
 
-def load_game_data(data_path: Optional[Path] = None) -> GameData:
-    global _cached
-    if _cached is not None and data_path is None:
-        return _cached
+def load_game_data(
+    data_path: Optional[Path] = None, gen: int = 9
+) -> GameData:
+    global _cached_by_gen
+    gen = int(gen)
+    if _cached_by_gen.get(gen) is not None and data_path is None:
+        return _cached_by_gen[gen]
 
     if data_path is None:
-        data_path = get_data_path()
+        data_path = get_data_path(gen)
     if not data_path.exists():
         raise FileNotFoundError(
-            f"Pokemon Showdown data not found at {data_path}. "
-            "Set POKEPY_DATA_PATH or reinstall pokepy with bundled data."
+            f"Pokemon Showdown data not found at {data_path} (gen={gen}). "
+            "Set POKEPY_DATA_PATH or run scripts/extract_ps_data.py --gen N."
         )
 
     def _load(name: str, optional: bool = False) -> Optional[np.ndarray]:
@@ -131,20 +137,15 @@ def load_game_data(data_path: Optional[Path] = None) -> GameData:
         item_is_choice=_load("item_is_choice", optional=True),
     )
 
-    # Patch metadata that the extracted numpy tables still miss. Today that is:
-    # - `accuracy: true` moves, which the extractor clips to 100 even though
-    #   pokepy's hit logic expects >100 to mean truly never-miss.
-    # - Showdown's `mustpressure` flag, which governs extra PP loss against
-    #   Pressure for moves like Stealth Rock / Spikes.
-    moves_json = data_path.parent / "moves.json"
+    moves_json = data_path / "moves.json"
+    if not moves_json.exists():
+        moves_json = data_path.parent / "moves.json"
     if moves_json.exists():
         try:
             with open(moves_json) as _f:
                 _moves = json.load(_f)
             acc_arr = gd.move_accuracy
             flags_arr = gd.move_flags
-            # `mustpressure` is not yet encoded in the extracted move_flags.npy
-            # table, so backfill it here from moves.json using an unused bit.
             _FLAG_MUSTPRESSURE = np.uint32(0x80000)
             for _name, _entry in _moves.items():
                 _num = int(_entry.get("num", 0))
@@ -152,8 +153,6 @@ def load_game_data(data_path: Optional[Path] = None) -> GameData:
                     continue
                 _acc = _entry.get("accuracy", 100)
                 if _acc is True:
-                    # Move accuracy is int8; 127 is the max value that still
-                    # compares >100 in the engine.
                     acc_arr[_num] = 127
                 _flags = _entry.get("flags") or {}
                 if _flags.get("mustpressure"):
@@ -164,17 +163,22 @@ def load_game_data(data_path: Optional[Path] = None) -> GameData:
             pass
 
     if data_path is None:
-        _cached = gd
+        _cached_by_gen[gen] = gd
+    else:
+        _cached_by_gen[gen] = gd
     return gd
 
 
-def load_id_mappings(data_path: Optional[Path] = None) -> IDMappings:
+def load_id_mappings(
+    data_path: Optional[Path] = None, gen: int = 9
+) -> IDMappings:
     """Load string -> int ID mappings from id_mappings.json."""
-    global _cached_mappings
-    if _cached_mappings is not None and data_path is None:
-        return _cached_mappings
+    global _cached_mappings_by_gen
+    gen = int(gen)
+    if _cached_mappings_by_gen.get(gen) is not None and data_path is None:
+        return _cached_mappings_by_gen[gen]
     if data_path is None:
-        data_path = get_data_path()
+        data_path = get_data_path(gen)
     with open(data_path / "id_mappings.json") as f:
         data = json.load(f)
     m = IDMappings(
@@ -188,20 +192,21 @@ def load_id_mappings(data_path: Optional[Path] = None) -> IDMappings:
         ability_names={int(k): v for k, v in data["ability_names"].items()},
         item_names={int(k): v for k, v in data["item_names"].items()},
     )
-    if data_path is None:
-        _cached_mappings = m
+    _cached_mappings_by_gen[gen] = m
     return m
 
 
 def load_move_effect_data(
     move_to_idx: Optional[Dict[str, int]] = None,
+    gen: int = 9,
 ) -> MoveEffectData:
     """Build MoveEffectData from pokepy.data.move_effects.MOVE_EFFECTS."""
-    global _cached_move_effects
-    if _cached_move_effects is not None and move_to_idx is None:
-        return _cached_move_effects
+    global _cached_move_effects_by_gen
+    gen = int(gen)
+    if _cached_move_effects_by_gen.get(gen) is not None and move_to_idx is None:
+        return _cached_move_effects_by_gen[gen]
     if move_to_idx is None:
-        move_to_idx = load_id_mappings().move_to_idx
+        move_to_idx = load_id_mappings(gen=gen).move_to_idx
 
     from pokepy.data.move_effects import create_move_effect_arrays
 
@@ -224,5 +229,23 @@ def load_move_effect_data(
         hits_min=np.asarray(arrays[13]),
         hits_max=np.asarray(arrays[14]),
     )
-    _cached_move_effects = me
+    _cached_move_effects_by_gen[gen] = me
+    _apply_gen_move_effect_patches(me, gen, move_to_idx)
     return me
+
+
+def _apply_gen_move_effect_patches(
+    me: MoveEffectData, gen: int, move_to_idx: Dict[str, int]
+) -> None:
+    """Patch move-effect tables for generation-specific Showdown mod deltas."""
+    if int(gen) != 1:
+        return
+    from pokepy.data.move_effects import STAT_SPA, STAT_SPD
+
+    psychic_idx = move_to_idx.get("psychic")
+    if psychic_idx is not None:
+        me.stat_target[psychic_idx] = 1
+        me.stat_chance[psychic_idx] = 33
+        me.stat_changes[psychic_idx, :] = 0
+        me.stat_changes[psychic_idx, STAT_SPA] = -1
+        me.stat_changes[psychic_idx, STAT_SPD] = -1

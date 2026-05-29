@@ -460,6 +460,8 @@ def apply_switch_in_ability(
     opponent_offset: int,
     did_switch: bool,
     gen5_prng=None,
+    has_terrain: bool = True,
+    ability_weather_limited: bool = True,
 ) -> None:
     """Port of _apply_switch_in_ability (line ~7987).
 
@@ -789,6 +791,8 @@ def apply_switch_in_ability(
         )
         if primal_weather:
             new_weather_turns = 0  # permanent
+        elif not ability_weather_limited:
+            new_weather_turns = 0  # gen5- permanent ability weather
         else:
             new_weather_turns = 8 if has_weather_rock else 5
         battle[OFF_META + M_WEATHER_TURNS] = new_weather_turns
@@ -801,11 +805,11 @@ def apply_switch_in_ability(
 
     # ----- Terrain setters ----------------------------------------------
     current_terrain = int(battle[OFF_FIELD + F_TERRAIN])
-    has_electric_surge = switcher_ability == ABILITY_ELECTRIC_SURGE
-    has_grassy_surge = switcher_ability == ABILITY_GRASSY_SURGE
-    has_psychic_surge = switcher_ability == ABILITY_PSYCHIC_SURGE
-    has_misty_surge = switcher_ability == ABILITY_MISTY_SURGE
-    has_hadron = switcher_ability == ABILITY_HADRON_ENGINE
+    has_electric_surge = switcher_ability == ABILITY_ELECTRIC_SURGE and has_terrain
+    has_grassy_surge = switcher_ability == ABILITY_GRASSY_SURGE and has_terrain
+    has_psychic_surge = switcher_ability == ABILITY_PSYCHIC_SURGE and has_terrain
+    has_misty_surge = switcher_ability == ABILITY_MISTY_SURGE and has_terrain
+    has_hadron = switcher_ability == ABILITY_HADRON_ENGINE and has_terrain
 
     final_terrain = current_terrain
     if has_electric_surge:
@@ -959,6 +963,8 @@ def apply_switch_in_ability_with_trace_reaction(
     opponent_offset: int,
     did_switch: bool,
     gen5_prng=None,
+    has_terrain: bool = True,
+    ability_weather_limited: bool = True,
 ) -> None:
     """Apply a unilateral switch-in and let an active foe react with Trace.
 
@@ -973,6 +979,8 @@ def apply_switch_in_ability_with_trace_reaction(
         opponent_offset,
         did_switch,
         gen5_prng=gen5_prng,
+        has_terrain=has_terrain,
+        ability_weather_limited=ability_weather_limited,
     )
     if not did_switch:
         return
@@ -989,6 +997,8 @@ def apply_switch_in_ability_with_trace_reaction(
         int(switcher_offset),
         True,
         gen5_prng=gen5_prng,
+        has_terrain=has_terrain,
+        ability_weather_limited=ability_weather_limited,
     )
 
 
