@@ -115,6 +115,12 @@ python scripts/parity_probe.py --gen 3 --scenario slp_spore --seed 999 --turns 1
 
 `POKEPY_PARITY_TURNS` (default `10`) controls Tier B / probe turn counts.
 
+**Always use the Showdown cache** (§2) for probes and pytest sweeps. It is
+**on by default** — do not set `POKEPY_SHOWDOWN_CACHE=0` unless you are
+debugging the cache itself. Only disable Showdown cache when using
+`POKEPY_PRNG_TRACE=1` (trace bypasses cache automatically). Warm sweeps take
+~1.5s; cold runs take minutes.
+
 ### 1.7 Faithfulness rule (important)
 
 When a parity test fails, fix the **engine**, not the test. Every PRNG frame we
@@ -219,3 +225,74 @@ frame, and where pokepy and Showdown diverge.
 
 > Note: the trace hooks are debugging instrumentation. The Showdown-side edit
 > modifies vendored source; remove it if a pristine oracle checkout is needed.
+
+---
+
+## 4. Parity progress and next targets
+
+Last updated after the **SetStatus speedSort frame** fix (May 2026).
+
+### 4.1 Recent faithful fixes (keep these)
+
+| Fix | Source | Files |
+|-----|--------|-------|
+| S3 turn-start frame restored | `sim/battle.ts:2938` trailing `eachEvent('Update')` after `beforeTurn` | `battle_gen9.py` |
+| Sleep duration per gen | `data/mods/gen{1,2,3,4}/conditions.ts` | `status_apply.py` |
+| Accuracy bypass only for `acc==127`, gen2 100%, gen5+ self-target | `sim/battle-actions.ts`, gen3 `scripts.ts` | `battle_gen9.py` |
+| **SetStatus shuffle before onStart** | `sim/pokemon.ts:1724`, `sim/battle.ts:794` | `status_apply.py`, `battle_gen9.py` |
+
+SetStatus implementation: `_consume_set_status_speedsort()` in
+`step_battle_gen9_iter` calls `_sst.each_event_update([p0_speed, p1_speed])`
+when `speeds_tied` and both actives alive, once per successful `_try_apply_status`
+via optional `set_status_speedsort` callback.
+
+### 4.2 Current baseline (warm cache, full suite)
+
+| Battery | Pass / total | Notes |
+|---------|--------------|-------|
+| Tier B status | **39 / 96** | Was 43 before SetStatus; net mixed (Spore early turns fixed, some secondaries shifted) |
+| Tier A + mirror | **55 / 56** | 1 fail: `test_gen3_live_diff_dual_mon_switch_mirror_full_battle[424242]` |
+| Full live-diff | **98 / 156** | + 4 unit tests always pass |
+
+Probe gates (gen3 seed 999, cache on):
+
+| Scenario | Result |
+|----------|--------|
+| `slp_spore` turns 1–7 | **pass** |
+| `slp_spore` turn 10 | fail turn 8 (post-wake re-Spore timing) |
+| `slp_hypnosis` | fail turn 7 (wake timing) |
+| `par_twave` | fail turn 1 (p1 not paralyzed in snapshot) |
+
+### 4.3 Next divergence targets (trace with `POKEPY_PRNG_TRACE=1`)
+
+Do **not** disable cache for sweeps; use trace only on single probes.
+
+1. **Post-wake dual Spore (gen3 seed 999 turn 8+)** — both sides Spore after sleep
+   expires; check gen3 sleep decrement / re-apply order vs Showdown.
+2. **Primary status snapshot timing (`par_twave` turn 1)** — TW applied in Showdown
+   but pokepy row shows `p1_status=0`; verify early-apply vs end-of-turn row flush.
+3. **Gen1 sleep wake** — Showdown cures in `onAfterMoveSelf`; pokepy may decrement
+   only in `onBeforeMove` (affects `slp_hypnosis` / `slp_spore` gen1).
+4. **Secondary status + SetStatus frame interaction** — Fire Blast / Sludge Bomb
+   buckets may need handler-count predicate refinement (not just `speeds_tied`).
+5. **Tier A dual-mon switch** — seed 424242 full-battle drift (likely unrelated
+   PRNG frame after status path change; trace with multi-mon team).
+
+### 4.4 Agent workflow (recommended loop)
+
+```bash
+cd metamon/env/pokepy-engine
+
+# 1. Fast gate (cache on by default, ~0.5s each)
+python scripts/parity_probe.py --gen 3 --scenario slp_spore --seed 999 --turns 7
+
+# 2. After engine edit — warm sweep (~1.5s)
+pytest tests/test_pokepy_multigen_live_diff.py -k "status" -n 4 -q --tb=no
+
+# 3. Frame trace only when probe fails (auto-disables cache)
+POKEPY_PRNG_TRACE=1 python scripts/parity_probe.py --gen 3 --scenario par_twave --seed 999 --turns 3
+```
+
+Never use `POKEPY_SHOWDOWN_CACHE=0` for routine parity work — it only slows runs;
+Showdown output does not depend on pokepy internals, so cache hits remain valid
+after pokepy-only edits.

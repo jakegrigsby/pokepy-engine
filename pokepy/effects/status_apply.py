@@ -9,6 +9,8 @@ take a stateful `Gen5PRNG`.
 
 from __future__ import annotations
 
+from typing import Callable, Optional
+
 from pokepy.effects._common import np, MultiFormatState, Gen5PRNG
 from pokepy.effects.ability_suppression import effective_ability
 from pokepy.effects.grounding import is_grounded
@@ -398,6 +400,7 @@ def _try_apply_status(
     *,
     is_status_move: bool,
     prerolled_sleep_turns: int | None = None,
+    set_status_speedsort: Optional[Callable[[], None]] = None,
 ) -> None:
     """Apply an already-selected status if the target can receive it.
 
@@ -417,6 +420,12 @@ def _try_apply_status(
         is_status_move=is_status_move,
     ):
         return
+
+    # Pokemon.setStatus runs runEvent('SetStatus') before onStart (sim/pokemon.ts:1724).
+    # runEvent speedSorts handlers by comparePriority; when tied actives contribute
+    # handlers at the same speed, one shuffle frame is consumed (battle.ts:794).
+    if set_status_speedsort is not None:
+        set_status_speedsort()
 
     target_ability = int(battle[target_offset + 5])
     status_offset = target_offset + 12
@@ -492,6 +501,7 @@ def apply_status_from_move(
     user_offset: int = None,
     num_hits: int = 1,
     prerolled_rolls: "list[int] | None" = None,
+    set_status_speedsort: Optional[Callable[[], None]] = None,
 ) -> None:
     """Port of MultiFormatFastEnv._apply_status_from_move (line ~7045).
 
@@ -617,6 +627,7 @@ def apply_status_from_move(
         gen5_prng,
         user_offset=user_offset,
         is_status_move=not is_secondary_status,
+        set_status_speedsort=set_status_speedsort,
     )
 
 
@@ -630,6 +641,7 @@ def apply_tri_attack_status_from_move(
     user_offset: int = None,
     prerolled_roll: "int | None" = None,
     prerolled_status: "int | None" = None,
+    set_status_speedsort: Optional[Callable[[], None]] = None,
 ) -> None:
     """Apply Tri Attack's callback secondary.
 
@@ -679,6 +691,7 @@ def apply_tri_attack_status_from_move(
         gen5_prng,
         user_offset=user_offset,
         is_status_move=False,
+        set_status_speedsort=set_status_speedsort,
     )
 
 
@@ -794,8 +807,9 @@ def apply_end_of_turn_status(
         new_turns = new_toxic_turns
     elif status == STATUS_SLEEP:
         gen = int(getattr(game_data, "gen", 9))
-        # Gen 3 decrements/cures sleep only in slp.onBeforeMove, not at EOT.
-        if gen == 3:
+        # Gens 1-4 decrement/cure sleep only in slp.onBeforeMove (gen1 also
+        # cures in onAfterMoveSelf). EOT decrement is gen5+ only in Showdown.
+        if gen <= 4:
             new_turns = status_turns
         else:
             new_turns = status_turns if skip_sleep_decrement else new_sleep_turns

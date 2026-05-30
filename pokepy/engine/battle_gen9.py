@@ -3053,6 +3053,20 @@ def step_battle_gen9_iter(
         ]
         _sst.each_event_update(_s2_speeds)  # S2: eachEvent('BeforeTurn')
         _sst.each_event_update(_s2_speeds)  # S3: trailing eachEvent('Update')
+
+    def _consume_set_status_speedsort() -> None:
+        """Mirror Pokemon.setStatus -> runEvent('SetStatus') speedSort.
+
+        sim/pokemon.ts:1724 runs runEvent before onStart; sim/battle.ts:794
+        speedSorts handlers. In speed-tied mirror singles, tied handlers at
+        the actives' speed consume one shuffle frame per successful setStatus.
+        """
+        if not speeds_tied:
+            return
+        if int(battle[p0_off + 1]) <= 0 or int(battle[p1_off + 1]) <= 0:
+            return
+        _sst.each_event_update([p0_speed, p1_speed])
+
     # S4: gen 8+ queue re-sort — only when no switch is ahead AND the two
     # move actions tie by comparePriority.
     resort_shuffle = (
@@ -4090,9 +4104,9 @@ def step_battle_gen9_iter(
         # single-hit moves; only runAction's post-move Update (battle.ts:2938).
         if profile.gen <= 2:
             return 1
-        # Gen 3 spends one fewer tied-speed Update frame per damaging move
-        # hit loop / post-action chain than gen 4+ in Showdown.
-        return 2 if profile.gen <= 3 else 3
+        # Gen 3-4 spend one fewer tied-speed Update frame per damaging move
+        # hit loop / post-action chain than gen 5+ in Showdown.
+        return 2 if profile.gen <= 4 else 3
 
     def _blocked_first_action_update_count(
         first_action_immobile: bool,
@@ -4772,6 +4786,7 @@ def step_battle_gen9_iter(
             user_offset=user_off,
             num_hits=nh,
             prerolled_rolls=rolled,
+            set_status_speedsort=_consume_set_status_speedsort,
         )
         _maybe_apply_poison_puppeteer(
             user_off,
@@ -4820,6 +4835,7 @@ def step_battle_gen9_iter(
             gen5_prng,
             user_offset=user_off,
             is_status_move=False,
+            set_status_speedsort=_consume_set_status_speedsort,
         )
         if get_status(int(battle[target_off + 12])) != status_before:
             _run_immediate_status_berry_updates(target_off)
@@ -4996,6 +5012,18 @@ def step_battle_gen9_iter(
         # confusion path spend its PRNG after late after-move hooks like
         # Red Card have already resolved.
 
+    def _gen1_sleep_after_move_self(user_off: int) -> None:
+        """Gen 1 slp.onAfterMoveSelf: cure sleep when the counter hit 0 during
+        this turn's onBeforeMove decrement (battle continues blocked until
+        afterMoveSelf even when no cant message is shown)."""
+        if profile.gen != 1:
+            return
+        raw = int(battle[user_off + 12])
+        if get_status(raw) != STATUS_SLEEP:
+            return
+        if get_status_turns(raw) <= 0:
+            battle[user_off + 12] = 0
+
     def _pre_calc_status_chain(side_idx: int) -> bool:
         """Roll frz thaw + par full-para in Showdown onBeforeMove order for
         `side_idx`, at the point its runMove would fire. Reads the status
@@ -5063,17 +5091,33 @@ def step_battle_gen9_iter(
         is_frozen_cur = status_cur == STATUS_FREEZE
         sleep_blocked = is_asleep and sb_mv not in (MOVE_SLEEP_TALK, MOVE_SNORE)
 
-        # Gen 3: sleep counter decrements in slp.onBeforeMove when the mon
-        # attempts to act, not at end-of-turn (data/mods/gen3/conditions.ts).
-        if profile.gen == 3 and sleep_blocked and not switching:
+        # Gens 1-4: sleep counter decrements in slp.onBeforeMove when the mon
+        # attempts to act, not at end-of-turn. Gen 1 always blocks the move
+        # but only shows cant when time > 0 after decrement; cure is deferred
+        # to onAfterMoveSelf. Gens 2-4 cure immediately when time hits 0.
+        if sleep_blocked and not switching and profile.gen <= 4:
             sleep_turns = get_status_turns(int(battle[user_off + 12]))
-            sleep_turns -= 1
-            if sleep_turns <= 0:
-                battle[user_off + 12] = 0
-                sleep_blocked = False
-                is_asleep = False
+            if profile.gen == 1:
+                sleep_turns -= 1
+                if sleep_turns <= 0:
+                    battle[user_off + 12] = set_status(STATUS_SLEEP, 0)
+                else:
+                    battle[user_off + 12] = set_status(STATUS_SLEEP, sleep_turns)
             else:
-                battle[user_off + 12] = set_status(STATUS_SLEEP, sleep_turns)
+                _ABILITY_EARLY_BIRD_SC = 48
+                user_ab_sc = int(battle[user_off + 5])
+                _sleep_dec = (
+                    2
+                    if profile.gen == 4 and user_ab_sc == _ABILITY_EARLY_BIRD_SC
+                    else 1
+                )
+                sleep_turns -= _sleep_dec
+                if sleep_turns <= 0:
+                    battle[user_off + 12] = 0
+                    sleep_blocked = False
+                    is_asleep = False
+                else:
+                    battle[user_off + 12] = set_status(STATUS_SLEEP, sleep_turns)
 
         thaw = False
         if is_frozen_cur and (not using_defrost) and (not switching):
@@ -6099,6 +6143,7 @@ def step_battle_gen9_iter(
                     user_offset=p0_off,
                     num_hits=1,
                     prerolled_rolls=None,
+                    set_status_speedsort=_consume_set_status_speedsort,
                 )
                 _run_immediate_status_berry_updates(p1_off)
         # Pre-apply the first mover's self-targeting stat changes from
@@ -6233,8 +6278,17 @@ def step_battle_gen9_iter(
                 # between-move Update before the slower runMove — only the
                 # post-action Update at runAction end. Extra frames here drift
                 # same-turn full-paralysis rolls (Thunder Wave mirrors).
-                if profile.gen <= 2 and _cat0_status and _cat1_status:
-                    _between_updates = 0
+                # Gen 3: Showdown spends exactly one between-move Update for
+                # dual status (runAction post-action), not the full status
+                # moveUpdate count of 2 — see battle.ts:2938 + trace on
+                # par_twave seed 999 (one eachEvent Update before slower para).
+                if _cat0_status and _cat1_status:
+                    if profile.gen == 2:
+                        _between_updates = 0
+                    elif profile.gen in (1, 3):
+                        _between_updates = 1
+                    elif profile.gen == 4:
+                        _between_updates = 2
                 _target1_red_card_can_rewrite_slower = (
                     int(battle[p1_off + 6]) == ITEM_RED_CARD
                     and int(battle[p1_off + 1]) > 0
@@ -7087,6 +7141,7 @@ def step_battle_gen9_iter(
                             user_offset=p1_off,
                             num_hits=1,
                             prerolled_rolls=None,
+                            set_status_speedsort=_consume_set_status_speedsort,
                         )
                         _run_immediate_status_berry_updates(p0_off)
             else:
@@ -7346,6 +7401,7 @@ def step_battle_gen9_iter(
                     user_offset=p1_off,
                     num_hits=1,
                     prerolled_rolls=None,
+                    set_status_speedsort=_consume_set_status_speedsort,
                 )
                 _run_immediate_status_berry_updates(p0_off)
         # Symmetric pre-apply: side1 first mover's self-targeted stat drops from
@@ -7466,8 +7522,13 @@ def step_battle_gen9_iter(
                         int(_meta1.get("num_hits", 1)),
                     ),
                 )
-                if profile.gen <= 2 and _cat0_status and _cat1_status:
-                    _between_updates = 0
+                if _cat0_status and _cat1_status:
+                    if profile.gen == 2:
+                        _between_updates = 0
+                    elif profile.gen in (1, 3):
+                        _between_updates = 1
+                    elif profile.gen == 4:
+                        _between_updates = 2
                 _target0_red_card_can_rewrite_slower = (
                     int(battle[p0_off + 6]) == ITEM_RED_CARD
                     and int(battle[p0_off + 1]) > 0
@@ -8246,6 +8307,41 @@ def step_battle_gen9_iter(
                         else None
                     )
                     _schedule_cursed_body_after_preroll(0)
+                # Pre-apply the second mover's primary status (Thunder Wave,
+                # Spore, etc.) once its acc check passes — symmetric with the
+                # side0_first branch above. Showdown resolves these inside the
+                # slower runMove before the legacy immobile pass.
+                if (
+                    cat0 == CAT_STATUS
+                    and not _p0_immobile_pre
+                    and not _self_hit0
+                    and not is_switch
+                ):
+                    _preset_screen_if_status(move_id0, 0)
+                    _status_hit0_pre = _status_move_hits_pre(0, _prerolled_status_acc0)
+                    _eff0_pre_second = int(move_effects.effect_type[move_id0])
+                    _EFFECT_STATUS_EARLY0B = 2
+                    if (
+                        _eff0_pre_second == _EFFECT_STATUS_EARLY0B
+                        and _status_hit0_pre
+                        and not _sleep_talk_pending_slp1
+                        and not _status_early_applied0
+                    ):
+                        _status_early_applied0 = True
+                        fx.apply_status_from_move(
+                            battle,
+                            move_id0,
+                            p1_off,
+                            True,
+                            game_data,
+                            move_effects,
+                            gen5_prng,
+                            user_offset=p0_off,
+                            num_hits=1,
+                            prerolled_rolls=None,
+                            set_status_speedsort=_consume_set_status_speedsort,
+                        )
+                        _run_immediate_status_berry_updates(p1_off)
             else:
                 if int(damage0) > 0:
                     _schedule_cursed_body_after_preroll(0)
@@ -8799,16 +8895,14 @@ def step_battle_gen9_iter(
     user0_status = get_status(int(battle[user0_off + 12]))
     user1_status = get_status(int(battle[user1_off + 12]))
 
-    # Turn-start sleep wake check (mirrors Showdown's slp.onBeforeMove,
-    # which decrements at move time and cures when the counter reaches 0).
-    # Pokepy's EOT decrement brings the stored counter to 0 on the LAST
-    # forced-sleep turn; the cure itself is deferred to THIS turn so the
-    # end-of-turn snapshot still shows slp on the last asleep turn and
-    # NONE on the wake turn — matching Showdown's per-turn status.
+    # Turn-start sleep wake check (gen5+ only). Gens 1-4 cure in
+    # slp.onBeforeMove / gen1 onAfterMoveSelf instead.
     def _turn_start_sleep_wake(user_off: int) -> int:
         """Clear sleep status if the counter has hit 0.  Returns the new
         raw status byte so callers can refresh `user_statusN`."""
         raw = int(battle[user_off + 12])
+        if profile.gen <= 4:
+            return raw
         st = get_status(raw)
         if st != STATUS_SLEEP:
             return raw
@@ -8908,10 +9002,10 @@ def step_battle_gen9_iter(
     is_immobile0 = sleep_blocked0 or frozen_blocked0 or full_para0 or must_recharge0
     is_immobile1 = sleep_blocked1 or frozen_blocked1 or full_para1 or must_recharge1
 
-    if is_immobile0 or prankster_fail0:
+    if is_immobile0 or prankster_fail0 or _p0_immobile_pre:
         hit0 = False
         damage0 = 0
-    if is_immobile1 or prankster_fail1:
+    if is_immobile1 or prankster_fail1 or _p1_immobile_pre:
         hit1 = False
         damage1 = 0
 
@@ -10136,7 +10230,7 @@ def step_battle_gen9_iter(
     # Multi-hit secondaries (Twineedle 20% poison etc.) roll per hit in
     # Showdown (sim/battle-actions.ts:1357 inside moveHit loop), so the
     # engine passes num_hits.
-    if not _status_early_applied0:
+    if not _status_early_applied0 and not _p0_immobile_pre:
         _status_before0 = get_status(int(battle[target0_off + 12]))
         fx.apply_status_from_move(
             battle,
@@ -10149,9 +10243,10 @@ def step_battle_gen9_iter(
             user_offset=user0_off,
             num_hits=int(_meta0.get("num_hits", 1)),
             prerolled_rolls=prerolled_move0.get("status"),
+            set_status_speedsort=_consume_set_status_speedsort,
         )
         _maybe_apply_poison_puppeteer(user0_off, target0_off, _status_before0)
-    if not _status_early_applied1:
+    if not _status_early_applied1 and not _p1_immobile_pre:
         _status_before1 = get_status(int(battle[target1_off + 12]))
         fx.apply_status_from_move(
             battle,
@@ -10164,8 +10259,13 @@ def step_battle_gen9_iter(
             user_offset=user1_off,
             num_hits=int(_meta1.get("num_hits", 1)),
             prerolled_rolls=prerolled_move1.get("status"),
+            set_status_speedsort=_consume_set_status_speedsort,
         )
         _maybe_apply_poison_puppeteer(user1_off, target1_off, _status_before1)
+    if not is_switch and _p0_immobile_pre:
+        _gen1_sleep_after_move_self(p0_off)
+    if not opp_is_switch and _p1_immobile_pre:
+        _gen1_sleep_after_move_self(p1_off)
     apply_tri_attack_status_from_move(
         battle,
         move_id0,
@@ -10176,6 +10276,7 @@ def step_battle_gen9_iter(
         user_offset=user0_off,
         prerolled_roll=prerolled_move0.get("tri_attack_roll"),
         prerolled_status=prerolled_move0.get("tri_attack_status"),
+        set_status_speedsort=_consume_set_status_speedsort,
     )
     apply_tri_attack_status_from_move(
         battle,
@@ -10187,6 +10288,7 @@ def step_battle_gen9_iter(
         user_offset=user1_off,
         prerolled_roll=prerolled_move1.get("tri_attack_roll"),
         prerolled_status=prerolled_move1.get("tri_attack_status"),
+        set_status_speedsort=_consume_set_status_speedsort,
     )
     fx.apply_confusion_from_move(
         battle,
@@ -13191,12 +13293,39 @@ def step_battle_gen9_iter(
         if side0_first
         else int(_meta0.get("num_hits", 1))
     )
-    _move2_post_action_updates = _move_update_count(
+    # When the slower (second) action is immobilized by an onBeforeMove block
+    # (sleep, freeze, full paralysis, recharge, Truant, etc.) the move never
+    # enters tryMoveHit / hitStepMoveHitLoop, so Showdown only spends the single
+    # generic `runAction` post-action `eachEvent('Update')` frame instead of the
+    # full move-update count. This mirrors `_blocked_first_action_update_count`
+    # for the first mover. The block is read from `_pre_calc_status_chain`'s
+    # FRESH result (`_status_chain_immobile{0,1}`), not `_move2_ran`, because a
+    # status freshly inflicted this turn by the first mover (e.g. Spore landing
+    # sleep) cancels the second move without ever clearing `_move2_ran`. Without
+    # this, gen3 over-spends one tied-speed frame per turn whenever one active is
+    # asleep, and that drift compounds across turns onto later rolls.
+    _move2_immobile = (
+        _status_chain_immobile1 if side0_first else _status_chain_immobile0
+    )
+    _move2_full_update_count = _move_update_count(
         _move2_status,
         _move2_target_kind,
         _move2_successful_self_boost,
         int(_move2_damage),
         _move2_num_hits,
+    )
+    # Gen 1-4 status moves have no `hitStepMoveHitLoop` Update — only the single
+    # generic `runAction` post-action `eachEvent('Update')` frame fires
+    # (battle.ts:2938). `_move_update_count` returns 2+ for a foe-targeting status
+    # move (that count is the damaging-move hit-loop + post-action count), so a
+    # status move resolving as the slower action — whether it lands its status or
+    # fails (e.g. Spore/Thunder Wave onto an already-statused target) — over-spends
+    # tied-speed frames. Collapse it to 1 for gen<=4.
+    if _move2_status and profile.gen <= 4 and _move2_full_update_count > 1:
+        _move2_full_update_count = 1
+    _move2_post_action_updates = _blocked_first_action_update_count(
+        _move2_immobile,
+        _move2_full_update_count,
     )
     _move2_side_field = _move2_status and (
         _move2_target_kind in (7, 9, 10)
