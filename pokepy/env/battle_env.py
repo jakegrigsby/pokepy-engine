@@ -293,6 +293,8 @@ def init_battle_state(
     game_data: Optional[GameData] = None,
     seed: int = 12345,
     gen: int = 9,
+    *,
+    battle_prng: Gen5PRNG | None = None,
 ) -> MultiFormatState:
     """Build a fully-initialized MultiFormatState ready for battle stepping."""
     profile = profile_for_gen(gen)
@@ -467,7 +469,7 @@ def init_battle_state(
     # exact same PRNG calls on turn 0 before the first visible action.
     from pokepy.effects.abilities import apply_switch_in_ability
     from pokepy.effects import get_effective_speed
-    from pokepy.engine.battle_gen9 import _consume_team_preview_queue_sort_frames
+    from pokepy.sim.startup import consume_team_preview_queue_sort_frames
 
     class _RecordingPRNG:
         def __init__(self, base_prng: Gen5PRNG):
@@ -483,9 +485,15 @@ def init_battle_state(
 
     seed_lo = seed & 0xFFFF
     seed_hi = (seed >> 16) & 0xFFFF
-    startup_prng = _RecordingPRNG(Gen5PRNG((seed_lo, seed_hi, 0, 0)))
+    if battle_prng is not None:
+        startup_prng = battle_prng
+        state.startup_prng_consumed = True
+        state.startup_prng_calls = ()
+    else:
+        startup_prng = _RecordingPRNG(Gen5PRNG((seed_lo, seed_hi, 0, 0)))
+        state.startup_prng_consumed = False
     if profile.has_teampreview:
-        _consume_team_preview_queue_sort_frames(bs, startup_prng)
+        consume_team_preview_queue_sort_frames(bs, startup_prng)
 
     p0_off = OFF_SIDE0  # active = slot 0
     p1_off = OFF_SIDE1
@@ -579,7 +587,8 @@ def init_battle_state(
         if not profile.has_teampreview:
             startup_prng.random(0, 2)
         startup_prng.random(0, 2)
-    state.startup_prng_calls = tuple(startup_prng.calls)
+    if not state.startup_prng_consumed:
+        state.startup_prng_calls = tuple(startup_prng.calls)
 
     # Mark the leadoff opponent as revealed . The obs
     # adapter doesn't directly read opp_revealed, but downstream code might.
@@ -628,7 +637,7 @@ class BattleEnv:
             self.seed = int(seed)
         self.prng = Gen5PRNG((self.seed & 0xFFFF, (self.seed >> 16) & 0xFFFF, 0, 0))
         self.state = init_battle_state(
-            team0, team1, self.game_data, self.seed, gen=self.gen
+            team0, team1, self.game_data, self.seed, gen=self.gen, battle_prng=self.prng
         )
         return self.observe(side=0)
 

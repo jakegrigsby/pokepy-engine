@@ -144,6 +144,9 @@ class MultiFormatState:
     # turn (team preview queue sort + lead switch-in startup). step_battle_gen9
     # replays these on turn 0 so the live Gen5 PRNG stays aligned.
     startup_prng_calls: tuple[tuple[int, ...], ...] = _f(default_factory=tuple)
+    # True when init_battle_state already consumed startup frames on the live
+    # battle PRNG (single consumption path matching Showdown simulate-battle).
+    startup_prng_consumed: bool = False
 
     @classmethod
     def create_empty(cls, format_id: int = 1) -> "MultiFormatState":

@@ -54,7 +54,7 @@ from pokepy.data.loader import (
 )
 from pokepy.data.type_charts import MODERN_TYPE_CHART
 from pokepy.env.battle_env import init_battle_state
-from pokepy.engine.battle_gen9 import step_battle_gen9, step_forced_switch
+from pokepy.engine import step_battle, step_forced_switch_for_gen
 from pokepy.engine.action_mask import get_action_mask
 from pokepy.utils.gen5_prng import Gen5PRNG
 
@@ -159,8 +159,8 @@ def fresh_battle(gd, me, make_team):
     ):
         t0 = make_team(team0_specs)
         t1 = make_team(team1_specs)
-        state = init_battle_state(t0, t1, gd, seed=seed)
         prng = Gen5PRNG((seed & 0xFFFF, (seed >> 16) & 0xFFFF, 0, 0))
+        state = init_battle_state(t0, t1, gd, seed=seed, battle_prng=prng)
         return state, prng
 
     return _factory
@@ -171,13 +171,25 @@ def fresh_battle(gd, me, make_team):
 # ---------------------------------------------------------------------------
 
 
+# Mechanics matrix fixtures load gen9 data (see gd/me session fixtures).
+_MECH_TEST_GEN = 9
+
+
 @pytest.fixture
 def step_turn(gd, me, type_chart):
     """Factory that runs one turn given (state, prng, action0, action1)."""
 
     def _step(state, prng, a0: int, a1: int):
+        # Extended action space used by mech tests: 9-12 = Terastallize + move slot 0-3.
+        wants_tera0 = 9 <= int(a0) <= 12
+        wants_tera1 = 9 <= int(a1) <= 12
+        if wants_tera0:
+            a0 = int(a0) - 9
+        if wants_tera1:
+            a1 = int(a1) - 9
         if int(state.phase) == PHASE_FORCED_SWITCH:
-            return step_forced_switch(
+            return step_forced_switch_for_gen(
+                _MECH_TEST_GEN,
                 state,
                 a0,
                 side=0,
@@ -186,7 +198,18 @@ def step_turn(gd, me, type_chart):
                 type_chart=type_chart,
                 gen5_prng=prng,
             )
-        return step_battle_gen9(state, a0, a1, gd, me, type_chart, prng)
+        return step_battle(
+            _MECH_TEST_GEN,
+            state,
+            a0,
+            a1,
+            gd,
+            me,
+            type_chart,
+            prng,
+            wants_tera0=wants_tera0,
+            wants_tera1=wants_tera1,
+        )
 
     return _step
 

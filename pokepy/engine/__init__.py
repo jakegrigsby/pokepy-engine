@@ -15,23 +15,6 @@ from pokepy.core.gen_profile import (
 )
 from pokepy.engine.action_mask import get_action_mask, get_battle_action_mask
 
-try:
-    from pokepy.engine.battle_gen9 import step_battle_gen9, step_forced_switch
-except ImportError:
-    step_battle_gen9 = None  # type: ignore
-    step_forced_switch = None  # type: ignore
-
-try:
-    from pokepy.engine.battle_gen2 import step_battle_gen2
-except ImportError:
-    step_battle_gen2 = None  # type: ignore
-
-try:
-    from pokepy.engine.battle_gen1 import step_battle_gen1
-except ImportError:
-    step_battle_gen1 = None  # type: ignore
-
-
 StepFn = Callable[..., Tuple[np.float32, np.float32, bool]]
 ForcedSwitchFn = Callable[..., Tuple[np.float32, np.float32, bool]]
 
@@ -43,7 +26,9 @@ class EngineEntry:
     profile: GenProfile
 
 
-def _wrap_modern_step(profile: GenProfile) -> StepFn:
+def _wrap_event_step(profile: GenProfile) -> StepFn:
+    from pokepy.sim.engine_adapter import step_battle_event
+
     def _step(
         state,
         action0,
@@ -54,7 +39,7 @@ def _wrap_modern_step(profile: GenProfile) -> StepFn:
         gen5_prng,
         **kwargs,
     ):
-        return step_battle_gen9(
+        return step_battle_event(
             state,
             action0,
             action1,
@@ -70,26 +55,15 @@ def _wrap_modern_step(profile: GenProfile) -> StepFn:
 
 
 def _build_registry() -> Dict[int, EngineEntry]:
+    from pokepy.sim.engine_adapter import step_forced_switch_event
+
     reg: Dict[int, EngineEntry] = {}
-    if step_battle_gen9 is not None and step_forced_switch is not None:
-        for gen in (4, 3, 9):
-            prof = profile_for_gen(gen)
-            reg[gen] = EngineEntry(
-                step_fn=_wrap_modern_step(prof),
-                forced_switch_fn=step_forced_switch,
-                profile=prof,
-            )
-    if step_battle_gen2 is not None and step_forced_switch is not None:
-        reg[2] = EngineEntry(
-            step_fn=step_battle_gen2,
-            forced_switch_fn=step_forced_switch,
-            profile=profile_for_gen(2),
-        )
-    if step_battle_gen1 is not None and step_forced_switch is not None:
-        reg[1] = EngineEntry(
-            step_fn=step_battle_gen1,
-            profile=profile_for_gen(1),
-            forced_switch_fn=step_forced_switch,
+    for gen in (1, 2, 3, 4, 9):
+        prof = profile_for_gen(gen)
+        reg[gen] = EngineEntry(
+            step_fn=_wrap_event_step(prof),
+            forced_switch_fn=step_forced_switch_event,
+            profile=prof,
         )
     return reg
 
@@ -154,6 +128,24 @@ def step_forced_switch_for_gen(
     )
 
 
+def __getattr__(name: str):
+    if name == "battle_gen9":
+        import pokepy.engine.battle_gen9 as mod
+
+        return mod
+    if name in (
+        "step_battle_gen9",
+        "step_battle_gen9_iter",
+        "step_forced_switch",
+        "step_battle_event",
+        "step_battle_event_iter",
+    ):
+        from pokepy.sim import engine_adapter
+
+        return getattr(engine_adapter, name)
+    raise AttributeError(name)
+
+
 __all__ = [
     "ENGINE_REGISTRY",
     "EngineEntry",
@@ -164,6 +156,8 @@ __all__ = [
     "registered_gens",
     "step_battle",
     "step_battle_gen9",
+    "step_battle_event",
+    "step_battle_event_iter",
     "step_forced_switch",
     "step_forced_switch_for_gen",
 ]

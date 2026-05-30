@@ -100,9 +100,7 @@ def _showdown_version_token() -> str:
         try:
             dist = SHOWDOWN_BIN.parent / "dist"
             files = sorted(
-                p
-                for sub in ("sim", "data")
-                for p in (dist / sub).rglob("*.js")
+                p for sub in ("sim", "data") for p in (dist / sub).rglob("*.js")
             )
             for p in files:
                 h.update(str(p.relative_to(dist)).encode())
@@ -137,6 +135,7 @@ def _showdown_cache_write(path: Path, raw: str) -> None:
     except OSError:
         pass
 
+
 # CI / full sweeps use 10. Set POKEPY_PARITY_TURNS=3 while debugging turn-2/3 drift.
 _DEFAULT_PARITY_TURNS = 10
 
@@ -150,9 +149,7 @@ def parity_n_turns(default: int = _DEFAULT_PARITY_TURNS) -> int:
 
 def _active_off(state, side: int) -> int:
     battle = state.battle_state
-    active = int(
-        battle[OFF_META + (M_ACTIVE0 if side == 0 else M_ACTIVE1)]
-    )
+    active = int(battle[OFF_META + (M_ACTIVE0 if side == 0 else M_ACTIVE1)])
     base = OFF_SIDE0 if side == 0 else OFF_SIDE1
     return base + active * POKEMON_SIZE
 
@@ -305,9 +302,7 @@ def team_to_showdown_packed(team: Dict[str, Any], mappings) -> str:
         timeout=60,
     )
     if proc.returncode != 0:
-        raise RuntimeError(
-            f"pack-team failed: {proc.stderr.decode(errors='replace')}"
-        )
+        raise RuntimeError(f"pack-team failed: {proc.stderr.decode(errors='replace')}")
     packed = proc.stdout.decode().strip()
     if cache_path is not None:
         _showdown_cache_write(cache_path, packed)
@@ -478,9 +473,7 @@ def compare_battle_rows(
     by_sh = {int(r["turn"]): r for r in show_rows if r.get("type") == "normal"}
     common = sorted(set(by_py) & set(by_sh))
     if not common:
-        return (
-            f"no overlapping turns (py={sorted(by_py)[:5]} show={sorted(by_sh)[:5]})"
-        )
+        return f"no overlapping turns (py={sorted(by_py)[:5]} show={sorted(by_sh)[:5]})"
     for turn in common:
         py_row = by_py[turn]
         sh_row = by_sh[turn]
@@ -610,8 +603,8 @@ def run_pokepy_battle(
     *,
     choice_log: Optional[List[Tuple[str, str]]] = None,
 ) -> Tuple[List[Dict[str, Any]], List[str], List[str]]:
-    state = init_battle_state(team0, team1, game_data, seed, gen=gen)
     prng = Gen5PRNG((seed & 0xFFFF, (seed >> 16) & 0xFFFF, 0, 0))
+    state = init_battle_state(team0, team1, game_data, seed, gen=gen, battle_prng=prng)
     rows: List[Dict[str, Any]] = []
     p0_actions: List[str] = []
     p1_actions: List[str] = []

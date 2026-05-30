@@ -143,22 +143,40 @@ def _status_mirror_team(gen: int, scenario: str) -> dict:
     return _single_mon_team(species, moves)
 
 
-GEN4_ALAKAZAM_TEAM = _single_mon_team(65, [94, 247, 60, 113])  # Psychic, SB, Psybeam, LS
-GEN4_STARMIE_TEAM = _single_mon_team(121, [56, 85, 94, 58], nature="Timid")  # Surf, Tbolt, Psychic, Ice Beam
-GEN4_GENGAR_TEAM = _single_mon_team(94, [247, 126, 194, 85], nature="Timid")  # SB, Dream Eater, Shadow Punch, Tbolt
+GEN4_ALAKAZAM_TEAM = _single_mon_team(
+    65, [94, 247, 60, 113]
+)  # Psychic, SB, Psybeam, LS
+GEN4_STARMIE_TEAM = _single_mon_team(
+    121, [56, 85, 94, 58], nature="Timid"
+)  # Surf, Tbolt, Psychic, Ice Beam
+GEN4_GENGAR_TEAM = _single_mon_team(
+    94, [247, 126, 194, 85], nature="Timid"
+)  # SB, Dream Eater, Shadow Punch, Tbolt
 
 # Gen3 Psychic-only mirror (Shadow Ball is gen4+ in packed export).
-GEN3_ALAKAZAM_TEAM = _single_mon_team(65, [94, 60, 113, 57])  # Psychic, Psybeam, LS, Surf
-GEN3_STARMIE_TEAM = _single_mon_team(121, [56, 85, 94, 58], nature="Timid")  # Surf, Tbolt, Psychic, Ice Beam
-GEN3_GENGAR_TEAM = _single_mon_team(94, [94, 94, 94, 94], nature="Timid")  # Psychic mirror
+GEN3_ALAKAZAM_TEAM = _single_mon_team(
+    65, [94, 60, 113, 57]
+)  # Psychic, Psybeam, LS, Surf
+GEN3_STARMIE_TEAM = _single_mon_team(
+    121, [56, 85, 94, 58], nature="Timid"
+)  # Surf, Tbolt, Psychic, Ice Beam
+GEN3_GENGAR_TEAM = _single_mon_team(
+    94, [94, 94, 94, 94], nature="Timid"
+)  # Psychic mirror
 
 # Gen2 Psychic-only mirror (same move set as gen3).
-GEN2_ALAKAZAM_TEAM = _single_mon_team(65, [94, 60, 113, 57])  # Psychic, Psybeam, LS, Surf
+GEN2_ALAKAZAM_TEAM = _single_mon_team(
+    65, [94, 60, 113, 57]
+)  # Psychic, Psybeam, LS, Surf
 GEN2_STARMIE_TEAM = _single_mon_team(121, [56, 85, 94, 58], nature="Timid")
-GEN2_GENGAR_TEAM = _single_mon_team(94, [94, 85, 126, 137], nature="Timid")  # Psychic, Tbolt, Dream Eater, Night Shade
+GEN2_GENGAR_TEAM = _single_mon_team(
+    94, [94, 85, 126, 137], nature="Timid"
+)  # Psychic, Tbolt, Dream Eater, Night Shade
 
 # Gen1 Psychic-only mirror (Surf is gen1-valid).
-GEN1_ALAKAZAM_TEAM = _single_mon_team(65, [94, 60, 113, 57])  # Psychic, Psybeam, LS, Surf
+GEN1_ALAKAZAM_TEAM = _single_mon_team(
+    65, [94, 60, 113, 57]
+)  # Psychic, Psybeam, LS, Surf
 GEN1_STARMIE_TEAM = _single_mon_team(121, [56, 85, 94, 58], nature="Timid")
 GEN1_GENGAR_TEAM = _single_mon_team(94, [94, 85, 126, 137], nature="Timid")
 
@@ -207,10 +225,30 @@ def test_showdown_log_parser_records_faint_hp():
 
 
 def test_compare_battle_rows_reports_first_hp_mismatch():
-    py_rows = [{"type": "normal", "turn": 1, "p0_hp": 110, "p0_max_hp": 251, "p0_status": 0,
-                "p1_hp": 119, "p1_max_hp": 251, "p1_status": 0}]
-    show_rows = [{"type": "normal", "turn": 1, "p0_hp": 176, "p0_max_hp": 251, "p0_status": 0,
-                  "p1_hp": 176, "p1_max_hp": 251, "p1_status": 0}]
+    py_rows = [
+        {
+            "type": "normal",
+            "turn": 1,
+            "p0_hp": 110,
+            "p0_max_hp": 251,
+            "p0_status": 0,
+            "p1_hp": 119,
+            "p1_max_hp": 251,
+            "p1_status": 0,
+        }
+    ]
+    show_rows = [
+        {
+            "type": "normal",
+            "turn": 1,
+            "p0_hp": 176,
+            "p0_max_hp": 251,
+            "p0_status": 0,
+            "p1_hp": 176,
+            "p1_max_hp": 251,
+            "p1_status": 0,
+        }
+    ]
     msg = compare_battle_rows(py_rows, show_rows)
     assert msg is not None
     assert "turn 1" in msg
@@ -512,7 +550,11 @@ def test_live_diff_status_par_thunder_wave(gen: int, seed: int):
     """Tier B: Thunder Wave paralysis must match Showdown through turn 10."""
     team = _status_mirror_team(gen, "par_twave")
     py_rows, show_rows, mismatch, meta = run_live_diff(
-        team, team, seed=seed, n_turns=parity_n_turns(), gen=gen,
+        team,
+        team,
+        seed=seed,
+        n_turns=parity_n_turns(),
+        gen=gen,
     )
     assert meta["returncode"] == 0, meta
     assert not meta["timeout"]
@@ -526,7 +568,11 @@ def test_live_diff_status_tox_toxic(gen: int, seed: int):
     """Tier B: Toxic badly-poison mirror must match Showdown through turn 10."""
     team = _status_mirror_team(gen, "tox_toxic")
     py_rows, show_rows, mismatch, meta = run_live_diff(
-        team, team, seed=seed, n_turns=parity_n_turns(), gen=gen,
+        team,
+        team,
+        seed=seed,
+        n_turns=parity_n_turns(),
+        gen=gen,
     )
     assert meta["returncode"] == 0, meta
     assert not meta["timeout"]
@@ -540,7 +586,11 @@ def test_live_diff_status_slp_hypnosis(gen: int, seed: int):
     """Tier B: Hypnosis sleep must match Showdown through turn 10."""
     team = _status_mirror_team(gen, "slp_hypnosis")
     py_rows, show_rows, mismatch, meta = run_live_diff(
-        team, team, seed=seed, n_turns=parity_n_turns(), gen=gen,
+        team,
+        team,
+        seed=seed,
+        n_turns=parity_n_turns(),
+        gen=gen,
     )
     assert meta["returncode"] == 0, meta
     assert not meta["timeout"]
@@ -554,7 +604,11 @@ def test_live_diff_status_slp_spore(gen: int, seed: int):
     """Tier B: Spore sleep must match Showdown through turn 10."""
     team = _status_mirror_team(gen, "slp_spore")
     py_rows, show_rows, mismatch, meta = run_live_diff(
-        team, team, seed=seed, n_turns=parity_n_turns(), gen=gen,
+        team,
+        team,
+        seed=seed,
+        n_turns=parity_n_turns(),
+        gen=gen,
     )
     assert meta["returncode"] == 0, meta
     assert not meta["timeout"]
@@ -568,7 +622,11 @@ def test_live_diff_status_brn_fire_blast_secondary(gen: int, seed: int):
     """Tier B: Fire Blast burn secondary must match Showdown through turn 10."""
     team = _status_mirror_team(gen, "brn_fire_blast")
     py_rows, show_rows, mismatch, meta = run_live_diff(
-        team, team, seed=seed, n_turns=parity_n_turns(), gen=gen,
+        team,
+        team,
+        seed=seed,
+        n_turns=parity_n_turns(),
+        gen=gen,
     )
     assert meta["returncode"] == 0, meta
     assert not meta["timeout"]
@@ -581,7 +639,11 @@ def test_live_diff_status_frz_blizzard_secondary(gen: int, seed: int):
     """Tier B: Blizzard freeze secondary must match Showdown through turn 10."""
     team = _status_mirror_team(gen, "frz_blizzard")
     py_rows, show_rows, mismatch, meta = run_live_diff(
-        team, team, seed=seed, n_turns=parity_n_turns(), gen=gen,
+        team,
+        team,
+        seed=seed,
+        n_turns=parity_n_turns(),
+        gen=gen,
     )
     assert meta["returncode"] == 0, meta
     assert not meta["timeout"]
@@ -594,7 +656,11 @@ def test_live_diff_status_psn_sludge_bomb_secondary(gen: int, seed: int):
     """Tier B: Sludge Bomb poison secondary must match Showdown through turn 10."""
     team = _status_mirror_team(gen, "psn_sludge")
     py_rows, show_rows, mismatch, meta = run_live_diff(
-        team, team, seed=seed, n_turns=parity_n_turns(), gen=gen,
+        team,
+        team,
+        seed=seed,
+        n_turns=parity_n_turns(),
+        gen=gen,
     )
     assert meta["returncode"] == 0, meta
     assert not meta["timeout"]

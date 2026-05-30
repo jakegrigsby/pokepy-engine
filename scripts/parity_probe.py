@@ -25,7 +25,10 @@ from parity_heuristic_e2e import (  # noqa: E402
     parity_n_turns,
     run_live_diff,
 )
-from test_pokepy_multigen_live_diff import _STATUS_SCENARIOS, _status_mirror_team  # noqa: E402
+from test_pokepy_multigen_live_diff import (
+    _STATUS_SCENARIOS,
+    _status_mirror_team,
+)  # noqa: E402
 
 _ROW_FIELDS = ("p0_hp", "p0_max_hp", "p0_status", "p1_hp", "p1_max_hp", "p1_status")
 
@@ -55,7 +58,9 @@ def main() -> int:
         default=None,
         help=f"battle turns (default: POKEPY_PARITY_TURNS or {parity_n_turns()})",
     )
-    parser.add_argument("-v", "--verbose", action="store_true", help="print all turn rows")
+    parser.add_argument(
+        "-v", "--verbose", action="store_true", help="print all turn rows"
+    )
     args = parser.parse_args()
 
     if not SHOWDOWN_BIN.exists():
@@ -69,7 +74,11 @@ def main() -> int:
     n_turns = args.turns if args.turns is not None else parity_n_turns()
     team = _status_mirror_team(args.gen, args.scenario)
     py_rows, show_rows, mismatch, meta = run_live_diff(
-        team, team, seed=args.seed, n_turns=n_turns, gen=args.gen,
+        team,
+        team,
+        seed=args.seed,
+        n_turns=n_turns,
+        gen=args.gen,
     )
 
     if meta.get("returncode") != 0:

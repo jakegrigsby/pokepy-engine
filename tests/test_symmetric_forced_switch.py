@@ -83,7 +83,9 @@ def test_sync_wrapper_auto_resolves_side1_post_faint(gd, me, type_chart, fresh_b
     state.forced_switch_side = 1
 
     # Wrapper path is not used here; inline helper mirrors wrapper behavior.
-    from pokepy.engine.battle_gen9 import _inline_post_faint_switch_side1
+    from pokepy.sim.event_turn import (
+        inline_post_faint_switch_side1 as _inline_post_faint_switch_side1,
+    )
 
     active0 = int(battle[OFF_META + M_ACTIVE0])
     prev_active1 = active1

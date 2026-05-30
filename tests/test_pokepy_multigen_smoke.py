@@ -59,7 +59,5 @@ def test_step_battle_smoke(gen):
     chart = load_type_chart_for_gen(gen)
     state = init_battle_state(DEFAULT_TEAM, DEFAULT_TEAM, gd, seed=42, gen=gen)
     prng = Gen5PRNG((42 & 0xFFFF, (42 >> 16) & 0xFFFF, 0, 0))
-    r0, r1, done = step_battle(
-        gen, state, 0, 0, gd, me, chart, prng
-    )
+    r0, r1, done = step_battle(gen, state, 0, 0, gd, me, chart, prng)
     assert np.isfinite(r0) and np.isfinite(r1)
