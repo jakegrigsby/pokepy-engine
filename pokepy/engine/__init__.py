@@ -31,6 +31,13 @@ try:
 except ImportError:
     step_battle_gen1 = None  # type: ignore
 
+from pokepy.engine.turn_loop import TurnDriver, run_turn  # noqa: E402
+from pokepy.engine.dispatch import BitpackBattleContext, make_context  # noqa: E402
+from pokepy.engine.registry import DEFAULT_REGISTRY, EffectRegistry  # noqa: E402
+from pokepy.engine.queue import Action, BattleQueue  # noqa: E402
+from pokepy.engine.move_pipeline import run_move, get_damage, modify_damage  # noqa: E402
+from pokepy.engine.switch import step_forced_switch_modular  # noqa: E402
+from pokepy.engine import gen_mods  # noqa: E402
 
 StepFn = Callable[..., Tuple[np.float32, np.float32, bool]]
 ForcedSwitchFn = Callable[..., Tuple[np.float32, np.float32, bool]]
@@ -54,7 +61,7 @@ def _wrap_modern_step(profile: GenProfile) -> StepFn:
         gen5_prng,
         **kwargs,
     ):
-        return step_battle_gen9(
+        return run_turn(
             state,
             action0,
             action1,
@@ -76,20 +83,20 @@ def _build_registry() -> Dict[int, EngineEntry]:
             prof = profile_for_gen(gen)
             reg[gen] = EngineEntry(
                 step_fn=_wrap_modern_step(prof),
-                forced_switch_fn=step_forced_switch,
+                forced_switch_fn=step_forced_switch_modular,
                 profile=prof,
             )
     if step_battle_gen2 is not None and step_forced_switch is not None:
         reg[2] = EngineEntry(
             step_fn=step_battle_gen2,
-            forced_switch_fn=step_forced_switch,
+            forced_switch_fn=step_forced_switch_modular,
             profile=profile_for_gen(2),
         )
     if step_battle_gen1 is not None and step_forced_switch is not None:
         reg[1] = EngineEntry(
             step_fn=step_battle_gen1,
             profile=profile_for_gen(1),
-            forced_switch_fn=step_forced_switch,
+            forced_switch_fn=step_forced_switch_modular,
         )
     return reg
 
@@ -155,13 +162,25 @@ def step_forced_switch_for_gen(
 
 
 __all__ = [
+    "Action",
+    "BattleQueue",
+    "BitpackBattleContext",
+    "DEFAULT_REGISTRY",
+    "EffectRegistry",
     "ENGINE_REGISTRY",
     "EngineEntry",
     "GEN9_PROFILE",
+    "TurnDriver",
+    "gen_mods",
     "get_action_mask",
     "get_battle_action_mask",
+    "get_damage",
     "get_engine",
+    "make_context",
+    "modify_damage",
     "registered_gens",
+    "run_move",
+    "run_turn",
     "step_battle",
     "step_battle_gen9",
     "step_forced_switch",
