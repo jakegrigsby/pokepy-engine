@@ -21,16 +21,6 @@ except ImportError:
     step_battle_gen9 = None  # type: ignore
     step_forced_switch = None  # type: ignore
 
-try:
-    from pokepy.engine.battle_gen2 import step_battle_gen2
-except ImportError:
-    step_battle_gen2 = None  # type: ignore
-
-try:
-    from pokepy.engine.battle_gen1 import step_battle_gen1
-except ImportError:
-    step_battle_gen1 = None  # type: ignore
-
 from pokepy.engine.turn_loop import TurnDriver, run_turn  # noqa: E402
 from pokepy.engine.dispatch import BitpackBattleContext, make_context  # noqa: E402
 from pokepy.engine.registry import DEFAULT_REGISTRY, EffectRegistry  # noqa: E402
@@ -83,25 +73,13 @@ def _wrap_modern_step(profile: GenProfile) -> StepFn:
 def _build_registry() -> Dict[int, EngineEntry]:
     reg: Dict[int, EngineEntry] = {}
     if step_battle_gen9 is not None and step_forced_switch is not None:
-        for gen in (4, 3, 9):
+        for gen in (1, 2, 3, 4, 9):
             prof = profile_for_gen(gen)
             reg[gen] = EngineEntry(
                 step_fn=_wrap_modern_step(prof),
                 forced_switch_fn=step_forced_switch_modular,
                 profile=prof,
             )
-    if step_battle_gen2 is not None and step_forced_switch is not None:
-        reg[2] = EngineEntry(
-            step_fn=step_battle_gen2,
-            forced_switch_fn=step_forced_switch_modular,
-            profile=profile_for_gen(2),
-        )
-    if step_battle_gen1 is not None and step_forced_switch is not None:
-        reg[1] = EngineEntry(
-            step_fn=step_battle_gen1,
-            profile=profile_for_gen(1),
-            forced_switch_fn=step_forced_switch_modular,
-        )
     return reg
 
 

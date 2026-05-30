@@ -18,7 +18,7 @@ from pokepy.utils.gen5_prng import Gen5PRNG
 
 def test_registry_has_handlers():
     reg = build_default_registry()
-    assert len(reg.handlers) > 0
+    assert len(reg.generic_handlers) > 0
 
 
 def test_dispatch_context_speed_sort_consumes_prng():

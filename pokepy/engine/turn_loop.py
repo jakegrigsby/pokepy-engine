@@ -20,7 +20,8 @@ from pokepy.engine.battle_gen9 import step_battle_gen9, step_battle_gen9_iter
 from pokepy.engine.dispatch import BitpackBattleContext, make_context
 from pokepy.engine.gen_mods import apply_gen_end_turn_rolls, profile_for_state
 from pokepy.engine.queue import BattleQueue
-from pokepy.engine.switch import resolve_switch_choices_sync
+from pokepy.engine.move_pipeline import run_move
+from pokepy.engine.switch import resolve_switch_choices_sync, step_forced_switch_modular
 from pokepy.engine.switch_requests import SwitchRequest
 
 
@@ -108,6 +109,70 @@ class TurnDriver:
             )
         self.queue.sort()
 
+    def run_action_modular(self, action) -> None:
+        """Execute one queued action via modular pipeline."""
+        from pokepy.core.constants import (
+            OFF_META,
+            M_ACTIVE0,
+            M_ACTIVE1,
+            OFF_SIDE0,
+            OFF_SIDE1,
+            POKEMON_SIZE,
+        )
+
+        choice = action.get("choice")
+        side = int(action.get("side", 0))
+        active0 = int(self.state.battle_state[OFF_META + M_ACTIVE0])
+        active1 = int(self.state.battle_state[OFF_META + M_ACTIVE1])
+        p0 = OFF_SIDE0 + active0 * POKEMON_SIZE
+        p1 = OFF_SIDE1 + active1 * POKEMON_SIZE
+        if choice == "move":
+            slot = int(action.get("action_index", 0))
+            user_off = p0 if side == 0 else p1
+            target_off = p1 if side == 0 else p0
+            # team_moves / opp_moves are indexed by active slot.
+            if side == 0:
+                move_id = int(self.state.team_moves[active0, slot])
+            else:
+                move_id = int(self.state.opp_moves[active1, slot])
+            if move_id >= 0:
+                run_move(self.ctx, move_id, user_off, target_off)
+        elif choice in ("switch", "instaswitch"):
+            target = int(action.get("action_index", 0)) - 4
+            if target >= 0:
+                step_forced_switch_modular(
+                    self.state,
+                    target,
+                    side,
+                    self.game_data,
+                    self.move_effects,
+                    self.type_chart,
+                    self.gen5_prng,
+                    profile=self.profile,
+                )
+
+    def residual(self) -> None:
+        """Residual step hook."""
+        self.ctx.each_event("Residual", lambda off: self.ctx.run_event("Residual", off))
+
+    def end_turn(self) -> None:
+        """End-turn hook for modular path."""
+        self.residual()
+        self.state.turn = np.int16(int(self.state.turn) + 1)
+
+    def run_turn_modular(self, action0: int, action1: int) -> Tuple[np.float32, np.float32, bool]:
+        """Execute one turn via modular queue/action flow."""
+        self.begin_turn()
+        self.commit_choices(action0, action1)
+        while self.queue:
+            action = self.queue.shift()
+            if action is None:
+                break
+            self.run_action_modular(action)
+        self.end_turn()
+        done = bool(self.state.done)
+        return np.float32(0.0), np.float32(0.0), done
+
     def run_turn_legacy(
         self,
         action0: int,
@@ -175,6 +240,8 @@ def run_turn(
     defer_p1_forced_switch: bool = False,
 ) -> Tuple[np.float32, np.float32, bool]:
     """Canonical modular one-turn entry (delegates to legacy executor)."""
+    import os
+
     driver = TurnDriver(
         state,
         game_data,
@@ -183,8 +250,12 @@ def run_turn(
         gen5_prng,
         profile=profile,
     )
-    driver.begin_turn()
-    driver.commit_choices(action0, action1)
+    if os.environ.get("POKEPY_MODULAR_TURN_LOOP") == "1":
+        return driver.run_turn_modular(action0, action1)
+    # While the legacy monolith remains the authoritative executor, invoking
+    # modular pre-turn hooks here double-consumes PRNG frames (quick-claw roll
+    # + queue tie shuffle) before `step_battle_gen9` runs its own draws.
+    # Keep this wrapper frame-neutral until modular turn execution fully takes over.
     return driver.run_turn_legacy(
         action0,
         action1,

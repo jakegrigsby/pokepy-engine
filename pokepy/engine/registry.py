@@ -9,9 +9,10 @@ from __future__ import annotations
 import inspect
 import re
 from dataclasses import dataclass, field
-from typing import Any, Callable, Dict, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 RegistryKey = Tuple[str, int, str]
+GenericKey = Tuple[str, str]
 Handler = Callable[..., Any]
 
 # Showdown camelCase event -> snake_case effect function prefix/suffix.
@@ -49,7 +50,8 @@ class EffectRegistry:
     """Maps Showdown dispatch keys to pokepy.effects callables."""
 
     handlers: Dict[RegistryKey, Handler] = field(default_factory=dict)
-    by_event: Dict[str, list] = field(default_factory=dict)
+    meta: Dict[RegistryKey, Dict[str, Any]] = field(default_factory=dict)
+    generic_handlers: Dict[GenericKey, List[Dict[str, Any]]] = field(default_factory=dict)
 
     def register(
         self,
@@ -63,21 +65,36 @@ class EffectRegistry:
     ) -> None:
         key = (table, int(effect_id), event)
         self.handlers[key] = fn
-        self.by_event.setdefault(event, []).append(
+        self.meta[key] = {"priority": int(priority), "order": bool(order)}
+
+    def register_generic(
+        self,
+        table: str,
+        event: str,
+        fn: Handler,
+        *,
+        priority: int = 0,
+        order: bool = False,
+    ) -> None:
+        key = (str(table), str(event))
+        self.generic_handlers.setdefault(key, []).append(
             {
-                "table": table,
-                "id": int(effect_id),
+                "table": str(table),
+                "event": str(event),
                 "fn": fn,
-                "priority": priority,
-                "order": order,
+                "priority": int(priority),
+                "order": bool(order),
             }
         )
 
     def lookup(self, table: str, effect_id: int, event: str) -> Optional[Handler]:
         return self.handlers.get((table, int(effect_id), event))
 
-    def handlers_for_event(self, event: str) -> list:
-        return list(self.by_event.get(event, []))
+    def get_meta(self, table: str, effect_id: int, event: str) -> Dict[str, Any]:
+        return dict(self.meta.get((table, int(effect_id), event), {}))
+
+    def generic_for(self, table: str, event: str) -> List[Dict[str, Any]]:
+        return list(self.generic_handlers.get((str(table), str(event)), []))
 
 
 def _discover_effect_module_handlers() -> Dict[str, Handler]:
@@ -126,7 +143,11 @@ def _infer_table_and_event(fn_name: str) -> Optional[Tuple[str, str]]:
 
 
 def build_default_registry() -> EffectRegistry:
-    """Auto-bind pokepy.effects public functions to dispatch events."""
+    """Auto-bind pokepy.effects public functions to dispatch events.
+
+    Most existing helpers are generic event handlers (not tied to one exact id),
+    so we register them as `(table,event)` generic handlers.
+    """
     reg = EffectRegistry()
     fns = _discover_effect_module_handlers()
     for fn_name, fn in fns.items():
@@ -134,9 +155,7 @@ def build_default_registry() -> EffectRegistry:
         if inferred is None:
             continue
         table, event = inferred
-        # Use fn_name hash bucket as pseudo-id for generic handlers.
-        pseudo_id = abs(hash(fn_name)) % 100000
-        reg.register(table, pseudo_id, event, fn)
+        reg.register_generic(table, event, fn)
     return reg
 
 

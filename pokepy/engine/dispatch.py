@@ -168,17 +168,18 @@ class BitpackBattleContext:
                 effect_id = 0
         fn = self.registry.lookup(table, int(effect_id), event_name)
         if fn is not None:
+            meta = self.registry.get_meta(table, int(effect_id), event_name)
             handlers.append(
                 {
                     "callback": fn,
                     "effectHolder": poff,
-                    "priority": 0,
-                    "order": False,
+                    "priority": int(meta.get("priority", 0)),
+                    "order": meta.get("order", False),
                     "index": poff,
                 }
             )
-        # Also attach generic handlers registered under pseudo-ids for this event.
-        for entry in self.registry.handlers_for_event(event_name):
+        # Attach generic handlers registered for this table+event.
+        for entry in self.registry.generic_for(table, event_name):
             if entry["fn"] is fn:
                 continue
             handlers.append(
@@ -187,9 +188,10 @@ class BitpackBattleContext:
                     "effectHolder": poff,
                     "priority": entry.get("priority", 0),
                     "order": entry.get("order", False),
-                    "index": poff + entry["id"],
+                    "index": poff,
                 }
             )
+        self.speed_sort(handlers)
         return handlers
 
     def single_event(
@@ -248,7 +250,7 @@ class BitpackBattleContext:
     ) -> Any:
         if target_offset is None:
             return relay_var
-        return self.single_event(
+        val = self.single_event(
             eventid,
             None,
             None,
@@ -256,6 +258,9 @@ class BitpackBattleContext:
             source_offset,
             relay_var=relay_var,
         )
+        if fast_exit is not None and fast_exit(val):
+            return val
+        return val
 
     def each_event(self, eventid: str, callback: Callable[[int], None]) -> None:
         from pokepy.core.constants import (
