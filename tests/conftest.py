@@ -19,31 +19,6 @@ from typing import Any, Dict, List, Optional, Tuple
 import numpy as np
 import pytest
 
-from pokepy.core.constants import (
-    OFF_FIELD,
-    OFF_META,
-    OFF_SIDE0,
-    OFF_SIDE1,
-    POKEMON_SIZE,
-    M_ACTIVE0,
-    M_ACTIVE1,
-    F_WEATHER,
-    F_TERRAIN,
-    M_WEATHER_TURNS,
-    M_TERRAIN_TURNS,
-    F_HAZARDS_0,
-    F_HAZARDS_1,
-    F_SCREENS_0,
-    F_SCREENS_1,
-    PHASE_BATTLE,
-    PHASE_FORCED_SWITCH,
-    STATUS_BURN,
-    STATUS_PARALYSIS,
-    STATUS_SLEEP,
-    STATUS_FREEZE,
-    STATUS_POISON,
-    STATUS_TOXIC,
-)
 from pokepy.data.loader import (
     GameData,
     IDMappings,
@@ -52,11 +27,41 @@ from pokepy.data.loader import (
     load_id_mappings,
     load_move_effect_data,
 )
-from pokepy.data.type_charts import MODERN_TYPE_CHART
-from pokepy.env.battle_env import init_battle_state
-from pokepy.engine import step_battle, step_forced_switch_for_gen
-from pokepy.engine.action_mask import get_action_mask
 from pokepy.utils.gen5_prng import Gen5PRNG
+
+# The hand-vectorized packed-state engine was removed in the verbatim-port
+# refactor (see pokepy/showdown/). The fixtures below that depend on it are kept
+# for the legacy mechanics suite but import lazily so this conftest still
+# collects for the new pokepy.showdown.* tests. Legacy fixtures raise on use.
+try:  # pragma: no cover - exercised only by the (obsolete) packed-engine tests
+    from pokepy.core.constants import (  # noqa: F401
+        OFF_FIELD,
+        OFF_META,
+        OFF_SIDE0,
+        OFF_SIDE1,
+        POKEMON_SIZE,
+        M_ACTIVE0,
+        M_ACTIVE1,
+        PHASE_FORCED_SWITCH,
+    )
+    from pokepy.data.type_charts import MODERN_TYPE_CHART
+    from pokepy.env.battle_env import init_battle_state
+    from pokepy.engine import step_battle, step_forced_switch_for_gen
+
+    _LEGACY_ENGINE = True
+except Exception:  # noqa: BLE001
+    _LEGACY_ENGINE = False
+    MODERN_TYPE_CHART = None
+
+    def _legacy_removed(*_a, **_k):
+        raise RuntimeError(
+            "The packed-state engine was removed in the verbatim-port refactor; "
+            "this legacy fixture is unavailable. See pokepy/showdown/."
+        )
+
+    init_battle_state = _legacy_removed
+    step_battle = _legacy_removed
+    step_forced_switch_for_gen = _legacy_removed
 
 # ---------------------------------------------------------------------------
 # Session-scoped data

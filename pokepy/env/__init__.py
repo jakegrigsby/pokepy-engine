@@ -1,5 +1,5 @@
-from pokepy.env.battle_env import (
-    BattleEnv,
-    init_battle_state,
-    DEFAULT_TEAM,
-)
+"""Battle environment glue.
+
+The packed-state ``battle_env`` was removed in the verbatim-port refactor. The
+object-model engine and its env wiring live under ``pokepy.showdown``.
+"""

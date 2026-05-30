@@ -1,0 +1,3579 @@
+{
+  "moves": {
+    "acrobatics": [
+      "basePowerCallback"
+    ],
+    "acupressure": [
+      "onHit"
+    ],
+    "afteryou": [
+      "onHit"
+    ],
+    "allyswitch": [
+      "onHit",
+      "onPrepareHit"
+    ],
+    "aromatherapy": [
+      "onHit"
+    ],
+    "assist": [
+      "onHit"
+    ],
+    "assurance": [
+      "basePowerCallback"
+    ],
+    "attract": [
+      "onTryImmunity"
+    ],
+    "aurawheel": [
+      "onModifyType",
+      "onTry"
+    ],
+    "auroraveil": [
+      "onTry"
+    ],
+    "autotomize": [
+      "onHit",
+      "onTryHit"
+    ],
+    "avalanche": [
+      "basePowerCallback"
+    ],
+    "axekick": [
+      "onMoveFail"
+    ],
+    "banefulbunker": [
+      "onHit",
+      "onPrepareHit"
+    ],
+    "barbbarrage": [
+      "onBasePower"
+    ],
+    "batonpass": [
+      "onHit"
+    ],
+    "beakblast": [
+      "onAfterMove",
+      "priorityChargeCallback"
+    ],
+    "beatup": [
+      "basePowerCallback",
+      "onModifyMove"
+    ],
+    "belch": [
+      "onDisableMove",
+      "onTry"
+    ],
+    "bellydrum": [
+      "onHit"
+    ],
+    "bestow": [
+      "onHit"
+    ],
+    "bide": [
+      "beforeMoveCallback"
+    ],
+    "bleakwindstorm": [
+      "onModifyMove"
+    ],
+    "blizzard": [
+      "onModifyMove"
+    ],
+    "block": [
+      "onHit"
+    ],
+    "boltbeak": [
+      "basePowerCallback"
+    ],
+    "bounce": [
+      "onTryMove"
+    ],
+    "brickbreak": [
+      "onTryHit"
+    ],
+    "brine": [
+      "onBasePower"
+    ],
+    "bugbite": [
+      "onHit"
+    ],
+    "burningbulwark": [
+      "onHit",
+      "onPrepareHit"
+    ],
+    "burnup": [
+      "onTryMove"
+    ],
+    "camouflage": [
+      "onHit"
+    ],
+    "captivate": [
+      "onTryImmunity"
+    ],
+    "ceaselessedge": [
+      "onAfterHit",
+      "onAfterSubDamage"
+    ],
+    "celebrate": [
+      "onTryHit"
+    ],
+    "chillyreception": [
+      "priorityChargeCallback"
+    ],
+    "clangoroussoul": [
+      "onHit",
+      "onTry",
+      "onTryHit"
+    ],
+    "clearsmog": [
+      "onHit"
+    ],
+    "collisioncourse": [
+      "onBasePower"
+    ],
+    "comeuppance": [
+      "damageCallback",
+      "onModifyTarget",
+      "onTry"
+    ],
+    "conversion": [
+      "onHit"
+    ],
+    "conversion2": [
+      "onHit"
+    ],
+    "copycat": [
+      "onHit"
+    ],
+    "coreenforcer": [
+      "onAfterSubDamage",
+      "onHit"
+    ],
+    "corrosivegas": [
+      "onHit"
+    ],
+    "counter": [
+      "beforeTurnCallback",
+      "damageCallback",
+      "onTry"
+    ],
+    "courtchange": [
+      "onHitField"
+    ],
+    "covet": [
+      "onAfterHit"
+    ],
+    "craftyshield": [
+      "onTry"
+    ],
+    "crushgrip": [
+      "basePowerCallback"
+    ],
+    "curse": [
+      "onHit",
+      "onModifyMove",
+      "onTryHit"
+    ],
+    "darkvoid": [
+      "onTry"
+    ],
+    "defog": [
+      "onHit"
+    ],
+    "destinybond": [
+      "onPrepareHit"
+    ],
+    "detect": [
+      "onHit",
+      "onPrepareHit"
+    ],
+    "dig": [
+      "onTryMove"
+    ],
+    "disable": [
+      "onTryHit"
+    ],
+    "dive": [
+      "onTryMove"
+    ],
+    "doodle": [
+      "onHit"
+    ],
+    "doomdesire": [
+      "onTry"
+    ],
+    "doubleshock": [
+      "onTryMove"
+    ],
+    "dragonenergy": [
+      "basePowerCallback"
+    ],
+    "dreameater": [
+      "onTryImmunity"
+    ],
+    "echoedvoice": [
+      "basePowerCallback",
+      "onTryMove"
+    ],
+    "electrify": [
+      "onTryHit"
+    ],
+    "electroball": [
+      "basePowerCallback"
+    ],
+    "electrodrift": [
+      "onBasePower"
+    ],
+    "electroshot": [
+      "onTryMove"
+    ],
+    "endeavor": [
+      "damageCallback",
+      "onTryImmunity"
+    ],
+    "endure": [
+      "onHit",
+      "onPrepareHit"
+    ],
+    "entrainment": [
+      "onHit",
+      "onTryHit"
+    ],
+    "eruption": [
+      "basePowerCallback"
+    ],
+    "expandingforce": [
+      "onBasePower",
+      "onModifyMove"
+    ],
+    "facade": [
+      "onBasePower"
+    ],
+    "fakeout": [
+      "onTry"
+    ],
+    "falseswipe": [
+      "onDamage"
+    ],
+    "fellstinger": [
+      "onAfterMoveSecondarySelf"
+    ],
+    "ficklebeam": [
+      "onBasePower"
+    ],
+    "filletaway": [
+      "onHit",
+      "onTry",
+      "onTryHit"
+    ],
+    "finalgambit": [
+      "damageCallback"
+    ],
+    "firepledge": [
+      "basePowerCallback",
+      "onModifyMove",
+      "onPrepareHit"
+    ],
+    "firstimpression": [
+      "onTry"
+    ],
+    "fishiousrend": [
+      "basePowerCallback"
+    ],
+    "flail": [
+      "basePowerCallback"
+    ],
+    "flameburst": [
+      "onAfterSubDamage",
+      "onHit"
+    ],
+    "fling": [
+      "onPrepareHit"
+    ],
+    "floralhealing": [
+      "onHit"
+    ],
+    "flowershield": [
+      "onHitField"
+    ],
+    "fly": [
+      "onTryMove"
+    ],
+    "flyingpress": [
+      "onEffectiveness"
+    ],
+    "focuspunch": [
+      "beforeMoveCallback",
+      "priorityChargeCallback"
+    ],
+    "followme": [
+      "onTry"
+    ],
+    "foresight": [
+      "onTryHit"
+    ],
+    "forestscurse": [
+      "onHit"
+    ],
+    "freezedry": [
+      "onEffectiveness"
+    ],
+    "freezeshock": [
+      "onTryMove"
+    ],
+    "freezyfrost": [
+      "onHit"
+    ],
+    "frustration": [
+      "basePowerCallback"
+    ],
+    "furycutter": [
+      "basePowerCallback"
+    ],
+    "fusionbolt": [
+      "onBasePower"
+    ],
+    "fusionflare": [
+      "onBasePower"
+    ],
+    "futuresight": [
+      "onTry"
+    ],
+    "gastroacid": [
+      "onTryHit"
+    ],
+    "gearup": [
+      "onHitSide"
+    ],
+    "geomancy": [
+      "onTryMove"
+    ],
+    "gmaxsnooze": [
+      "onAfterSubDamage",
+      "onHit"
+    ],
+    "grassknot": [
+      "basePowerCallback",
+      "onTryHit"
+    ],
+    "grasspledge": [
+      "basePowerCallback",
+      "onModifyMove",
+      "onPrepareHit"
+    ],
+    "grassyglide": [
+      "onModifyPriority"
+    ],
+    "gravapple": [
+      "onBasePower"
+    ],
+    "growth": [
+      "onModifyMove"
+    ],
+    "guardianofalola": [
+      "damageCallback"
+    ],
+    "guardsplit": [
+      "onHit"
+    ],
+    "guardswap": [
+      "onHit"
+    ],
+    "gyroball": [
+      "basePowerCallback"
+    ],
+    "happyhour": [
+      "onTryHit"
+    ],
+    "hardpress": [
+      "basePowerCallback"
+    ],
+    "haze": [
+      "onHitField"
+    ],
+    "healbell": [
+      "onHit"
+    ],
+    "healingwish": [
+      "onTryHit"
+    ],
+    "healpulse": [
+      "onHit"
+    ],
+    "heartswap": [
+      "onHit"
+    ],
+    "heatcrash": [
+      "basePowerCallback",
+      "onTryHit"
+    ],
+    "heavyslam": [
+      "basePowerCallback",
+      "onTryHit"
+    ],
+    "helpinghand": [
+      "onTryHit"
+    ],
+    "hex": [
+      "basePowerCallback"
+    ],
+    "hiddenpower": [
+      "onModifyType"
+    ],
+    "highjumpkick": [
+      "onMoveFail"
+    ],
+    "holdback": [
+      "onDamage"
+    ],
+    "hurricane": [
+      "onModifyMove"
+    ],
+    "hyperspacefury": [
+      "onTry"
+    ],
+    "iceball": [
+      "basePowerCallback",
+      "onAfterMove",
+      "onModifyMove"
+    ],
+    "iceburn": [
+      "onTryMove"
+    ],
+    "icespinner": [
+      "onAfterHit",
+      "onAfterSubDamage"
+    ],
+    "incinerate": [
+      "onHit"
+    ],
+    "infernalparade": [
+      "basePowerCallback"
+    ],
+    "instruct": [
+      "onHit"
+    ],
+    "ivycudgel": [
+      "onModifyType",
+      "onPrepareHit"
+    ],
+    "jawlock": [
+      "onHit"
+    ],
+    "judgment": [
+      "onModifyType"
+    ],
+    "jumpkick": [
+      "onMoveFail"
+    ],
+    "junglehealing": [
+      "onHit"
+    ],
+    "kingsshield": [
+      "onHit",
+      "onPrepareHit"
+    ],
+    "knockoff": [
+      "onAfterHit",
+      "onBasePower"
+    ],
+    "lashout": [
+      "onBasePower"
+    ],
+    "lastresort": [
+      "onTry"
+    ],
+    "lastrespects": [
+      "basePowerCallback"
+    ],
+    "leechseed": [
+      "onTryImmunity"
+    ],
+    "lightthatburnsthesky": [
+      "onModifyMove"
+    ],
+    "lockon": [
+      "onHit",
+      "onTryHit"
+    ],
+    "lowkick": [
+      "basePowerCallback",
+      "onTryHit"
+    ],
+    "lunarblessing": [
+      "onHit"
+    ],
+    "lunardance": [
+      "onTryHit"
+    ],
+    "magicpowder": [
+      "onHit"
+    ],
+    "magneticflux": [
+      "onHitSide"
+    ],
+    "magnetrise": [
+      "onTry"
+    ],
+    "magnitude": [
+      "onModifyMove",
+      "onUseMoveMessage"
+    ],
+    "matblock": [
+      "onTry"
+    ],
+    "maxguard": [
+      "onHit",
+      "onPrepareHit"
+    ],
+    "meanlook": [
+      "onHit"
+    ],
+    "mefirst": [
+      "onTryHit"
+    ],
+    "metalburst": [
+      "damageCallback",
+      "onModifyTarget",
+      "onTry"
+    ],
+    "meteorbeam": [
+      "onTryMove"
+    ],
+    "metronome": [
+      "onHit"
+    ],
+    "mimic": [
+      "onHit"
+    ],
+    "mindblown": [
+      "onAfterMove"
+    ],
+    "mindreader": [
+      "onHit",
+      "onTryHit"
+    ],
+    "miracleeye": [
+      "onTryHit"
+    ],
+    "mirrorcoat": [
+      "beforeTurnCallback",
+      "damageCallback",
+      "onTry"
+    ],
+    "mirrormove": [
+      "onTryHit"
+    ],
+    "mistyexplosion": [
+      "onBasePower"
+    ],
+    "moonlight": [
+      "onHit"
+    ],
+    "morningsun": [
+      "onHit"
+    ],
+    "mortalspin": [
+      "onAfterHit",
+      "onAfterSubDamage"
+    ],
+    "multiattack": [
+      "onModifyType"
+    ],
+    "naturalgift": [
+      "onModifyType",
+      "onPrepareHit"
+    ],
+    "naturepower": [
+      "onTryHit"
+    ],
+    "naturesmadness": [
+      "damageCallback"
+    ],
+    "noretreat": [
+      "onTry"
+    ],
+    "obstruct": [
+      "onHit",
+      "onPrepareHit"
+    ],
+    "octolock": [
+      "onTryImmunity"
+    ],
+    "odorsleuth": [
+      "onTryHit"
+    ],
+    "orderup": [
+      "onAfterMoveSecondarySelf"
+    ],
+    "painsplit": [
+      "onHit"
+    ],
+    "partingshot": [
+      "onHit"
+    ],
+    "payback": [
+      "basePowerCallback"
+    ],
+    "perishsong": [
+      "onHitField"
+    ],
+    "phantomforce": [
+      "onTryMove"
+    ],
+    "photongeyser": [
+      "onModifyMove"
+    ],
+    "pikapapow": [
+      "basePowerCallback"
+    ],
+    "pluck": [
+      "onHit"
+    ],
+    "pollenpuff": [
+      "onHit",
+      "onTryHit",
+      "onTryMove"
+    ],
+    "poltergeist": [
+      "onTry",
+      "onTryHit"
+    ],
+    "powersplit": [
+      "onHit"
+    ],
+    "powerswap": [
+      "onHit"
+    ],
+    "powertrip": [
+      "basePowerCallback"
+    ],
+    "present": [
+      "onModifyMove"
+    ],
+    "protect": [
+      "onHit",
+      "onPrepareHit"
+    ],
+    "psyblade": [
+      "onBasePower"
+    ],
+    "psychicfangs": [
+      "onTryHit"
+    ],
+    "psychoshift": [
+      "onTryHit"
+    ],
+    "psychup": [
+      "onHit"
+    ],
+    "psywave": [
+      "damageCallback"
+    ],
+    "punishment": [
+      "basePowerCallback"
+    ],
+    "purify": [
+      "onHit"
+    ],
+    "pursuit": [
+      "basePowerCallback",
+      "beforeTurnCallback",
+      "onModifyMove"
+    ],
+    "quash": [
+      "onHit"
+    ],
+    "quickguard": [
+      "onHitSide",
+      "onTry"
+    ],
+    "ragefist": [
+      "basePowerCallback"
+    ],
+    "ragepowder": [
+      "onTry"
+    ],
+    "ragingbull": [
+      "onModifyType",
+      "onTryHit"
+    ],
+    "rapidspin": [
+      "onAfterHit",
+      "onAfterSubDamage"
+    ],
+    "razorwind": [
+      "onTryMove"
+    ],
+    "recycle": [
+      "onHit"
+    ],
+    "reflecttype": [
+      "onHit"
+    ],
+    "refresh": [
+      "onHit"
+    ],
+    "relicsong": [
+      "onAfterMoveSecondarySelf"
+    ],
+    "rest": [
+      "onHit",
+      "onTry"
+    ],
+    "retaliate": [
+      "onBasePower"
+    ],
+    "return": [
+      "basePowerCallback"
+    ],
+    "revelationdance": [
+      "onModifyType"
+    ],
+    "revenge": [
+      "basePowerCallback"
+    ],
+    "reversal": [
+      "basePowerCallback"
+    ],
+    "revivalblessing": [
+      "onTryHit"
+    ],
+    "risingvoltage": [
+      "basePowerCallback"
+    ],
+    "roleplay": [
+      "onHit",
+      "onTryHit"
+    ],
+    "rollout": [
+      "basePowerCallback",
+      "onAfterMove",
+      "onModifyMove"
+    ],
+    "rototiller": [
+      "onHitField"
+    ],
+    "round": [
+      "basePowerCallback",
+      "onTry"
+    ],
+    "ruination": [
+      "damageCallback"
+    ],
+    "sandsearstorm": [
+      "onModifyMove"
+    ],
+    "sappyseed": [
+      "onHit"
+    ],
+    "secretpower": [
+      "onModifyMove"
+    ],
+    "shadowforce": [
+      "onTryMove"
+    ],
+    "shedtail": [
+      "onHit",
+      "onTryHit"
+    ],
+    "shellsidearm": [
+      "onAfterSubDamage",
+      "onHit",
+      "onModifyMove",
+      "onPrepareHit"
+    ],
+    "shelltrap": [
+      "onTryMove",
+      "priorityChargeCallback"
+    ],
+    "shoreup": [
+      "onHit"
+    ],
+    "silktrap": [
+      "onHit",
+      "onPrepareHit"
+    ],
+    "simplebeam": [
+      "onHit",
+      "onTryHit"
+    ],
+    "sketch": [
+      "onHit"
+    ],
+    "skillswap": [
+      "onHit"
+    ],
+    "skullbash": [
+      "onTryMove"
+    ],
+    "skyattack": [
+      "onTryMove"
+    ],
+    "skydrop": [
+      "onHit",
+      "onModifyMove",
+      "onMoveFail",
+      "onTry",
+      "onTryHit"
+    ],
+    "sleeptalk": [
+      "onHit",
+      "onTry"
+    ],
+    "smellingsalts": [
+      "basePowerCallback",
+      "onHit"
+    ],
+    "snore": [
+      "onTry"
+    ],
+    "soak": [
+      "onHit"
+    ],
+    "solarbeam": [
+      "onBasePower",
+      "onTryMove"
+    ],
+    "solarblade": [
+      "onBasePower",
+      "onTryMove"
+    ],
+    "sparklingaria": [
+      "onAfterMove"
+    ],
+    "speedswap": [
+      "onHit"
+    ],
+    "spiderweb": [
+      "onHit"
+    ],
+    "spikyshield": [
+      "onHit",
+      "onPrepareHit"
+    ],
+    "spite": [
+      "onHit"
+    ],
+    "spitup": [
+      "basePowerCallback",
+      "onAfterMove",
+      "onTry"
+    ],
+    "splash": [
+      "onTry",
+      "onTryHit"
+    ],
+    "splinteredstormshards": [
+      "onAfterSubDamage",
+      "onHit"
+    ],
+    "spotlight": [
+      "onTryHit"
+    ],
+    "steelbeam": [
+      "onAfterMove"
+    ],
+    "steelroller": [
+      "onAfterSubDamage",
+      "onHit",
+      "onTry"
+    ],
+    "stockpile": [
+      "onTry"
+    ],
+    "stompingtantrum": [
+      "basePowerCallback"
+    ],
+    "stoneaxe": [
+      "onAfterHit",
+      "onAfterSubDamage"
+    ],
+    "storedpower": [
+      "basePowerCallback"
+    ],
+    "strengthsap": [
+      "onHit"
+    ],
+    "struggle": [
+      "onModifyMove"
+    ],
+    "stuffcheeks": [
+      "onDisableMove",
+      "onHit",
+      "onTry"
+    ],
+    "substitute": [
+      "onHit",
+      "onTryHit"
+    ],
+    "suckerpunch": [
+      "onTry"
+    ],
+    "supercellslam": [
+      "onMoveFail"
+    ],
+    "superfang": [
+      "damageCallback"
+    ],
+    "swallow": [
+      "onHit",
+      "onTry"
+    ],
+    "switcheroo": [
+      "onHit",
+      "onTryImmunity"
+    ],
+    "synchronoise": [
+      "onTryImmunity"
+    ],
+    "synthesis": [
+      "onHit"
+    ],
+    "takeheart": [
+      "onHit"
+    ],
+    "teatime": [
+      "onHitField"
+    ],
+    "technoblast": [
+      "onModifyType"
+    ],
+    "telekinesis": [
+      "onTry"
+    ],
+    "teleport": [
+      "onTry"
+    ],
+    "temperflare": [
+      "basePowerCallback"
+    ],
+    "terablast": [
+      "basePowerCallback",
+      "onModifyMove",
+      "onModifyType",
+      "onPrepareHit"
+    ],
+    "terastarstorm": [
+      "onModifyMove",
+      "onModifyType"
+    ],
+    "terrainpulse": [
+      "onModifyMove",
+      "onModifyType"
+    ],
+    "thief": [
+      "onAfterHit"
+    ],
+    "thousandarrows": [
+      "onEffectiveness"
+    ],
+    "thousandwaves": [
+      "onHit"
+    ],
+    "thunder": [
+      "onModifyMove"
+    ],
+    "thunderclap": [
+      "onTry"
+    ],
+    "tidyup": [
+      "onHit"
+    ],
+    "topsyturvy": [
+      "onHit"
+    ],
+    "transform": [
+      "onHit"
+    ],
+    "trick": [
+      "onHit",
+      "onTryImmunity"
+    ],
+    "trickortreat": [
+      "onHit"
+    ],
+    "tripleaxel": [
+      "basePowerCallback"
+    ],
+    "triplekick": [
+      "basePowerCallback"
+    ],
+    "trumpcard": [
+      "basePowerCallback"
+    ],
+    "upperhand": [
+      "onTry"
+    ],
+    "uproar": [
+      "onTryHit"
+    ],
+    "veeveevolley": [
+      "basePowerCallback"
+    ],
+    "venomdrench": [
+      "onHit"
+    ],
+    "venoshock": [
+      "onBasePower"
+    ],
+    "wakeupslap": [
+      "basePowerCallback",
+      "onHit"
+    ],
+    "waterpledge": [
+      "basePowerCallback",
+      "onModifyMove",
+      "onPrepareHit"
+    ],
+    "watershuriken": [
+      "basePowerCallback"
+    ],
+    "waterspout": [
+      "basePowerCallback"
+    ],
+    "weatherball": [
+      "onModifyMove",
+      "onModifyType"
+    ],
+    "wideguard": [
+      "onHitSide",
+      "onTry"
+    ],
+    "wildboltstorm": [
+      "onModifyMove"
+    ],
+    "worryseed": [
+      "onHit",
+      "onTryHit",
+      "onTryImmunity"
+    ],
+    "wringout": [
+      "basePowerCallback"
+    ],
+    "yawn": [
+      "onTryHit"
+    ],
+    "polarflare": [
+      "onAfterMoveSecondarySelf"
+    ]
+  },
+  "species": {
+    "arceus": [
+      "onType"
+    ],
+    "arceusbug": [
+      "onType"
+    ],
+    "arceusdark": [
+      "onType"
+    ],
+    "arceusdragon": [
+      "onType"
+    ],
+    "arceuselectric": [
+      "onType"
+    ],
+    "arceusfairy": [
+      "onType"
+    ],
+    "arceusfighting": [
+      "onType"
+    ],
+    "arceusfire": [
+      "onType"
+    ],
+    "arceusflying": [
+      "onType"
+    ],
+    "arceusghost": [
+      "onType"
+    ],
+    "arceusgrass": [
+      "onType"
+    ],
+    "arceusground": [
+      "onType"
+    ],
+    "arceusice": [
+      "onType"
+    ],
+    "arceuspoison": [
+      "onType"
+    ],
+    "arceuspsychic": [
+      "onType"
+    ],
+    "arceusrock": [
+      "onType"
+    ],
+    "arceussteel": [
+      "onType"
+    ],
+    "arceuswater": [
+      "onType"
+    ],
+    "silvally": [
+      "onType"
+    ],
+    "silvallybug": [
+      "onType"
+    ],
+    "silvallydark": [
+      "onType"
+    ],
+    "silvallydragon": [
+      "onType"
+    ],
+    "silvallyelectric": [
+      "onType"
+    ],
+    "silvallyfairy": [
+      "onType"
+    ],
+    "silvallyfighting": [
+      "onType"
+    ],
+    "silvallyfire": [
+      "onType"
+    ],
+    "silvallyflying": [
+      "onType"
+    ],
+    "silvallyghost": [
+      "onType"
+    ],
+    "silvallygrass": [
+      "onType"
+    ],
+    "silvallyground": [
+      "onType"
+    ],
+    "silvallyice": [
+      "onType"
+    ],
+    "silvallypoison": [
+      "onType"
+    ],
+    "silvallypsychic": [
+      "onType"
+    ],
+    "silvallyrock": [
+      "onType"
+    ],
+    "silvallysteel": [
+      "onType"
+    ],
+    "silvallywater": [
+      "onType"
+    ],
+    "zacian": [
+      "onBattleStart"
+    ],
+    "zaciancrowned": [
+      "onBattleStart"
+    ],
+    "zamazenta": [
+      "onBattleStart"
+    ],
+    "zamazentacrowned": [
+      "onBattleStart"
+    ]
+  },
+  "abilities": {
+    "adaptability": [
+      "onModifySTAB"
+    ],
+    "aerilate": [
+      "onBasePower",
+      "onModifyType"
+    ],
+    "aftermath": [
+      "onDamagingHit"
+    ],
+    "airlock": [
+      "onEnd",
+      "onStart",
+      "onSwitchIn"
+    ],
+    "analytic": [
+      "onBasePower"
+    ],
+    "angerpoint": [
+      "onHit"
+    ],
+    "angershell": [
+      "onAfterMoveSecondary",
+      "onDamage",
+      "onTryEatItem"
+    ],
+    "anticipation": [
+      "onStart"
+    ],
+    "arenatrap": [
+      "onFoeMaybeTrapPokemon",
+      "onFoeTrapPokemon"
+    ],
+    "armortail": [
+      "onFoeTryMove"
+    ],
+    "aromaveil": [
+      "onAllyTryAddVolatile"
+    ],
+    "asoneglastrier": [
+      "onEnd",
+      "onFoeTryEatItem",
+      "onSourceAfterFaint",
+      "onStart"
+    ],
+    "asonespectrier": [
+      "onEnd",
+      "onFoeTryEatItem",
+      "onSourceAfterFaint",
+      "onStart"
+    ],
+    "aurabreak": [
+      "onAnyTryPrimaryHit",
+      "onStart"
+    ],
+    "baddreams": [
+      "onResidual"
+    ],
+    "battery": [
+      "onAllyBasePower"
+    ],
+    "battlebond": [
+      "onModifyMove",
+      "onSourceAfterFaint"
+    ],
+    "beadsofruin": [
+      "onAnyModifySpD",
+      "onStart"
+    ],
+    "beastboost": [
+      "onSourceAfterFaint"
+    ],
+    "berserk": [
+      "onAfterMoveSecondary",
+      "onDamage",
+      "onTryEatItem"
+    ],
+    "bigpecks": [
+      "onTryBoost"
+    ],
+    "blaze": [
+      "onModifyAtk",
+      "onModifySpA"
+    ],
+    "bulletproof": [
+      "onTryHit"
+    ],
+    "cheekpouch": [
+      "onEatItem"
+    ],
+    "chillingneigh": [
+      "onSourceAfterFaint"
+    ],
+    "chlorophyll": [
+      "onModifySpe"
+    ],
+    "clearbody": [
+      "onTryBoost"
+    ],
+    "cloudnine": [
+      "onEnd",
+      "onStart",
+      "onSwitchIn"
+    ],
+    "colorchange": [
+      "onAfterMoveSecondary"
+    ],
+    "comatose": [
+      "onSetStatus",
+      "onStart"
+    ],
+    "commander": [
+      "onAnySwitchIn",
+      "onStart",
+      "onUpdate"
+    ],
+    "competitive": [
+      "onAfterEachBoost"
+    ],
+    "compoundeyes": [
+      "onSourceModifyAccuracy"
+    ],
+    "contrary": [
+      "onChangeBoost"
+    ],
+    "costar": [
+      "onStart"
+    ],
+    "cottondown": [
+      "onDamagingHit"
+    ],
+    "cudchew": [
+      "onEatItem",
+      "onResidual"
+    ],
+    "curiousmedicine": [
+      "onStart"
+    ],
+    "cursedbody": [
+      "onDamagingHit"
+    ],
+    "cutecharm": [
+      "onDamagingHit"
+    ],
+    "damp": [
+      "onAnyDamage",
+      "onAnyTryMove"
+    ],
+    "darkaura": [
+      "onAnyBasePower",
+      "onStart"
+    ],
+    "dauntlessshield": [
+      "onStart"
+    ],
+    "dazzling": [
+      "onFoeTryMove"
+    ],
+    "defeatist": [
+      "onModifyAtk",
+      "onModifySpA"
+    ],
+    "defiant": [
+      "onAfterEachBoost"
+    ],
+    "deltastream": [
+      "onAnySetWeather",
+      "onEnd",
+      "onStart"
+    ],
+    "desolateland": [
+      "onAnySetWeather",
+      "onEnd",
+      "onStart"
+    ],
+    "disguise": [
+      "onCriticalHit",
+      "onDamage",
+      "onEffectiveness",
+      "onUpdate"
+    ],
+    "download": [
+      "onStart"
+    ],
+    "dragonize": [
+      "onBasePower",
+      "onModifyType"
+    ],
+    "dragonsmaw": [
+      "onModifyAtk",
+      "onModifySpA"
+    ],
+    "drizzle": [
+      "onStart"
+    ],
+    "drought": [
+      "onStart"
+    ],
+    "dryskin": [
+      "onSourceBasePower",
+      "onTryHit",
+      "onWeather"
+    ],
+    "eartheater": [
+      "onTryHit"
+    ],
+    "effectspore": [
+      "onDamagingHit"
+    ],
+    "electricsurge": [
+      "onStart"
+    ],
+    "electromorphosis": [
+      "onDamagingHit"
+    ],
+    "embodyaspectcornerstone": [
+      "onStart"
+    ],
+    "embodyaspecthearthflame": [
+      "onStart"
+    ],
+    "embodyaspectteal": [
+      "onStart"
+    ],
+    "embodyaspectwellspring": [
+      "onStart"
+    ],
+    "emergencyexit": [
+      "onEmergencyExit"
+    ],
+    "fairyaura": [
+      "onAnyBasePower",
+      "onStart"
+    ],
+    "filter": [
+      "onSourceModifyDamage"
+    ],
+    "flamebody": [
+      "onDamagingHit"
+    ],
+    "flareboost": [
+      "onBasePower"
+    ],
+    "flashfire": [
+      "onEnd",
+      "onTryHit"
+    ],
+    "flowergift": [
+      "onAllyModifyAtk",
+      "onAllyModifySpD",
+      "onStart",
+      "onWeatherChange"
+    ],
+    "flowerveil": [
+      "onAllySetStatus",
+      "onAllyTryAddVolatile",
+      "onAllyTryBoost"
+    ],
+    "fluffy": [
+      "onSourceModifyDamage"
+    ],
+    "forecast": [
+      "onStart",
+      "onWeatherChange"
+    ],
+    "forewarn": [
+      "onStart"
+    ],
+    "friendguard": [
+      "onAnyModifyDamage"
+    ],
+    "frisk": [
+      "onStart"
+    ],
+    "fullmetalbody": [
+      "onTryBoost"
+    ],
+    "furcoat": [
+      "onModifyDef"
+    ],
+    "galewings": [
+      "onModifyPriority"
+    ],
+    "galvanize": [
+      "onBasePower",
+      "onModifyType"
+    ],
+    "gluttony": [
+      "onDamage",
+      "onStart"
+    ],
+    "goodasgold": [
+      "onTryHit"
+    ],
+    "gooey": [
+      "onDamagingHit"
+    ],
+    "gorillatactics": [
+      "onBeforeMove",
+      "onDisableMove",
+      "onEnd",
+      "onModifyAtk",
+      "onModifyMove",
+      "onStart"
+    ],
+    "grasspelt": [
+      "onModifyDef"
+    ],
+    "grassysurge": [
+      "onStart"
+    ],
+    "grimneigh": [
+      "onSourceAfterFaint"
+    ],
+    "guarddog": [
+      "onDragOut",
+      "onTryBoost"
+    ],
+    "gulpmissile": [
+      "onDamagingHit",
+      "onSourceTryPrimaryHit"
+    ],
+    "guts": [
+      "onModifyAtk"
+    ],
+    "hadronengine": [
+      "onModifySpA",
+      "onStart"
+    ],
+    "harvest": [
+      "onResidual"
+    ],
+    "healer": [
+      "onResidual"
+    ],
+    "heatproof": [
+      "onDamage",
+      "onSourceModifyAtk",
+      "onSourceModifySpA"
+    ],
+    "heavymetal": [
+      "onModifyWeight"
+    ],
+    "hospitality": [
+      "onStart"
+    ],
+    "hugepower": [
+      "onModifyAtk"
+    ],
+    "hungerswitch": [
+      "onResidual"
+    ],
+    "hustle": [
+      "onModifyAtk",
+      "onSourceModifyAccuracy"
+    ],
+    "hydration": [
+      "onResidual"
+    ],
+    "hypercutter": [
+      "onTryBoost"
+    ],
+    "icebody": [
+      "onImmunity",
+      "onWeather"
+    ],
+    "iceface": [
+      "onCriticalHit",
+      "onDamage",
+      "onEffectiveness",
+      "onStart",
+      "onUpdate",
+      "onWeatherChange"
+    ],
+    "icescales": [
+      "onSourceModifyDamage"
+    ],
+    "illuminate": [
+      "onModifyMove",
+      "onTryBoost"
+    ],
+    "illusion": [
+      "onBeforeSwitchIn",
+      "onDamagingHit",
+      "onEnd",
+      "onFaint"
+    ],
+    "immunity": [
+      "onSetStatus",
+      "onUpdate"
+    ],
+    "imposter": [
+      "onSwitchIn"
+    ],
+    "infiltrator": [
+      "onModifyMove"
+    ],
+    "innardsout": [
+      "onDamagingHit"
+    ],
+    "innerfocus": [
+      "onTryAddVolatile",
+      "onTryBoost"
+    ],
+    "insomnia": [
+      "onSetStatus",
+      "onTryAddVolatile",
+      "onUpdate"
+    ],
+    "intimidate": [
+      "onStart"
+    ],
+    "intrepidsword": [
+      "onStart"
+    ],
+    "ironbarbs": [
+      "onDamagingHit"
+    ],
+    "ironfist": [
+      "onBasePower"
+    ],
+    "justified": [
+      "onDamagingHit"
+    ],
+    "keeneye": [
+      "onModifyMove",
+      "onTryBoost"
+    ],
+    "klutz": [
+      "onStart"
+    ],
+    "leafguard": [
+      "onSetStatus",
+      "onTryAddVolatile"
+    ],
+    "libero": [
+      "onPrepareHit"
+    ],
+    "lightmetal": [
+      "onModifyWeight"
+    ],
+    "lightningrod": [
+      "onAnyRedirectTarget",
+      "onTryHit"
+    ],
+    "limber": [
+      "onSetStatus",
+      "onUpdate"
+    ],
+    "lingeringaroma": [
+      "onDamagingHit"
+    ],
+    "liquidooze": [
+      "onSourceTryHeal"
+    ],
+    "liquidvoice": [
+      "onModifyType"
+    ],
+    "longreach": [
+      "onModifyMove"
+    ],
+    "magicbounce": [
+      "onAllyTryHitSide",
+      "onTryHit"
+    ],
+    "magicguard": [
+      "onDamage"
+    ],
+    "magician": [
+      "onAfterMoveSecondarySelf"
+    ],
+    "magmaarmor": [
+      "onImmunity",
+      "onUpdate"
+    ],
+    "magnetpull": [
+      "onFoeMaybeTrapPokemon",
+      "onFoeTrapPokemon"
+    ],
+    "marvelscale": [
+      "onModifyDef"
+    ],
+    "megalauncher": [
+      "onBasePower"
+    ],
+    "megasol": [
+      "onWeatherModifyDamage"
+    ],
+    "merciless": [
+      "onModifyCritRatio"
+    ],
+    "mimicry": [
+      "onStart",
+      "onTerrainChange"
+    ],
+    "mindseye": [
+      "onModifyMove",
+      "onTryBoost"
+    ],
+    "minus": [
+      "onModifySpA"
+    ],
+    "mirrorarmor": [
+      "onTryBoost"
+    ],
+    "mistysurge": [
+      "onStart"
+    ],
+    "moldbreaker": [
+      "onModifyMove",
+      "onStart"
+    ],
+    "moody": [
+      "onResidual"
+    ],
+    "motordrive": [
+      "onTryHit"
+    ],
+    "moxie": [
+      "onSourceAfterFaint"
+    ],
+    "multiscale": [
+      "onSourceModifyDamage"
+    ],
+    "mummy": [
+      "onDamagingHit"
+    ],
+    "myceliummight": [
+      "onFractionalPriority",
+      "onModifyMove"
+    ],
+    "naturalcure": [
+      "onCheckShow",
+      "onSwitchOut"
+    ],
+    "neuroforce": [
+      "onModifyDamage"
+    ],
+    "neutralizinggas": [
+      "onEnd",
+      "onSwitchIn"
+    ],
+    "noguard": [
+      "onAnyAccuracy",
+      "onAnyInvulnerability"
+    ],
+    "normalize": [
+      "onBasePower",
+      "onModifyType"
+    ],
+    "oblivious": [
+      "onImmunity",
+      "onTryBoost",
+      "onTryHit",
+      "onUpdate"
+    ],
+    "opportunist": [
+      "onAnyAfterMega",
+      "onAnyAfterMove",
+      "onAnyAfterTerastallization",
+      "onAnySwitchIn",
+      "onEnd",
+      "onFoeAfterBoost",
+      "onResidual"
+    ],
+    "orichalcumpulse": [
+      "onModifyAtk",
+      "onStart"
+    ],
+    "overcoat": [
+      "onImmunity",
+      "onTryHit"
+    ],
+    "overgrow": [
+      "onModifyAtk",
+      "onModifySpA"
+    ],
+    "owntempo": [
+      "onHit",
+      "onTryAddVolatile",
+      "onTryBoost",
+      "onUpdate"
+    ],
+    "parentalbond": [
+      "onPrepareHit",
+      "onSourceModifySecondaries"
+    ],
+    "pastelveil": [
+      "onAllySetStatus",
+      "onAnySwitchIn",
+      "onSetStatus",
+      "onStart",
+      "onUpdate"
+    ],
+    "perishbody": [
+      "onDamagingHit"
+    ],
+    "pickpocket": [
+      "onAfterMoveSecondary"
+    ],
+    "pickup": [
+      "onResidual"
+    ],
+    "piercingdrill": [
+      "onHitProtect"
+    ],
+    "pixilate": [
+      "onBasePower",
+      "onModifyType"
+    ],
+    "plus": [
+      "onModifySpA"
+    ],
+    "poisonheal": [
+      "onDamage"
+    ],
+    "poisonpoint": [
+      "onDamagingHit"
+    ],
+    "poisonpuppeteer": [
+      "onAnyAfterSetStatus"
+    ],
+    "poisontouch": [
+      "onSourceDamagingHit"
+    ],
+    "powerconstruct": [
+      "onResidual"
+    ],
+    "powerofalchemy": [
+      "onAllyFaint"
+    ],
+    "powerspot": [
+      "onAllyBasePower"
+    ],
+    "prankster": [
+      "onModifyPriority"
+    ],
+    "pressure": [
+      "onDeductPP",
+      "onStart"
+    ],
+    "primordialsea": [
+      "onAnySetWeather",
+      "onEnd",
+      "onStart"
+    ],
+    "prismarmor": [
+      "onSourceModifyDamage"
+    ],
+    "propellertail": [
+      "onModifyMove"
+    ],
+    "protean": [
+      "onPrepareHit"
+    ],
+    "protosynthesis": [
+      "onEnd",
+      "onStart",
+      "onWeatherChange"
+    ],
+    "psychicsurge": [
+      "onStart"
+    ],
+    "punkrock": [
+      "onBasePower",
+      "onSourceModifyDamage"
+    ],
+    "purepower": [
+      "onModifyAtk"
+    ],
+    "purifyingsalt": [
+      "onSetStatus",
+      "onSourceModifyAtk",
+      "onSourceModifySpA",
+      "onTryAddVolatile"
+    ],
+    "quarkdrive": [
+      "onEnd",
+      "onStart",
+      "onTerrainChange"
+    ],
+    "queenlymajesty": [
+      "onFoeTryMove"
+    ],
+    "quickdraw": [
+      "onFractionalPriority"
+    ],
+    "quickfeet": [
+      "onModifySpe"
+    ],
+    "raindish": [
+      "onWeather"
+    ],
+    "rattled": [
+      "onAfterBoost",
+      "onDamagingHit"
+    ],
+    "receiver": [
+      "onAllyFaint"
+    ],
+    "reckless": [
+      "onBasePower"
+    ],
+    "refrigerate": [
+      "onBasePower",
+      "onModifyType"
+    ],
+    "regenerator": [
+      "onSwitchOut"
+    ],
+    "ripen": [
+      "onChangeBoost",
+      "onEatItem",
+      "onSourceModifyDamage",
+      "onTryEatItem",
+      "onTryHeal"
+    ],
+    "rivalry": [
+      "onBasePower"
+    ],
+    "rockhead": [
+      "onDamage"
+    ],
+    "rockypayload": [
+      "onModifyAtk",
+      "onModifySpA"
+    ],
+    "roughskin": [
+      "onDamagingHit"
+    ],
+    "sandforce": [
+      "onBasePower",
+      "onImmunity"
+    ],
+    "sandrush": [
+      "onImmunity",
+      "onModifySpe"
+    ],
+    "sandspit": [
+      "onDamagingHit"
+    ],
+    "sandstream": [
+      "onStart"
+    ],
+    "sandveil": [
+      "onImmunity",
+      "onModifyAccuracy"
+    ],
+    "sapsipper": [
+      "onAllyTryHitSide",
+      "onTryHit"
+    ],
+    "schooling": [
+      "onResidual",
+      "onStart"
+    ],
+    "scrappy": [
+      "onModifyMove",
+      "onTryBoost"
+    ],
+    "screencleaner": [
+      "onStart"
+    ],
+    "seedsower": [
+      "onDamagingHit"
+    ],
+    "serenegrace": [
+      "onModifyMove"
+    ],
+    "shadowshield": [
+      "onSourceModifyDamage"
+    ],
+    "shadowtag": [
+      "onFoeMaybeTrapPokemon",
+      "onFoeTrapPokemon"
+    ],
+    "sharpness": [
+      "onBasePower"
+    ],
+    "shedskin": [
+      "onResidual"
+    ],
+    "sheerforce": [
+      "onBasePower",
+      "onModifyMove"
+    ],
+    "shielddust": [
+      "onModifySecondaries"
+    ],
+    "shieldsdown": [
+      "onResidual",
+      "onSetStatus",
+      "onStart",
+      "onTryAddVolatile"
+    ],
+    "simple": [
+      "onChangeBoost"
+    ],
+    "skilllink": [
+      "onModifyMove"
+    ],
+    "slowstart": [
+      "onEnd",
+      "onModifyAtk",
+      "onModifySpe",
+      "onResidual",
+      "onStart"
+    ],
+    "slushrush": [
+      "onModifySpe"
+    ],
+    "sniper": [
+      "onModifyDamage"
+    ],
+    "snowcloak": [
+      "onImmunity",
+      "onModifyAccuracy"
+    ],
+    "snowwarning": [
+      "onStart"
+    ],
+    "solarpower": [
+      "onModifySpA",
+      "onWeather"
+    ],
+    "solidrock": [
+      "onSourceModifyDamage"
+    ],
+    "soulheart": [
+      "onAnyFaint"
+    ],
+    "soundproof": [
+      "onAllyTryHitSide",
+      "onTryHit"
+    ],
+    "speedboost": [
+      "onResidual"
+    ],
+    "spicyspray": [
+      "onDamagingHit"
+    ],
+    "stakeout": [
+      "onModifyAtk",
+      "onModifySpA"
+    ],
+    "stalwart": [
+      "onModifyMove"
+    ],
+    "stamina": [
+      "onDamagingHit"
+    ],
+    "stancechange": [
+      "onModifyMove"
+    ],
+    "static": [
+      "onDamagingHit"
+    ],
+    "steadfast": [
+      "onFlinch"
+    ],
+    "steamengine": [
+      "onDamagingHit"
+    ],
+    "steelworker": [
+      "onModifyAtk",
+      "onModifySpA"
+    ],
+    "steelyspirit": [
+      "onAllyBasePower"
+    ],
+    "stench": [
+      "onModifyMove"
+    ],
+    "stickyhold": [
+      "onTakeItem"
+    ],
+    "stormdrain": [
+      "onAnyRedirectTarget",
+      "onTryHit"
+    ],
+    "strongjaw": [
+      "onBasePower"
+    ],
+    "sturdy": [
+      "onDamage",
+      "onTryHit"
+    ],
+    "suctioncups": [
+      "onDragOut"
+    ],
+    "superluck": [
+      "onModifyCritRatio"
+    ],
+    "supersweetsyrup": [
+      "onStart"
+    ],
+    "supremeoverlord": [
+      "onBasePower",
+      "onEnd",
+      "onStart"
+    ],
+    "surgesurfer": [
+      "onModifySpe"
+    ],
+    "swarm": [
+      "onModifyAtk",
+      "onModifySpA"
+    ],
+    "sweetveil": [
+      "onAllySetStatus",
+      "onAllyTryAddVolatile"
+    ],
+    "swiftswim": [
+      "onModifySpe"
+    ],
+    "swordofruin": [
+      "onAnyModifyDef",
+      "onStart"
+    ],
+    "symbiosis": [
+      "onAllyAfterUseItem"
+    ],
+    "synchronize": [
+      "onAfterSetStatus"
+    ],
+    "tabletsofruin": [
+      "onAnyModifyAtk",
+      "onStart"
+    ],
+    "tangledfeet": [
+      "onModifyAccuracy"
+    ],
+    "tanglinghair": [
+      "onDamagingHit"
+    ],
+    "technician": [
+      "onBasePower"
+    ],
+    "telepathy": [
+      "onTryHit"
+    ],
+    "teraformzero": [
+      "onAfterTerastallization"
+    ],
+    "terashift": [
+      "onSwitchIn"
+    ],
+    "teravolt": [
+      "onModifyMove",
+      "onStart"
+    ],
+    "thermalexchange": [
+      "onDamagingHit",
+      "onSetStatus",
+      "onUpdate"
+    ],
+    "thickfat": [
+      "onSourceModifyAtk",
+      "onSourceModifySpA"
+    ],
+    "tintedlens": [
+      "onModifyDamage"
+    ],
+    "torrent": [
+      "onModifyAtk",
+      "onModifySpA"
+    ],
+    "toughclaws": [
+      "onBasePower"
+    ],
+    "toxicboost": [
+      "onBasePower"
+    ],
+    "toxicchain": [
+      "onSourceDamagingHit"
+    ],
+    "toxicdebris": [
+      "onDamagingHit"
+    ],
+    "trace": [
+      "onStart",
+      "onUpdate"
+    ],
+    "transistor": [
+      "onModifyAtk",
+      "onModifySpA"
+    ],
+    "triage": [
+      "onModifyPriority"
+    ],
+    "truant": [
+      "onBeforeMove",
+      "onStart"
+    ],
+    "turboblaze": [
+      "onModifyMove",
+      "onStart"
+    ],
+    "unaware": [
+      "onAnyModifyBoost"
+    ],
+    "unburden": [
+      "onAfterUseItem",
+      "onEnd",
+      "onTakeItem"
+    ],
+    "unnerve": [
+      "onEnd",
+      "onFoeTryEatItem",
+      "onStart"
+    ],
+    "unseenfist": [
+      "onModifyMove"
+    ],
+    "vesselofruin": [
+      "onAnyModifySpA",
+      "onStart"
+    ],
+    "victorystar": [
+      "onAnyModifyAccuracy"
+    ],
+    "vitalspirit": [
+      "onSetStatus",
+      "onTryAddVolatile",
+      "onUpdate"
+    ],
+    "voltabsorb": [
+      "onTryHit"
+    ],
+    "wanderingspirit": [
+      "onDamagingHit"
+    ],
+    "waterabsorb": [
+      "onTryHit"
+    ],
+    "waterbubble": [
+      "onModifyAtk",
+      "onModifySpA",
+      "onSetStatus",
+      "onSourceModifyAtk",
+      "onSourceModifySpA",
+      "onUpdate"
+    ],
+    "watercompaction": [
+      "onDamagingHit"
+    ],
+    "waterveil": [
+      "onSetStatus",
+      "onUpdate"
+    ],
+    "weakarmor": [
+      "onDamagingHit"
+    ],
+    "wellbakedbody": [
+      "onTryHit"
+    ],
+    "whitesmoke": [
+      "onTryBoost"
+    ],
+    "wimpout": [
+      "onEmergencyExit"
+    ],
+    "windpower": [
+      "onDamagingHit",
+      "onSideConditionStart"
+    ],
+    "windrider": [
+      "onSideConditionStart",
+      "onStart",
+      "onTryHit"
+    ],
+    "wonderguard": [
+      "onTryHit"
+    ],
+    "wonderskin": [
+      "onModifyAccuracy"
+    ],
+    "zenmode": [
+      "onEnd",
+      "onResidual"
+    ],
+    "zerotohero": [
+      "onSwitchIn",
+      "onSwitchOut"
+    ],
+    "mountaineer": [
+      "onDamage",
+      "onTryHit"
+    ],
+    "rebound": [
+      "onAllyTryHitSide",
+      "onTryHit"
+    ]
+  },
+  "items": {
+    "abilityshield": [
+      "onSetAbility"
+    ],
+    "abomasite": [
+      "onTakeItem"
+    ],
+    "absolite": [
+      "onTakeItem"
+    ],
+    "absolitez": [
+      "onTakeItem"
+    ],
+    "absorbbulb": [
+      "onDamagingHit"
+    ],
+    "adamantcrystal": [
+      "onBasePower",
+      "onTakeItem"
+    ],
+    "adamantorb": [
+      "onBasePower"
+    ],
+    "adrenalineorb": [
+      "onAfterBoost"
+    ],
+    "aerodactylite": [
+      "onTakeItem"
+    ],
+    "aggronite": [
+      "onTakeItem"
+    ],
+    "aguavberry": [
+      "onEat",
+      "onTryEatItem",
+      "onUpdate"
+    ],
+    "airballoon": [
+      "onAfterSubDamage",
+      "onDamagingHit",
+      "onStart"
+    ],
+    "alakazite": [
+      "onTakeItem"
+    ],
+    "altarianite": [
+      "onTakeItem"
+    ],
+    "ampharosite": [
+      "onTakeItem"
+    ],
+    "apicotberry": [
+      "onEat",
+      "onUpdate"
+    ],
+    "aspearberry": [
+      "onEat",
+      "onUpdate"
+    ],
+    "assaultvest": [
+      "onDisableMove",
+      "onModifySpD"
+    ],
+    "audinite": [
+      "onTakeItem"
+    ],
+    "babiriberry": [
+      "onEat",
+      "onSourceModifyDamage"
+    ],
+    "banettite": [
+      "onTakeItem"
+    ],
+    "barbaracite": [
+      "onTakeItem"
+    ],
+    "baxcalibrite": [
+      "onTakeItem"
+    ],
+    "beedrillite": [
+      "onTakeItem"
+    ],
+    "berryjuice": [
+      "onUpdate"
+    ],
+    "bigroot": [
+      "onTryHeal"
+    ],
+    "blackbelt": [
+      "onBasePower"
+    ],
+    "blackglasses": [
+      "onBasePower"
+    ],
+    "blacksludge": [
+      "onResidual"
+    ],
+    "blastoisinite": [
+      "onTakeItem"
+    ],
+    "blazikenite": [
+      "onTakeItem"
+    ],
+    "blueorb": [
+      "onSwitchIn",
+      "onTakeItem"
+    ],
+    "boosterenergy": [
+      "onStart",
+      "onTakeItem",
+      "onUpdate"
+    ],
+    "brightpowder": [
+      "onModifyAccuracy"
+    ],
+    "buggem": [
+      "onSourceTryPrimaryHit"
+    ],
+    "bugmemory": [
+      "onTakeItem"
+    ],
+    "burndrive": [
+      "onTakeItem"
+    ],
+    "cameruptite": [
+      "onTakeItem"
+    ],
+    "cellbattery": [
+      "onDamagingHit"
+    ],
+    "chandelurite": [
+      "onTakeItem"
+    ],
+    "charcoal": [
+      "onBasePower"
+    ],
+    "charizarditex": [
+      "onTakeItem"
+    ],
+    "charizarditey": [
+      "onTakeItem"
+    ],
+    "chartiberry": [
+      "onEat",
+      "onSourceModifyDamage"
+    ],
+    "cheriberry": [
+      "onEat",
+      "onUpdate"
+    ],
+    "chesnaughtite": [
+      "onTakeItem"
+    ],
+    "chestoberry": [
+      "onEat",
+      "onUpdate"
+    ],
+    "chilanberry": [
+      "onEat",
+      "onSourceModifyDamage"
+    ],
+    "chilldrive": [
+      "onTakeItem"
+    ],
+    "chimechite": [
+      "onTakeItem"
+    ],
+    "choiceband": [
+      "onModifyAtk",
+      "onModifyMove",
+      "onStart"
+    ],
+    "choicescarf": [
+      "onModifyMove",
+      "onModifySpe",
+      "onStart"
+    ],
+    "choicespecs": [
+      "onModifyMove",
+      "onModifySpA",
+      "onStart"
+    ],
+    "chopleberry": [
+      "onEat",
+      "onSourceModifyDamage"
+    ],
+    "clearamulet": [
+      "onTryBoost"
+    ],
+    "clefablite": [
+      "onTakeItem"
+    ],
+    "cobaberry": [
+      "onEat",
+      "onSourceModifyDamage"
+    ],
+    "colburberry": [
+      "onEat",
+      "onSourceModifyDamage"
+    ],
+    "cornerstonemask": [
+      "onBasePower",
+      "onTakeItem"
+    ],
+    "covertcloak": [
+      "onModifySecondaries"
+    ],
+    "crabominite": [
+      "onTakeItem"
+    ],
+    "custapberry": [
+      "onEat",
+      "onFractionalPriority"
+    ],
+    "darkgem": [
+      "onSourceTryPrimaryHit"
+    ],
+    "darkmemory": [
+      "onTakeItem"
+    ],
+    "darkranite": [
+      "onTakeItem"
+    ],
+    "deepseascale": [
+      "onModifySpD"
+    ],
+    "deepseatooth": [
+      "onModifySpA"
+    ],
+    "delphoxite": [
+      "onTakeItem"
+    ],
+    "destinyknot": [
+      "onAttract"
+    ],
+    "diancite": [
+      "onTakeItem"
+    ],
+    "dousedrive": [
+      "onTakeItem"
+    ],
+    "dracoplate": [
+      "onBasePower",
+      "onTakeItem"
+    ],
+    "dragalgite": [
+      "onTakeItem"
+    ],
+    "dragonfang": [
+      "onBasePower"
+    ],
+    "dragongem": [
+      "onSourceTryPrimaryHit"
+    ],
+    "dragoninite": [
+      "onTakeItem"
+    ],
+    "dragonmemory": [
+      "onTakeItem"
+    ],
+    "drampanite": [
+      "onTakeItem"
+    ],
+    "dreadplate": [
+      "onBasePower",
+      "onTakeItem"
+    ],
+    "earthplate": [
+      "onBasePower",
+      "onTakeItem"
+    ],
+    "eelektrossite": [
+      "onTakeItem"
+    ],
+    "ejectbutton": [
+      "onAfterMoveSecondary"
+    ],
+    "ejectpack": [
+      "onAfterBoost",
+      "onAnyAfterMega",
+      "onAnyAfterMove",
+      "onAnySwitchIn",
+      "onEnd",
+      "onResidual",
+      "onUse",
+      "onUseItem"
+    ],
+    "electricgem": [
+      "onSourceTryPrimaryHit"
+    ],
+    "electricmemory": [
+      "onTakeItem"
+    ],
+    "electricseed": [
+      "onStart",
+      "onTerrainChange"
+    ],
+    "emboarite": [
+      "onTakeItem"
+    ],
+    "enigmaberry": [
+      "onEat",
+      "onHit",
+      "onTryEatItem"
+    ],
+    "eviolite": [
+      "onModifyDef",
+      "onModifySpD"
+    ],
+    "excadrite": [
+      "onTakeItem"
+    ],
+    "expertbelt": [
+      "onModifyDamage"
+    ],
+    "fairyfeather": [
+      "onBasePower"
+    ],
+    "fairygem": [
+      "onSourceTryPrimaryHit"
+    ],
+    "fairymemory": [
+      "onTakeItem"
+    ],
+    "falinksite": [
+      "onTakeItem"
+    ],
+    "feraligite": [
+      "onTakeItem"
+    ],
+    "fightinggem": [
+      "onSourceTryPrimaryHit"
+    ],
+    "fightingmemory": [
+      "onTakeItem"
+    ],
+    "figyberry": [
+      "onEat",
+      "onTryEatItem",
+      "onUpdate"
+    ],
+    "firegem": [
+      "onSourceTryPrimaryHit"
+    ],
+    "firememory": [
+      "onTakeItem"
+    ],
+    "fistplate": [
+      "onBasePower",
+      "onTakeItem"
+    ],
+    "flameorb": [
+      "onResidual"
+    ],
+    "flameplate": [
+      "onBasePower",
+      "onTakeItem"
+    ],
+    "floatstone": [
+      "onModifyWeight"
+    ],
+    "floettite": [
+      "onTakeItem"
+    ],
+    "flyinggem": [
+      "onSourceTryPrimaryHit"
+    ],
+    "flyingmemory": [
+      "onTakeItem"
+    ],
+    "focusband": [
+      "onDamage"
+    ],
+    "focussash": [
+      "onDamage"
+    ],
+    "froslassite": [
+      "onTakeItem"
+    ],
+    "galladite": [
+      "onTakeItem"
+    ],
+    "ganlonberry": [
+      "onEat",
+      "onUpdate"
+    ],
+    "garchompite": [
+      "onTakeItem"
+    ],
+    "garchompitez": [
+      "onTakeItem"
+    ],
+    "gardevoirite": [
+      "onTakeItem"
+    ],
+    "gengarite": [
+      "onTakeItem"
+    ],
+    "ghostgem": [
+      "onSourceTryPrimaryHit"
+    ],
+    "ghostmemory": [
+      "onTakeItem"
+    ],
+    "glalitite": [
+      "onTakeItem"
+    ],
+    "glimmoranite": [
+      "onTakeItem"
+    ],
+    "golisopite": [
+      "onTakeItem"
+    ],
+    "golurkite": [
+      "onTakeItem"
+    ],
+    "grassgem": [
+      "onSourceTryPrimaryHit"
+    ],
+    "grassmemory": [
+      "onTakeItem"
+    ],
+    "grassyseed": [
+      "onStart",
+      "onTerrainChange"
+    ],
+    "greninjite": [
+      "onTakeItem"
+    ],
+    "griseouscore": [
+      "onBasePower",
+      "onTakeItem"
+    ],
+    "griseousorb": [
+      "onBasePower"
+    ],
+    "groundgem": [
+      "onSourceTryPrimaryHit"
+    ],
+    "groundmemory": [
+      "onTakeItem"
+    ],
+    "gyaradosite": [
+      "onTakeItem"
+    ],
+    "habanberry": [
+      "onEat",
+      "onSourceModifyDamage"
+    ],
+    "hardstone": [
+      "onBasePower"
+    ],
+    "hawluchanite": [
+      "onTakeItem"
+    ],
+    "hearthflamemask": [
+      "onBasePower",
+      "onTakeItem"
+    ],
+    "heatranite": [
+      "onTakeItem"
+    ],
+    "heracronite": [
+      "onTakeItem"
+    ],
+    "houndoominite": [
+      "onTakeItem"
+    ],
+    "iapapaberry": [
+      "onEat",
+      "onTryEatItem",
+      "onUpdate"
+    ],
+    "icegem": [
+      "onSourceTryPrimaryHit"
+    ],
+    "icememory": [
+      "onTakeItem"
+    ],
+    "icicleplate": [
+      "onBasePower",
+      "onTakeItem"
+    ],
+    "insectplate": [
+      "onBasePower",
+      "onTakeItem"
+    ],
+    "ironball": [
+      "onEffectiveness",
+      "onModifySpe"
+    ],
+    "ironplate": [
+      "onBasePower",
+      "onTakeItem"
+    ],
+    "jabocaberry": [
+      "onDamagingHit",
+      "onEat"
+    ],
+    "kangaskhanite": [
+      "onTakeItem"
+    ],
+    "kasibberry": [
+      "onEat",
+      "onSourceModifyDamage"
+    ],
+    "kebiaberry": [
+      "onEat",
+      "onSourceModifyDamage"
+    ],
+    "keeberry": [
+      "onAfterMoveSecondary",
+      "onEat"
+    ],
+    "kingsrock": [
+      "onModifyMove"
+    ],
+    "lansatberry": [
+      "onEat",
+      "onUpdate"
+    ],
+    "latiasite": [
+      "onTakeItem"
+    ],
+    "latiosite": [
+      "onTakeItem"
+    ],
+    "laxincense": [
+      "onModifyAccuracy"
+    ],
+    "leek": [
+      "onModifyCritRatio"
+    ],
+    "leftovers": [
+      "onResidual"
+    ],
+    "leppaberry": [
+      "onEat",
+      "onUpdate"
+    ],
+    "liechiberry": [
+      "onEat",
+      "onUpdate"
+    ],
+    "lifeorb": [
+      "onAfterMoveSecondarySelf",
+      "onModifyDamage"
+    ],
+    "lightball": [
+      "onModifyAtk",
+      "onModifySpA"
+    ],
+    "loadeddice": [
+      "onModifyMove"
+    ],
+    "lopunnite": [
+      "onTakeItem"
+    ],
+    "lucarionite": [
+      "onTakeItem"
+    ],
+    "lucarionitez": [
+      "onTakeItem"
+    ],
+    "luckypunch": [
+      "onModifyCritRatio"
+    ],
+    "lumberry": [
+      "onAfterSetStatus",
+      "onEat",
+      "onUpdate"
+    ],
+    "luminousmoss": [
+      "onDamagingHit"
+    ],
+    "lustrousglobe": [
+      "onBasePower",
+      "onTakeItem"
+    ],
+    "lustrousorb": [
+      "onBasePower"
+    ],
+    "machobrace": [
+      "onModifySpe"
+    ],
+    "magearnite": [
+      "onTakeItem"
+    ],
+    "magnet": [
+      "onBasePower"
+    ],
+    "magoberry": [
+      "onEat",
+      "onTryEatItem",
+      "onUpdate"
+    ],
+    "mail": [
+      "onTakeItem"
+    ],
+    "malamarite": [
+      "onTakeItem"
+    ],
+    "manectite": [
+      "onTakeItem"
+    ],
+    "marangaberry": [
+      "onAfterMoveSecondary",
+      "onEat"
+    ],
+    "mawilite": [
+      "onTakeItem"
+    ],
+    "meadowplate": [
+      "onBasePower",
+      "onTakeItem"
+    ],
+    "medichamite": [
+      "onTakeItem"
+    ],
+    "meganiumite": [
+      "onTakeItem"
+    ],
+    "mentalherb": [
+      "onUpdate"
+    ],
+    "meowsticite": [
+      "onTakeItem"
+    ],
+    "metagrossite": [
+      "onTakeItem"
+    ],
+    "metalcoat": [
+      "onBasePower"
+    ],
+    "metalpowder": [
+      "onModifyDef"
+    ],
+    "metronome": [
+      "onStart"
+    ],
+    "mewtwonitex": [
+      "onTakeItem"
+    ],
+    "mewtwonitey": [
+      "onTakeItem"
+    ],
+    "micleberry": [
+      "onEat",
+      "onResidual"
+    ],
+    "mindplate": [
+      "onBasePower",
+      "onTakeItem"
+    ],
+    "miracleseed": [
+      "onBasePower"
+    ],
+    "mirrorherb": [
+      "onAnyAfterMega",
+      "onAnyAfterMove",
+      "onAnyAfterTerastallization",
+      "onAnySwitchIn",
+      "onEnd",
+      "onFoeAfterBoost",
+      "onResidual",
+      "onUse"
+    ],
+    "mistyseed": [
+      "onStart",
+      "onTerrainChange"
+    ],
+    "muscleband": [
+      "onBasePower"
+    ],
+    "mysticwater": [
+      "onBasePower"
+    ],
+    "nevermeltice": [
+      "onBasePower"
+    ],
+    "normalgem": [
+      "onSourceTryPrimaryHit"
+    ],
+    "occaberry": [
+      "onEat",
+      "onSourceModifyDamage"
+    ],
+    "oddincense": [
+      "onBasePower"
+    ],
+    "oranberry": [
+      "onEat",
+      "onTryEatItem",
+      "onUpdate"
+    ],
+    "passhoberry": [
+      "onEat",
+      "onSourceModifyDamage"
+    ],
+    "payapaberry": [
+      "onEat",
+      "onSourceModifyDamage"
+    ],
+    "pechaberry": [
+      "onEat",
+      "onUpdate"
+    ],
+    "persimberry": [
+      "onEat",
+      "onUpdate"
+    ],
+    "petayaberry": [
+      "onEat",
+      "onUpdate"
+    ],
+    "pidgeotite": [
+      "onTakeItem"
+    ],
+    "pinsirite": [
+      "onTakeItem"
+    ],
+    "pixieplate": [
+      "onBasePower",
+      "onTakeItem"
+    ],
+    "poisonbarb": [
+      "onBasePower"
+    ],
+    "poisongem": [
+      "onSourceTryPrimaryHit"
+    ],
+    "poisonmemory": [
+      "onTakeItem"
+    ],
+    "poweranklet": [
+      "onModifySpe"
+    ],
+    "powerband": [
+      "onModifySpe"
+    ],
+    "powerbelt": [
+      "onModifySpe"
+    ],
+    "powerbracer": [
+      "onModifySpe"
+    ],
+    "powerherb": [
+      "onChargeMove"
+    ],
+    "powerlens": [
+      "onModifySpe"
+    ],
+    "powerweight": [
+      "onModifySpe"
+    ],
+    "psychicgem": [
+      "onSourceTryPrimaryHit"
+    ],
+    "psychicmemory": [
+      "onTakeItem"
+    ],
+    "psychicseed": [
+      "onStart",
+      "onTerrainChange"
+    ],
+    "punchingglove": [
+      "onBasePower",
+      "onModifyMove"
+    ],
+    "pyroarite": [
+      "onTakeItem"
+    ],
+    "quickclaw": [
+      "onFractionalPriority"
+    ],
+    "quickpowder": [
+      "onModifySpe"
+    ],
+    "raichunitex": [
+      "onTakeItem"
+    ],
+    "raichunitey": [
+      "onTakeItem"
+    ],
+    "rawstberry": [
+      "onEat",
+      "onUpdate"
+    ],
+    "razorclaw": [
+      "onModifyCritRatio"
+    ],
+    "razorfang": [
+      "onModifyMove"
+    ],
+    "redcard": [
+      "onAfterMoveSecondary"
+    ],
+    "redorb": [
+      "onSwitchIn",
+      "onTakeItem"
+    ],
+    "rindoberry": [
+      "onEat",
+      "onSourceModifyDamage"
+    ],
+    "rockgem": [
+      "onSourceTryPrimaryHit"
+    ],
+    "rockincense": [
+      "onBasePower"
+    ],
+    "rockmemory": [
+      "onTakeItem"
+    ],
+    "rockyhelmet": [
+      "onDamagingHit"
+    ],
+    "roomservice": [
+      "onAnyPseudoWeatherChange",
+      "onStart"
+    ],
+    "roseincense": [
+      "onBasePower"
+    ],
+    "roseliberry": [
+      "onEat",
+      "onSourceModifyDamage"
+    ],
+    "rowapberry": [
+      "onDamagingHit",
+      "onEat"
+    ],
+    "rustedshield": [
+      "onTakeItem"
+    ],
+    "rustedsword": [
+      "onTakeItem"
+    ],
+    "sablenite": [
+      "onTakeItem"
+    ],
+    "safetygoggles": [
+      "onImmunity",
+      "onTryHit"
+    ],
+    "salacberry": [
+      "onEat",
+      "onUpdate"
+    ],
+    "salamencite": [
+      "onTakeItem"
+    ],
+    "sceptilite": [
+      "onTakeItem"
+    ],
+    "scizorite": [
+      "onTakeItem"
+    ],
+    "scolipite": [
+      "onTakeItem"
+    ],
+    "scopelens": [
+      "onModifyCritRatio"
+    ],
+    "scovillainite": [
+      "onTakeItem"
+    ],
+    "scraftinite": [
+      "onTakeItem"
+    ],
+    "seaincense": [
+      "onBasePower"
+    ],
+    "sharpbeak": [
+      "onBasePower"
+    ],
+    "sharpedonite": [
+      "onTakeItem"
+    ],
+    "shedshell": [
+      "onMaybeTrapPokemon",
+      "onTrapPokemon"
+    ],
+    "shellbell": [
+      "onAfterMoveSecondarySelf"
+    ],
+    "shockdrive": [
+      "onTakeItem"
+    ],
+    "shucaberry": [
+      "onEat",
+      "onSourceModifyDamage"
+    ],
+    "silkscarf": [
+      "onBasePower"
+    ],
+    "silverpowder": [
+      "onBasePower"
+    ],
+    "sitrusberry": [
+      "onEat",
+      "onTryEatItem",
+      "onUpdate"
+    ],
+    "skarmorite": [
+      "onTakeItem"
+    ],
+    "skyplate": [
+      "onBasePower",
+      "onTakeItem"
+    ],
+    "slowbronite": [
+      "onTakeItem"
+    ],
+    "snowball": [
+      "onDamagingHit"
+    ],
+    "softsand": [
+      "onBasePower"
+    ],
+    "souldew": [
+      "onBasePower"
+    ],
+    "spelltag": [
+      "onBasePower"
+    ],
+    "splashplate": [
+      "onBasePower",
+      "onTakeItem"
+    ],
+    "spookyplate": [
+      "onBasePower",
+      "onTakeItem"
+    ],
+    "staraptite": [
+      "onTakeItem"
+    ],
+    "starfberry": [
+      "onEat",
+      "onUpdate"
+    ],
+    "starminite": [
+      "onTakeItem"
+    ],
+    "steelgem": [
+      "onSourceTryPrimaryHit"
+    ],
+    "steelixite": [
+      "onTakeItem"
+    ],
+    "steelmemory": [
+      "onTakeItem"
+    ],
+    "stick": [
+      "onModifyCritRatio"
+    ],
+    "stickybarb": [
+      "onHit",
+      "onResidual"
+    ],
+    "stoneplate": [
+      "onBasePower",
+      "onTakeItem"
+    ],
+    "swampertite": [
+      "onTakeItem"
+    ],
+    "tangaberry": [
+      "onEat",
+      "onSourceModifyDamage"
+    ],
+    "tatsugirinite": [
+      "onTakeItem"
+    ],
+    "thickclub": [
+      "onModifyAtk"
+    ],
+    "throatspray": [
+      "onAfterMoveSecondarySelf"
+    ],
+    "toxicorb": [
+      "onResidual"
+    ],
+    "toxicplate": [
+      "onBasePower",
+      "onTakeItem"
+    ],
+    "twistedspoon": [
+      "onBasePower"
+    ],
+    "tyranitarite": [
+      "onTakeItem"
+    ],
+    "utilityumbrella": [
+      "onEnd",
+      "onStart",
+      "onUpdate"
+    ],
+    "venusaurite": [
+      "onTakeItem"
+    ],
+    "victreebelite": [
+      "onTakeItem"
+    ],
+    "wacanberry": [
+      "onEat",
+      "onSourceModifyDamage"
+    ],
+    "watergem": [
+      "onSourceTryPrimaryHit"
+    ],
+    "watermemory": [
+      "onTakeItem"
+    ],
+    "waveincense": [
+      "onBasePower"
+    ],
+    "weaknesspolicy": [
+      "onDamagingHit"
+    ],
+    "wellspringmask": [
+      "onBasePower",
+      "onTakeItem"
+    ],
+    "whiteherb": [
+      "onAnyAfterMega",
+      "onAnyAfterMove",
+      "onAnySwitchIn",
+      "onResidual",
+      "onStart",
+      "onUse"
+    ],
+    "widelens": [
+      "onSourceModifyAccuracy"
+    ],
+    "wikiberry": [
+      "onEat",
+      "onTryEatItem",
+      "onUpdate"
+    ],
+    "wiseglasses": [
+      "onBasePower"
+    ],
+    "yacheberry": [
+      "onEat",
+      "onSourceModifyDamage"
+    ],
+    "zapplate": [
+      "onBasePower",
+      "onTakeItem"
+    ],
+    "zeraorite": [
+      "onTakeItem"
+    ],
+    "zoomlens": [
+      "onSourceModifyAccuracy"
+    ],
+    "zygardite": [
+      "onTakeItem"
+    ],
+    "berry": [
+      "onEat",
+      "onResidual",
+      "onTryEatItem"
+    ],
+    "berserkgene": [
+      "onUpdate"
+    ],
+    "bitterberry": [
+      "onEat",
+      "onUpdate"
+    ],
+    "burntberry": [
+      "onEat",
+      "onUpdate"
+    ],
+    "goldberry": [
+      "onEat",
+      "onResidual",
+      "onTryEatItem"
+    ],
+    "iceberry": [
+      "onEat",
+      "onUpdate"
+    ],
+    "mintberry": [
+      "onEat",
+      "onUpdate"
+    ],
+    "miracleberry": [
+      "onEat",
+      "onUpdate"
+    ],
+    "mysteryberry": [
+      "onEat",
+      "onUpdate"
+    ],
+    "pinkbow": [
+      "onBasePower"
+    ],
+    "polkadotbow": [
+      "onBasePower"
+    ],
+    "przcureberry": [
+      "onEat",
+      "onUpdate"
+    ],
+    "psncureberry": [
+      "onEat",
+      "onUpdate"
+    ],
+    "crucibellite": [
+      "onTakeItem"
+    ],
+    "vilevial": [
+      "onBasePower",
+      "onTakeItem"
+    ]
+  },
+  "conditions": {
+    "brn": [
+      "onResidual",
+      "onStart"
+    ],
+    "par": [
+      "onBeforeMove",
+      "onModifySpe",
+      "onStart"
+    ],
+    "slp": [
+      "onBeforeMove",
+      "onStart"
+    ],
+    "frz": [
+      "onAfterMoveSecondary",
+      "onBeforeMove",
+      "onDamagingHit",
+      "onModifyMove",
+      "onStart"
+    ],
+    "psn": [
+      "onResidual",
+      "onStart"
+    ],
+    "tox": [
+      "onResidual",
+      "onStart",
+      "onSwitchIn"
+    ],
+    "confusion": [
+      "onBeforeMove",
+      "onEnd",
+      "onStart"
+    ],
+    "flinch": [
+      "onBeforeMove"
+    ],
+    "trapped": [
+      "onStart",
+      "onTrapPokemon"
+    ],
+    "partiallytrapped": [
+      "durationCallback",
+      "onEnd",
+      "onResidual",
+      "onStart",
+      "onTrapPokemon"
+    ],
+    "lockedmove": [
+      "onAfterMove",
+      "onEnd",
+      "onLockMove",
+      "onResidual",
+      "onRestart",
+      "onStart"
+    ],
+    "twoturnmove": [
+      "onEnd",
+      "onLockMove",
+      "onMoveAborted",
+      "onStart"
+    ],
+    "choicelock": [
+      "onBeforeMove",
+      "onDisableMove",
+      "onStart"
+    ],
+    "mustrecharge": [
+      "onBeforeMove",
+      "onStart"
+    ],
+    "futuremove": [
+      "onEnd",
+      "onResidual",
+      "onStart"
+    ],
+    "healreplacement": [
+      "onStart",
+      "onSwitchIn"
+    ],
+    "stall": [
+      "onRestart",
+      "onStallMove",
+      "onStart"
+    ],
+    "gem": [
+      "onBasePower"
+    ],
+    "raindance": [
+      "durationCallback",
+      "onFieldEnd",
+      "onFieldResidual",
+      "onFieldStart",
+      "onWeatherModifyDamage"
+    ],
+    "primordialsea": [
+      "onFieldEnd",
+      "onFieldResidual",
+      "onFieldStart",
+      "onTryMove",
+      "onWeatherModifyDamage"
+    ],
+    "sunnyday": [
+      "durationCallback",
+      "onFieldEnd",
+      "onFieldResidual",
+      "onFieldStart",
+      "onImmunity",
+      "onWeatherModifyDamage"
+    ],
+    "desolateland": [
+      "onFieldEnd",
+      "onFieldResidual",
+      "onFieldStart",
+      "onImmunity",
+      "onTryMove",
+      "onWeatherModifyDamage"
+    ],
+    "sandstorm": [
+      "durationCallback",
+      "onFieldEnd",
+      "onFieldResidual",
+      "onFieldStart",
+      "onModifySpD",
+      "onWeather"
+    ],
+    "hail": [
+      "durationCallback",
+      "onFieldEnd",
+      "onFieldResidual",
+      "onFieldStart",
+      "onWeather"
+    ],
+    "snowscape": [
+      "durationCallback",
+      "onFieldEnd",
+      "onFieldResidual",
+      "onFieldStart",
+      "onModifyDef"
+    ],
+    "deltastream": [
+      "onEffectiveness",
+      "onFieldEnd",
+      "onFieldResidual",
+      "onFieldStart"
+    ],
+    "dynamax": [
+      "onBeforeSwitchOut",
+      "onDragOut",
+      "onEnd",
+      "onResidual",
+      "onSourceModifyDamage",
+      "onStart",
+      "onTryAddVolatile"
+    ],
+    "commanded": [
+      "onDragOut",
+      "onStart",
+      "onTrapPokemon"
+    ],
+    "commanding": [
+      "onBeforeTurn",
+      "onDragOut",
+      "onTrapPokemon"
+    ],
+    "arceus": [
+      "onType"
+    ],
+    "silvally": [
+      "onType"
+    ],
+    "zacian": [
+      "onBattleStart"
+    ],
+    "zamazenta": [
+      "onBattleStart"
+    ],
+    "rolloutstorage": [
+      "onBasePower"
+    ]
+  }
+}

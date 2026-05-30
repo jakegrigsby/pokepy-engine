@@ -1,66 +1,44 @@
-"""End-to-end parity harness: pokepy battles vs Showdown scripted replay.
+"""Showdown ground-truth reference helpers (engine-agnostic).
 
-Used by tests/test_pokepy_parity_regressions.py. Parameterized by ``format``
-(default ``gen9ou``).
+Extracted from ``parity_heuristic_e2e`` so the verbatim-port harness
+(``pokepy.showdown``) can diff against live Showdown without importing the
+removed packed-state engine. Everything here is a pure function of its inputs:
+team dicts + an id->name ``mappings`` object + a scripted action log. Showdown
+output is memoized on disk keyed by a content hash of the script.
 """
 
 from __future__ import annotations
 
 import hashlib
-import json
 import os
 import re
 import subprocess
-import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
-
-import numpy as np
-
-from pokepy.core.gen_profile import profile_for_format
-from pokepy.data.loader import load_game_data, load_id_mappings, load_move_effect_data
-from pokepy.showdown.adapter import (
-    action_index_to_showdown_str,
-    get_battle_action_mask,
-    run_pokepy_battle,
-    simple_heuristic_action as _battle_heuristic_action,
-    simple_heuristic_forced_switch as _battle_forced_switch,
-)
 
 REPO_ROOT = Path(__file__).resolve().parents[4]
 SHOWDOWN_BIN = REPO_ROOT / "server" / "pokemon-showdown" / "pokemon-showdown"
 
+_STAT_LABELS = ("HP", "Atk", "Def", "SpA", "SpD", "Spe")
+_DEFAULT_PARITY_TURNS = 10
+
+
+def parity_n_turns(default: int = _DEFAULT_PARITY_TURNS) -> int:
+    raw = os.environ.get("POKEPY_PARITY_TURNS")
+    if raw is None or raw == "":
+        return default
+    return max(1, int(raw))
+
+
 # --------------------------------------------------------------------------
-# Showdown ground-truth cache
-#
-# `simulate-battle` is a pure function of its stdin script (format + seed +
-# packed teams + the scripted action log). Identical script -> identical
-# stdout, deterministically. Re-running the suite after a pokepy change that
-# does not alter the action sequence therefore re-simulates the exact same
-# battles. We memoize the raw stdout on disk keyed by a hash of the script so
-# repeat runs skip the (slow) `node` subprocess entirely.
-#
-# Correctness: the key covers everything Showdown reads, so any change to the
-# inputs (including a different pokepy-driven action log) yields a different
-# key and forces a fresh run. A Showdown rebuild changes the version token and
-# busts the whole cache. Only successful (returncode 0) runs are cached.
-#
-# Controls:
-#   POKEPY_SHOWDOWN_CACHE=0           disable read+write
-#   POKEPY_SHOWDOWN_CACHE_DIR=<path>  override location
-#   POKEPY_SHOWDOWN_CACHE_VERSION=<s> extra token to force-bust
-#   POKEPY_PRNG_TRACE=1               bypass cache (need live stderr trace)
+# Showdown ground-truth cache (content-hashed; see parity_heuristic_e2e docs)
 # --------------------------------------------------------------------------
 
 
 def _showdown_cache_enabled() -> bool:
     if os.environ.get("POKEPY_PRNG_TRACE") == "1":
         return False
-    return os.environ.get("POKEPY_SHOWDOWN_CACHE", "1").lower() not in (
-        "0",
-        "false",
-        "no",
-    )
+    return os.environ.get("POKEPY_SHOWDOWN_CACHE", "1").lower() not in ("0", "false", "no")
 
 
 def _showdown_cache_dir() -> Path:
@@ -74,26 +52,13 @@ _SHOWDOWN_VERSION_TOKEN: Optional[str] = None
 
 
 def _showdown_version_token() -> str:
-    """Token that changes when the vendored Showdown build changes.
-
-    Hash the CONTENT (not mtime) of every compiled file under dist/sim and
-    dist/data: running the CLI recompiles dist/ on each invocation, bumping
-    mtimes without changing behavior (which would bust the cache every run),
-    while edits to gen-specific conditions/scripts/moves change content in
-    those trees but not necessarily battle.js. Content-hashing the whole
-    behavior surface invalidates the cache on any real engine change and
-    nothing else. Memoized per process; bump POKEPY_SHOWDOWN_CACHE_VERSION
-    to force-invalidate manually.
-    """
     global _SHOWDOWN_VERSION_TOKEN
     if _SHOWDOWN_VERSION_TOKEN is None:
         extra = os.environ.get("POKEPY_SHOWDOWN_CACHE_VERSION", "")
         h = hashlib.sha256()
         try:
             dist = SHOWDOWN_BIN.parent / "dist"
-            files = sorted(
-                p for sub in ("sim", "data") for p in (dist / sub).rglob("*.js")
-            )
+            files = sorted(p for sub in ("sim", "data") for p in (dist / sub).rglob("*.js"))
             for p in files:
                 h.update(str(p.relative_to(dist)).encode())
                 h.update(p.read_bytes())
@@ -105,9 +70,7 @@ def _showdown_version_token() -> str:
 
 
 def _showdown_cache_path(script: str) -> Path:
-    key = hashlib.sha256(
-        (_showdown_version_token() + "\0" + script).encode("utf-8")
-    ).hexdigest()
+    key = hashlib.sha256((_showdown_version_token() + "\0" + script).encode("utf-8")).hexdigest()
     return _showdown_cache_dir() / key[:2] / f"{key}.log"
 
 
@@ -123,63 +86,14 @@ def _showdown_cache_write(path: Path, raw: str) -> None:
         path.parent.mkdir(parents=True, exist_ok=True)
         tmp = path.with_suffix(f".{os.getpid()}.tmp")
         tmp.write_text(raw, encoding="utf-8")
-        os.replace(tmp, path)  # atomic; safe under xdist workers
+        os.replace(tmp, path)
     except OSError:
         pass
 
 
-# CI / full sweeps use 10. Set POKEPY_PARITY_TURNS=3 while debugging turn-2/3 drift.
-_DEFAULT_PARITY_TURNS = 10
-
-
-def parity_n_turns(default: int = _DEFAULT_PARITY_TURNS) -> int:
-    raw = __import__("os").environ.get("POKEPY_PARITY_TURNS")
-    if raw is None or raw == "":
-        return default
-    return max(1, int(raw))
-
-
-def action_to_showdown_str(action: int, *, forced_suffix: str = "") -> str:
-    return action_index_to_showdown_str(action, forced=bool(forced_suffix))
-
-
-def simple_heuristic_action(state_or_battle, side: int, game_data=None, mask=None) -> int:
-    if not hasattr(state_or_battle, "sides"):
-        raise RuntimeError(
-            "simple_heuristic_action(state, side, game_data) requires the old "
-            "packed engine; pass a pokepy.showdown.Battle instead."
-        )
-    return _battle_heuristic_action(state_or_battle, side, mask)
-
-
-def simple_heuristic_forced_switch(state_or_battle, side: int, game_data=None) -> int:
-    if game_data is not None and not hasattr(state_or_battle, "sides"):
-        raise RuntimeError(
-            "simple_heuristic_forced_switch(state, side, game_data) requires the "
-            "old packed engine; pass a pokepy.showdown.Battle instead."
-        )
-    return _battle_forced_switch(state_or_battle, side)
-
-
-_STAT_LABELS = ("HP", "Atk", "Def", "SpA", "SpD", "Spe")
-
-
-def _side_from_showdown_ident(player: str) -> Optional[int]:
-    if player.startswith("p1"):
-        return 0
-    if player.startswith("p2"):
-        return 1
-    return None
-
-
-def _parse_hp_token(token: str) -> Optional[Tuple[int, int]]:
-    faint = re.match(r"^(\d+)\s+fnt$", token.strip())
-    if faint:
-        return int(faint.group(1)), 0
-    m = re.match(r"(\d+)/(\d+)", token)
-    if not m:
-        return None
-    return int(m.group(1)), int(m.group(2))
+# --------------------------------------------------------------------------
+# Team -> Showdown packed string
+# --------------------------------------------------------------------------
 
 
 def team_to_showdown_export(team: Dict[str, Any], mappings) -> str:
@@ -228,12 +142,9 @@ def team_to_showdown_export(team: Dict[str, Any], mappings) -> str:
             nature = str(team_natures[i]).strip()
             if nature:
                 lines.append(f"{nature.title()} Nature")
-        move_names = []
         for mid in team["moves"][i]:
             if int(mid) >= 0:
-                move_names.append(mappings.move_names.get(int(mid), str(mid)))
-        for mn in move_names:
-            lines.append(f"- {mn}")
+                lines.append(f"- {mappings.move_names.get(int(mid), str(mid))}")
         lines.append("")
     return "\n".join(lines).strip() + "\n"
 
@@ -243,10 +154,6 @@ _PACK_TEAM_MEMO: Dict[str, str] = {}
 
 def team_to_showdown_packed(team: Dict[str, Any], mappings) -> str:
     export = team_to_showdown_export(team, mappings)
-    # pack-team is a pure function of the export string. The same handful of
-    # mirror teams are packed thousands of times across the suite, each
-    # spawning a ~2s `node` process. Memoize on disk + in-process so we only
-    # ever shell out once per distinct team per Showdown build.
     if export in _PACK_TEAM_MEMO:
         return _PACK_TEAM_MEMO[export]
 
@@ -275,6 +182,36 @@ def team_to_showdown_packed(team: Dict[str, Any], mappings) -> str:
     return packed
 
 
+# --------------------------------------------------------------------------
+# Showdown log parsing + comparison
+# --------------------------------------------------------------------------
+
+
+def _packed_team_size(packed: str) -> int:
+    """Number of mons in a Showdown packed-team string (mons split by ']')."""
+    if not packed:
+        return 0
+    return packed.count("]") + 1
+
+
+def _side_from_showdown_ident(player: str) -> Optional[int]:
+    if player.startswith("p1"):
+        return 0
+    if player.startswith("p2"):
+        return 1
+    return None
+
+
+def _parse_hp_token(token: str) -> Optional[Tuple[int, int]]:
+    faint = re.match(r"^(\d+)\s+fnt$", token.strip())
+    if faint:
+        return int(faint.group(1)), 0
+    m = re.match(r"(\d+)/(\d+)", token)
+    if not m:
+        return None
+    return int(m.group(1)), int(m.group(2))
+
+
 def _parse_showdown_log(raw: str) -> List[Dict[str, Any]]:
     rows: List[Dict[str, Any]] = []
     turn = 0
@@ -286,8 +223,6 @@ def _parse_showdown_log(raw: str) -> List[Dict[str, Any]]:
         nonlocal p0_hp, p0_max, p1_hp, p1_max
         if side is None:
             return
-        # Showdown emits percentage-mod duplicates (e.g. 88/100) alongside
-        # absolute HP (203/231). Keep the absolute scale for pokepy parity.
         if mx == 0:
             if side == 0:
                 p0_hp = hp
@@ -337,20 +272,14 @@ def _parse_showdown_log(raw: str) -> List[Dict[str, Any]]:
             turn = int(turn_m.group(1))
             turn_p0_action = turn_p1_action = ""
         elif cmd == "move":
-            player = parts[2]
-            side = _side_from_showdown_ident(player)
+            side = _side_from_showdown_ident(parts[2])
             action = f"move {parts[3]}"
             if side == 0:
-                turn_p0_action = (
-                    action if not turn_p0_action else turn_p0_action + "+" + action
-                )
+                turn_p0_action = action if not turn_p0_action else turn_p0_action + "+" + action
             elif side == 1:
-                turn_p1_action = (
-                    action if not turn_p1_action else turn_p1_action + "+" + action
-                )
+                turn_p1_action = action if not turn_p1_action else turn_p1_action + "+" + action
         elif cmd in ("switch", "drag", "replace"):
-            player = parts[2]
-            side = _side_from_showdown_ident(player)
+            side = _side_from_showdown_ident(parts[2])
             if len(parts) > 4:
                 parsed = _parse_hp_token(parts[4])
                 if parsed is not None:
@@ -362,15 +291,13 @@ def _parse_showdown_log(raw: str) -> List[Dict[str, Any]]:
                     else:
                         _apply_hp(side, hp_val, max_val)
         elif cmd == "faint":
-            player = parts[2]
-            side = _side_from_showdown_ident(player)
+            side = _side_from_showdown_ident(parts[2])
             if side == 0:
                 p0_hp = 0
             elif side == 1:
                 p1_hp = 0
-        elif cmd == "-damage" or cmd == "damage":
-            player = parts[2]
-            side = _side_from_showdown_ident(player)
+        elif cmd in ("-damage", "damage"):
+            side = _side_from_showdown_ident(parts[2])
             parsed = _parse_hp_token(parts[3])
             if parsed is None:
                 continue
@@ -384,33 +311,22 @@ def _parse_showdown_log(raw: str) -> List[Dict[str, Any]]:
                     _apply_hp(side, hp_val, 0)
             else:
                 _apply_hp(side, hp_val, max_val)
-        elif cmd == "-heal" or cmd == "heal":
-            player = parts[2]
-            side = _side_from_showdown_ident(player)
+        elif cmd in ("-heal", "heal"):
+            side = _side_from_showdown_ident(parts[2])
             parsed = _parse_hp_token(parts[3])
             if parsed is None:
                 continue
             _apply_hp(side, parsed[0], parsed[1])
         elif cmd == "-status":
-            player = parts[2]
-            side = _side_from_showdown_ident(player)
-            status_name = parts[3].lower()
-            status_map = {
-                "brn": 1,
-                "par": 2,
-                "slp": 3,
-                "frz": 4,
-                "psn": 5,
-                "tox": 6,
-            }
-            st = status_map.get(status_name, 0)
+            side = _side_from_showdown_ident(parts[2])
+            status_map = {"brn": 1, "par": 2, "slp": 3, "frz": 4, "psn": 5, "tox": 6}
+            st = status_map.get(parts[3].lower(), 0)
             if side == 0:
                 p0_status = st
             elif side == 1:
                 p1_status = st
         elif cmd == "-curestatus":
-            player = parts[2]
-            side = _side_from_showdown_ident(player)
+            side = _side_from_showdown_ident(parts[2])
             if side == 0:
                 p0_status = 0
             elif side == 1:
@@ -433,7 +349,6 @@ def compare_battle_rows(
         "p1_status",
     ),
 ) -> Optional[str]:
-    """Return a human-readable first mismatch, or None if rows agree."""
     by_py = {int(r["turn"]): r for r in py_rows if r.get("type") == "normal"}
     by_sh = {int(r["turn"]): r for r in show_rows if r.get("type") == "normal"}
     common = sorted(set(by_py) & set(by_sh))
@@ -447,61 +362,10 @@ def compare_battle_rows(
                 return (
                     f"turn {turn} {field}: pokepy={py_row.get(field)!r} "
                     f"showdown={sh_row.get(field)!r} "
-                    f"(actions py {py_row.get('p0_action')!r}/"
-                    f"{py_row.get('p1_action')!r} "
-                    f"show {sh_row.get('p0_action')!r}/"
-                    f"{sh_row.get('p1_action')!r})"
+                    f"(actions py {py_row.get('p0_action')!r}/{py_row.get('p1_action')!r} "
+                    f"show {sh_row.get('p0_action')!r}/{sh_row.get('p1_action')!r})"
                 )
     return None
-
-
-def run_live_diff(
-    team0: Dict[str, Any],
-    team1: Dict[str, Any],
-    seed: int,
-    n_turns: int,
-    *,
-    gen: int = 9,
-    battle_format: Optional[str] = None,
-    timeout_s: int = 120,
-) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]], Optional[str], Dict[str, Any]]:
-    """Run pokepy + Showdown on identical actions; return rows and first mismatch."""
-    profile = profile_for_format(battle_format or f"gen{gen}ou")
-    gd = load_game_data(gen=gen)
-    me = load_move_effect_data(gen=gen)
-    mappings = load_id_mappings(gen=gen)
-    from pokepy.data.type_charts import load_type_chart_for_gen
-
-    chart = load_type_chart_for_gen(gen)
-    choice_log: List[Tuple[str, str]] = []
-    py_rows, p0_actions, p1_actions = run_pokepy_battle(
-        team0,
-        team1,
-        gd,
-        me,
-        mappings,
-        chart,
-        seed,
-        n_turns,
-        gen=gen,
-        choice_log=choice_log,
-    )
-    seed_tuple = (seed & 0xFFFF, (seed >> 16) & 0xFFFF, 0, 0)
-    show_rows, _raw, meta = run_showdown(
-        seed_tuple,
-        team_to_showdown_packed(team0, mappings),
-        team_to_showdown_packed(team1, mappings),
-        p0_actions,
-        p1_actions,
-        n_turns,
-        battle_format=battle_format or profile.battle_format,
-        timeout_s=timeout_s,
-        choice_log=choice_log,
-    )
-    mismatch = None
-    if meta.get("returncode") == 0 and show_rows:
-        mismatch = compare_battle_rows(py_rows, show_rows)
-    return py_rows, show_rows, mismatch, meta
 
 
 def run_showdown(
@@ -517,11 +381,7 @@ def run_showdown(
     choice_log: Optional[List[Tuple[str, str]]] = None,
 ) -> Tuple[List[Dict[str, Any]], Optional[str], Dict[str, Any]]:
     if not SHOWDOWN_BIN.exists():
-        meta = {
-            "returncode": 1,
-            "timeout": False,
-            "error": f"Showdown CLI not found at {SHOWDOWN_BIN}",
-        }
+        meta = {"returncode": 1, "timeout": False, "error": f"Showdown CLI not found at {SHOWDOWN_BIN}"}
         return [], None, meta
 
     lines = [
@@ -529,6 +389,14 @@ def run_showdown(
         f'>player p1 {{"name":"P1","team":"{packed0}"}}',
         f'>player p2 {{"name":"P2","team":"{packed1}"}}',
     ]
+    # Gen5+ formats open with team preview; lead in natural team order so the
+    # replay matches the engine (which leads with team slot 0).
+    gen_m = re.match(r"gen(\d+)", battle_format)
+    if gen_m and int(gen_m.group(1)) >= 5:
+        order0 = "".join(str(i + 1) for i in range(_packed_team_size(packed0)))
+        order1 = "".join(str(i + 1) for i in range(_packed_team_size(packed1)))
+        lines.append(f">p1 team {order0}")
+        lines.append(f">p2 team {order1}")
     if choice_log:
         for player, action in choice_log:
             lines.append(f">{player} {action}")
@@ -545,12 +413,7 @@ def run_showdown(
     if cache_path is not None:
         cached = _showdown_cache_read(cache_path)
         if cached is not None:
-            meta = {
-                "returncode": 0,
-                "timeout": False,
-                "error": None,
-                "cached": True,
-            }
+            meta = {"returncode": 0, "timeout": False, "error": None, "cached": True}
             return _parse_showdown_log(cached), cached, meta
 
     try:
