@@ -133,12 +133,8 @@ def calc_damage_gen1(
         acc_stage = _clamp_int(extract_boost(atk_boosts, 4), -6, 6)
         eva_stage = _clamp_int(extract_boost(def_boosts, 8), -6, 6)
         if not suppress_attacker_boosts:
-            acc_val = math.floor(
-                acc_val * _GEN1_ACC_TABLE[acc_stage + 6] / 100
-            )
-        acc_val = math.floor(
-            acc_val * _GEN1_ACC_TABLE[-eva_stage + 6] / 100
-        )
+            acc_val = math.floor(acc_val * _GEN1_ACC_TABLE[acc_stage + 6] / 100)
+        acc_val = math.floor(acc_val * _GEN1_ACC_TABLE[-eva_stage + 6] / 100)
         acc_val = _clamp_int(acc_val, 1, 255)
         if not _random_chance(gen5_prng, acc_val, 256):
             if out_meta is not None:

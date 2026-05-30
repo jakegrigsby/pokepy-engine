@@ -1151,30 +1151,20 @@ def _count_residual_speedsort_frames(
             handlers.append((0, 0, spd, 0, 0))
             handlers.append((0, 0, spd, 0, 0))
         side_idx = 0 if poff < _OFF_SIDE1_R else 1
-        vol = int(
-            battle[
-                _OFF_FIELD_R
-                + (_F_VOL0_R if side_idx == 0 else _F_VOL1_R)
-            ]
-        )
+        vol = int(battle[_OFF_FIELD_R + (_F_VOL0_R if side_idx == 0 else _F_VOL1_R)])
         # Duration volatiles collected via fieldEvent('Residual') getKey='duration'.
         if _get_taunt_turns_r(vol) > 0:
             handlers.append((15, 0, spd, 0, 0))
         if _get_encore_turns_r(vol) > 0:
             handlers.append((16, 0, spd, 0, 0))
         dis_off = _OFF_FIELD_R + (_F_DIS0_R if side_idx == 0 else _F_DIS1_R)
-        dis_turns_off = _OFF_FIELD_R + (
-            _F_DIST0_R if side_idx == 0 else _F_DIST1_R
-        )
+        dis_turns_off = _OFF_FIELD_R + (_F_DIST0_R if side_idx == 0 else _F_DIST1_R)
         if int(battle[dis_off]) >= 0 and int(battle[dis_turns_off]) > 0:
             handlers.append((17, 0, spd, 0, 0))
         if _get_heal_block_turns_r(vol) > 0:
             handlers.append((20, 0, spd, 0, 0))
         yawn_turns = int(
-            battle[
-                _OFF_FIELD_R
-                + (_F_YAWN0_R if side_idx == 0 else _F_YAWN1_R)
-            ]
+            battle[_OFF_FIELD_R + (_F_YAWN0_R if side_idx == 0 else _F_YAWN1_R)]
         )
         if yawn_turns > 0:
             handlers.append((23, 0, spd, 0, 0))
@@ -3046,25 +3036,27 @@ def step_battle_gen9_iter(
         (_order1, action_priority1, action_speed1, 0, 0),
     ]
     commit_shuffle = _sst.queue_sort(_s1_entries)
-    # S2 + S3: eachEvent('BeforeTurn') and post-BeforeTurn Update — speedSort
-    # actives by speed. These fire inside the beforeTurn action handler,
-    # BEFORE any switch action executes — so when a voluntary switch changes
-    # the active's species mid-turn they still see the PRE-switch actives.
-    # Use pre_switch speeds when a switch happens this turn.
+    # The beforeTurn action handler produces TWO speed-sort frames:
+    #   S2: eachEvent('BeforeTurn')                       (sim/battle.ts:2830)
+    #   S3: the trailing eachEvent('Update') that runAction runs after EVERY
+    #       action — `if (this.gen < 5) this.eachEvent('Update')` at
+    #       sim/battle.ts:2938 (gen>=5 runs the equivalent at :2881).
+    # Both speedSort the active Pokemon by speed, so each costs one shuffle
+    # frame when the actives' speeds tie. These fire BEFORE any switch action
+    # executes, so a voluntary switch this turn still sees the PRE-switch
+    # actives — use pre_switch speeds in that case.
     _bt_tied = pre_switch_speeds_tied if (is_switch or opp_is_switch) else speeds_tied
     if _bt_tied:
         _s2_speeds = [
             pre_switch_p0_speed if (is_switch or opp_is_switch) else p0_speed,
             pre_switch_p1_speed if (is_switch or opp_is_switch) else p1_speed,
         ]
-        _sst.each_event_update(_s2_speeds)  # S2: BeforeTurn speedSort
-        _sst.each_event_update(_s2_speeds)  # S3: post-BeforeTurn Update speedSort
+        _sst.each_event_update(_s2_speeds)  # S2: eachEvent('BeforeTurn')
+        _sst.each_event_update(_s2_speeds)  # S3: trailing eachEvent('Update')
     # S4: gen 8+ queue re-sort — only when no switch is ahead AND the two
     # move actions tie by comparePriority.
     resort_shuffle = (
-        _sst.queue_sort(_s1_entries)
-        if queue_sort_tied and profile.gen >= 8
-        else 0
+        _sst.queue_sort(_s1_entries) if queue_sort_tied and profile.gen >= 8 else 0
     )
     action_sort_roll = commit_shuffle ^ resort_shuffle
     tie_break = action_sort_roll == 0  # 0 = no net swap (side0 first)
@@ -4165,10 +4157,29 @@ def step_battle_gen9_iter(
     _MOVE_TOXIC_PRE = 92
     _acc0_pre = int(game_data.move_accuracy[move_id0])
     _acc1_pre = int(game_data.move_accuracy[move_id1])
-    _acc0_bypass_pre = _acc0_pre == 0 or _acc0_pre > 100
-    _acc1_bypass_pre = _acc1_pre == 0 or _acc1_pre > 100
     _move0_is_status_pre = cat0 == CAT_STATUS
     _move1_is_status_pre = cat1 == CAT_STATUS
+
+    def _showdown_accuracy_bypass(acc: int, is_status: bool, target_kind: int) -> bool:
+        """Showdown skips randomChance only when accuracy === true (loader: 127).
+
+        Gen2 tryMoveHit skips at scaled 255 (stored acc >= 100). Gen5+
+        hitStepAccuracy sets self-targeting status moves to accuracy === true.
+        """
+        if acc == 127 or acc == 0:
+            return True
+        if profile.gen >= 5 and is_status and target_kind == 3:
+            return True
+        if profile.gen == 2 and acc >= 100:
+            return True
+        return False
+
+    _acc0_bypass_pre = _showdown_accuracy_bypass(
+        _acc0_pre, _move0_is_status_pre, target0_kind
+    )
+    _acc1_bypass_pre = _showdown_accuracy_bypass(
+        _acc1_pre, _move1_is_status_pre, target1_kind
+    )
     # Showdown uses `tryMoveHit` (no accuracy check) for moves with
     # target in {all, foeSide, allySide, allyTeam} (pokepy targets 7, 9, 10).
     # Self-targeting status moves (pokepy target 3) get `accuracy = true` in
@@ -4251,7 +4262,8 @@ def step_battle_gen9_iter(
         target_t2 = (target_types >> 8) & 0xFF
         if (move_flags & FLAG_POWDER) != 0:
             target_item = int(battle[target_off + 6])
-            if (
+            # Grass powder immunity is gen6+ (Showdown battle-actions.ts onTryHit).
+            if int(getattr(game_data, "gen", 9)) >= 6 and (
                 target_t1 == TYPE_GRASS
                 or target_t2 == TYPE_GRASS
                 or target_ab == ABILITY_OVERCOAT
@@ -4410,7 +4422,11 @@ def step_battle_gen9_iter(
             user_off = p1_off
 
         is_par_cur = get_status(int(battle[user_off + 12])) == STATUS_PARALYSIS
-        para = bool(is_par_cur and int(gen5_prng.random(4)) == 0)
+        para = bool(
+            is_par_cur
+            and int(gen5_prng.random(int(profile.full_para_denom)))
+            < int(profile.full_para_num)
+        )
         if side_idx == 0:
             _status_chain_full_para0 = para
             _status_chain_immobile0 = _status_chain_immobile0 or para
@@ -4473,9 +4489,11 @@ def step_battle_gen9_iter(
             cat0 = int(game_data.move_category[move_id0])
             _cat0_status = cat0 == CAT_STATUS
             _move0_is_status_pre = _cat0_status
-            _acc0_pre = int(game_data.move_accuracy[move_id0])
-            _acc0_bypass_pre = _acc0_pre == 0 or _acc0_pre > 100
             target0_kind = int(game_data.move_target[move_id0])
+            _acc0_pre = int(game_data.move_accuracy[move_id0])
+            _acc0_bypass_pre = _showdown_accuracy_bypass(
+                _acc0_pre, _cat0_status, target0_kind
+            )
             move0_targets_foe_mon = target0_kind in (0, 1, 2, 4, 5, 6, 8, 11, 12)
             move0_can_change_foe_item = int(
                 move_effects.effect_type[move_id0]
@@ -4535,9 +4553,11 @@ def step_battle_gen9_iter(
             cat1 = int(game_data.move_category[move_id1])
             _cat1_status = cat1 == CAT_STATUS
             _move1_is_status_pre = _cat1_status
-            _acc1_pre = int(game_data.move_accuracy[move_id1])
-            _acc1_bypass_pre = _acc1_pre == 0 or _acc1_pre > 100
             target1_kind = int(game_data.move_target[move_id1])
+            _acc1_pre = int(game_data.move_accuracy[move_id1])
+            _acc1_bypass_pre = _showdown_accuracy_bypass(
+                _acc1_pre, _cat1_status, target1_kind
+            )
             move1_targets_foe_mon = target1_kind in (0, 1, 2, 4, 5, 6, 8, 11, 12)
             move1_can_change_foe_item = int(
                 move_effects.effect_type[move_id1]
@@ -5042,6 +5062,18 @@ def step_battle_gen9_iter(
         is_asleep = status_cur == STATUS_SLEEP
         is_frozen_cur = status_cur == STATUS_FREEZE
         sleep_blocked = is_asleep and sb_mv not in (MOVE_SLEEP_TALK, MOVE_SNORE)
+
+        # Gen 3: sleep counter decrements in slp.onBeforeMove when the mon
+        # attempts to act, not at end-of-turn (data/mods/gen3/conditions.ts).
+        if profile.gen == 3 and sleep_blocked and not switching:
+            sleep_turns = get_status_turns(int(battle[user_off + 12]))
+            sleep_turns -= 1
+            if sleep_turns <= 0:
+                battle[user_off + 12] = 0
+                sleep_blocked = False
+                is_asleep = False
+            else:
+                battle[user_off + 12] = set_status(STATUS_SLEEP, sleep_turns)
 
         thaw = False
         if is_frozen_cur and (not using_defrost) and (not switching):
@@ -6197,6 +6229,12 @@ def step_battle_gen9_iter(
                         int(_meta0.get("num_hits", 1)),
                     ),
                 )
+                # Gen 1/2: dual primary-status turns do not spend a tied-speed
+                # between-move Update before the slower runMove — only the
+                # post-action Update at runAction end. Extra frames here drift
+                # same-turn full-paralysis rolls (Thunder Wave mirrors).
+                if profile.gen <= 2 and _cat0_status and _cat1_status:
+                    _between_updates = 0
                 _target1_red_card_can_rewrite_slower = (
                     int(battle[p1_off + 6]) == ITEM_RED_CARD
                     and int(battle[p1_off + 1]) > 0
@@ -7017,6 +7055,40 @@ def step_battle_gen9_iter(
                         else None
                     )
                     _schedule_cursed_body_after_preroll(1)
+                # Pre-apply the second mover's primary status (Thunder Wave,
+                # Spore, etc.) once its acc check passes — symmetric with the
+                # first-mover block above. Showdown resolves these inside the
+                # slower runMove before the legacy immobile pass.
+                if (
+                    cat1 == CAT_STATUS
+                    and not _p1_immobile_pre
+                    and not _self_hit1
+                    and not opp_is_switch
+                ):
+                    _preset_screen_if_status(move_id1, 1)
+                    _status_hit1_pre = _status_move_hits_pre(1, _prerolled_status_acc1)
+                    _eff1_pre_second = int(move_effects.effect_type[move_id1])
+                    _EFFECT_STATUS_EARLY1B = 2
+                    if (
+                        _eff1_pre_second == _EFFECT_STATUS_EARLY1B
+                        and _status_hit1_pre
+                        and not _sleep_talk_pending_slp0
+                        and not _status_early_applied1
+                    ):
+                        _status_early_applied1 = True
+                        fx.apply_status_from_move(
+                            battle,
+                            move_id1,
+                            p0_off,
+                            True,
+                            game_data,
+                            move_effects,
+                            gen5_prng,
+                            user_offset=p1_off,
+                            num_hits=1,
+                            prerolled_rolls=None,
+                        )
+                        _run_immediate_status_berry_updates(p0_off)
             else:
                 battle[p1_off + 1] = _saved_hp1
                 damage1 = 0
@@ -7394,6 +7466,8 @@ def step_battle_gen9_iter(
                         int(_meta1.get("num_hits", 1)),
                     ),
                 )
+                if profile.gen <= 2 and _cat0_status and _cat1_status:
+                    _between_updates = 0
                 _target0_red_card_can_rewrite_slower = (
                     int(battle[p0_off + 6]) == ITEM_RED_CARD
                     and int(battle[p0_off + 1]) > 0
@@ -8036,6 +8110,8 @@ def step_battle_gen9_iter(
                 damage0 = 0
             else:
                 _p0_immobile_pre = _pre_calc_status_chain(0)
+                if _p0_immobile_pre:
+                    damage0 = 0
             if _move0_canceled_pre:
                 battle[p0_off + 1] = _saved_hp0
                 damage0_after_flinch = 0
@@ -8344,13 +8420,10 @@ def step_battle_gen9_iter(
     ) == TYPE_POISON
     toxic_bypass0 = move_id0 == _MOVE_TOXIC and user0_is_poison
     toxic_bypass1 = move_id1 == _MOVE_TOXIC and user1_is_poison
-    # Showdown battle-actions.ts:600 gates the accuracy `randomChance(accuracy,
-    # 100)` behind `accuracy !== true`. Moves with `accuracy: true` in data/
-    # moves.ts (Stealth Rock, Spikes, Swords Dance, ...) skip the PRNG frame
-    # entirely. Pokepy encodes these as `move_accuracy[move_id] > 100` (the
-    # loader maps `accuracy: true` to 127). Match the skip.
-    acc0_bypass = acc0 == 0 or acc0 > 100
-    acc1_bypass = acc1 == 0 or acc1 > 100
+    # Showdown battle-actions.ts:733 gates randomChance behind accuracy !== true.
+    # Loader maps accuracy: true -> 127. Gen2 skips at scaled 255 (acc >= 100).
+    acc0_bypass = _showdown_accuracy_bypass(acc0, move0_is_status, target0_kind)
+    acc1_bypass = _showdown_accuracy_bypass(acc1, move1_is_status, target1_kind)
     # Status-move accuracy rolls were pre-consumed earlier in speed order
     # (see `_prerolled_status_accN` block above) so the frame lands at the
     # right Showdown offset. Re-use the prerolled value here; only roll

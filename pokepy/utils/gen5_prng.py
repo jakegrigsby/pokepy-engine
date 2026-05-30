@@ -16,6 +16,11 @@ A = 0x5D588B656C078965
 C = 0x269EC3
 M = 2**64
 
+import os as _os
+
+_PRNG_TRACE = _os.environ.get("POKEPY_PRNG_TRACE") == "1"
+_PRNG_TRACE_LOG: list = []
+
 
 def gen5_seed_from_array(seed_array: Tuple[int, int, int, int]) -> int:
     return (
@@ -45,7 +50,16 @@ class Gen5PRNG:
 
     def next(self) -> int:
         self.seed = (A * self.seed + C) % M
-        return (self.seed >> 32) & 0xFFFFFFFF
+        val = (self.seed >> 32) & 0xFFFFFFFF
+        if _PRNG_TRACE:
+            import traceback
+
+            stack = traceback.extract_stack(limit=4)
+            caller = stack[-3]
+            _PRNG_TRACE_LOG.append(
+                (val, f"{caller.filename.split('/')[-1]}:{caller.lineno} {caller.name}")
+            )
+        return val
 
     def random(self, from_val=None, to_val=None) -> float:
         """Showdown-compatible random() (sim/prng.ts:91-103).

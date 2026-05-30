@@ -44,7 +44,16 @@ class EngineEntry:
 
 
 def _wrap_modern_step(profile: GenProfile) -> StepFn:
-    def _step(state, action0, action1, game_data, move_effects, type_chart, gen5_prng, **kwargs):
+    def _step(
+        state,
+        action0,
+        action1,
+        game_data,
+        move_effects,
+        type_chart,
+        gen5_prng,
+        **kwargs,
+    ):
         return step_battle_gen9(
             state,
             action0,

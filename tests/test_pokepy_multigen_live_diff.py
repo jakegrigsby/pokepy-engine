@@ -18,6 +18,7 @@ if str(SCRIPTS_DIR) not in sys.path:
 from parity_heuristic_e2e import (  # noqa: E402
     _parse_showdown_log,
     compare_battle_rows,
+    parity_n_turns,
     run_live_diff,
 )
 
@@ -109,6 +110,37 @@ def _multi_mon_team(
         ivs=_MAX_IV * 3,
         natures=["Serious", "Serious", "Timid"],
     )
+
+
+# Tier B status mirror teams (move slot 1 = primary status or secondary carrier).
+# Status codes in parity rows: brn=1, par=2, slp=3, frz=4, psn=5, tox=6.
+
+_STATUS_SCENARIOS = {
+    "par_twave": (121, None),  # Starmie, Thunder Wave
+    "tox_toxic": (89, None),  # Muk, Toxic
+    "slp_hypnosis": (94, [95, 94, 85, 126]),  # Gengar
+    "slp_spore": (47, [147, 77, 78, 79]),  # Parasect
+    "brn_fire_blast": (6, [126, 53, 52, 83]),  # Charizard
+    "frz_blizzard": (124, [59, 58, 85, 94]),  # Jynx
+    "psn_sludge": (73, [188, 85, 56, 92]),  # Tentacruel, gen2+
+}
+
+
+def _status_mirror_team(gen: int, scenario: str) -> dict:
+    """Build a single-mon mirror team for a status parity scenario."""
+    species, moves_override = _STATUS_SCENARIOS[scenario]
+    if moves_override is not None:
+        moves = moves_override
+    elif scenario == "par_twave":
+        moves = [86, 85, 94, 58]
+    elif scenario == "tox_toxic":
+        if gen == 1:
+            moves = [92, 126, 124, 137]  # Toxic, Fire Blast, Sludge, Night Shade
+        else:
+            moves = [92, 126, 188, 153]  # Toxic, Fire Blast, Sludge Bomb, Explosion
+    else:
+        raise KeyError(scenario)
+    return _single_mon_team(species, moves)
 
 
 GEN4_ALAKAZAM_TEAM = _single_mon_team(65, [94, 247, 60, 113])  # Psychic, SB, Psybeam, LS
@@ -471,4 +503,99 @@ def test_gen3_live_diff_dual_mon_switch_mirror_full_battle(seed: int):
     assert not meta["timeout"]
     assert show_rows
     assert py_rows
+    assert mismatch is None, mismatch
+
+
+@pytest.mark.parametrize("gen", [1, 2, 3, 4])
+@pytest.mark.parametrize("seed", [999, 12345, 424242, 500])
+def test_live_diff_status_par_thunder_wave(gen: int, seed: int):
+    """Tier B: Thunder Wave paralysis must match Showdown through turn 10."""
+    team = _status_mirror_team(gen, "par_twave")
+    py_rows, show_rows, mismatch, meta = run_live_diff(
+        team, team, seed=seed, n_turns=parity_n_turns(), gen=gen,
+    )
+    assert meta["returncode"] == 0, meta
+    assert not meta["timeout"]
+    assert mismatch is None, mismatch
+    assert any(r["p0_status"] == 2 or r["p1_status"] == 2 for r in py_rows)
+
+
+@pytest.mark.parametrize("gen", [2, 3, 4])
+@pytest.mark.parametrize("seed", [999, 12345, 424242, 500])
+def test_live_diff_status_tox_toxic(gen: int, seed: int):
+    """Tier B: Toxic badly-poison mirror must match Showdown through turn 10."""
+    team = _status_mirror_team(gen, "tox_toxic")
+    py_rows, show_rows, mismatch, meta = run_live_diff(
+        team, team, seed=seed, n_turns=parity_n_turns(), gen=gen,
+    )
+    assert meta["returncode"] == 0, meta
+    assert not meta["timeout"]
+    assert mismatch is None, mismatch
+    assert any(r["p0_status"] == 6 or r["p1_status"] == 6 for r in py_rows)
+
+
+@pytest.mark.parametrize("gen", [1, 2, 3, 4])
+@pytest.mark.parametrize("seed", [999, 12345, 424242, 500])
+def test_live_diff_status_slp_hypnosis(gen: int, seed: int):
+    """Tier B: Hypnosis sleep must match Showdown through turn 10."""
+    team = _status_mirror_team(gen, "slp_hypnosis")
+    py_rows, show_rows, mismatch, meta = run_live_diff(
+        team, team, seed=seed, n_turns=parity_n_turns(), gen=gen,
+    )
+    assert meta["returncode"] == 0, meta
+    assert not meta["timeout"]
+    assert mismatch is None, mismatch
+    assert any(r["p0_status"] == 3 or r["p1_status"] == 3 for r in py_rows)
+
+
+@pytest.mark.parametrize("gen", [1, 2, 3, 4])
+@pytest.mark.parametrize("seed", [999, 12345, 424242, 500])
+def test_live_diff_status_slp_spore(gen: int, seed: int):
+    """Tier B: Spore sleep must match Showdown through turn 10."""
+    team = _status_mirror_team(gen, "slp_spore")
+    py_rows, show_rows, mismatch, meta = run_live_diff(
+        team, team, seed=seed, n_turns=parity_n_turns(), gen=gen,
+    )
+    assert meta["returncode"] == 0, meta
+    assert not meta["timeout"]
+    assert mismatch is None, mismatch
+    assert any(r["p0_status"] == 3 or r["p1_status"] == 3 for r in py_rows)
+
+
+@pytest.mark.parametrize("gen", [1, 2, 3, 4])
+@pytest.mark.parametrize("seed", [999, 12345, 424242, 500])
+def test_live_diff_status_brn_fire_blast_secondary(gen: int, seed: int):
+    """Tier B: Fire Blast burn secondary must match Showdown through turn 10."""
+    team = _status_mirror_team(gen, "brn_fire_blast")
+    py_rows, show_rows, mismatch, meta = run_live_diff(
+        team, team, seed=seed, n_turns=parity_n_turns(), gen=gen,
+    )
+    assert meta["returncode"] == 0, meta
+    assert not meta["timeout"]
+    assert mismatch is None, mismatch
+
+
+@pytest.mark.parametrize("gen", [3, 4])
+@pytest.mark.parametrize("seed", [999, 12345, 424242, 500])
+def test_live_diff_status_frz_blizzard_secondary(gen: int, seed: int):
+    """Tier B: Blizzard freeze secondary must match Showdown through turn 10."""
+    team = _status_mirror_team(gen, "frz_blizzard")
+    py_rows, show_rows, mismatch, meta = run_live_diff(
+        team, team, seed=seed, n_turns=parity_n_turns(), gen=gen,
+    )
+    assert meta["returncode"] == 0, meta
+    assert not meta["timeout"]
+    assert mismatch is None, mismatch
+
+
+@pytest.mark.parametrize("gen", [2, 3, 4])
+@pytest.mark.parametrize("seed", [999, 12345, 424242, 500])
+def test_live_diff_status_psn_sludge_bomb_secondary(gen: int, seed: int):
+    """Tier B: Sludge Bomb poison secondary must match Showdown through turn 10."""
+    team = _status_mirror_team(gen, "psn_sludge")
+    py_rows, show_rows, mismatch, meta = run_live_diff(
+        team, team, seed=seed, n_turns=parity_n_turns(), gen=gen,
+    )
+    assert meta["returncode"] == 0, meta
+    assert not meta["timeout"]
     assert mismatch is None, mismatch

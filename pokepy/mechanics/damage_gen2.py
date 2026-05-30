@@ -182,9 +182,7 @@ def calc_damage_gen2(
     if suppress_attacker_boosts:
         atk_boost = 0
 
-    attack = _gen2_stat(
-        atk_stat_base, atk_boost, status=atk_status, stat_name=atk_name
-    )
+    attack = _gen2_stat(atk_stat_base, atk_boost, status=atk_status, stat_name=atk_name)
     defense = _gen2_stat(
         def_stat_base, def_boost, status=def_status, stat_name=def_name
     )

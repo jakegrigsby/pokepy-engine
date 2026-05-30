@@ -37,6 +37,7 @@ class GameData:
     item_fling_power: Optional[np.ndarray] = None
     item_is_berry: Optional[np.ndarray] = None
     item_is_choice: Optional[np.ndarray] = None
+    gen: int = 9
 
 
 @dataclass
@@ -93,9 +94,7 @@ def get_data_path(gen: int = 9) -> Path:
     return sub
 
 
-def load_game_data(
-    data_path: Optional[Path] = None, gen: int = 9
-) -> GameData:
+def load_game_data(data_path: Optional[Path] = None, gen: int = 9) -> GameData:
     global _cached_by_gen
     gen = int(gen)
     if _cached_by_gen.get(gen) is not None and data_path is None:
@@ -135,6 +134,7 @@ def load_game_data(
         item_fling_power=_load("item_fling_power", optional=True),
         item_is_berry=_load("item_is_berry", optional=True),
         item_is_choice=_load("item_is_choice", optional=True),
+        gen=gen,
     )
 
     moves_json = data_path / "moves.json"
@@ -169,9 +169,7 @@ def load_game_data(
     return gd
 
 
-def load_id_mappings(
-    data_path: Optional[Path] = None, gen: int = 9
-) -> IDMappings:
+def load_id_mappings(data_path: Optional[Path] = None, gen: int = 9) -> IDMappings:
     """Load string -> int ID mappings from id_mappings.json."""
     global _cached_mappings_by_gen
     gen = int(gen)

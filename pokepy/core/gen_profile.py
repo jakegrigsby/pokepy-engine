@@ -37,6 +37,11 @@ class GenProfile:
     ability_weather_limited: bool = False
     type_chart_name: str = "type_chart"
     data_subdir: str = ""
+    # Showdown gen1-2: randomChance(63, 256); gen3+: randomChance(1, 4).
+    full_para_num: int = 1
+    full_para_denom: int = 4
+    # Powder/spore Grass immunity (Showdown battle-actions.ts: gen >= 6).
+    powder_grass_immune: bool = True
 
     def crit_denom_for_stage(self, crit_stage: int) -> int:
         stage = max(1, min(self.crit_stage_max, int(crit_stage)))
@@ -71,9 +76,7 @@ GEN9_PROFILE = GenProfile(
     has_tera=True,
     has_terrain=True,
     has_teampreview=True,
-    enabled_hazards=frozenset(
-        {"spikes", "stealthrock", "toxicspikes", "stickyweb"}
-    ),
+    enabled_hazards=frozenset({"spikes", "stealthrock", "toxicspikes", "stickyweb"}),
     ability_weather_limited=True,
     type_chart_name="type_chart",
     data_subdir="",
@@ -98,6 +101,7 @@ GEN4_PROFILE = GenProfile(
     ability_weather_limited=False,
     type_chart_name="type_chart",
     data_subdir="gen4",
+    powder_grass_immune=False,
 )
 
 # gen3: type-based phys/spec split, no SR
@@ -119,6 +123,7 @@ GEN3_PROFILE = GenProfile(
     ability_weather_limited=False,
     type_chart_name="type_chart",
     data_subdir="gen3",
+    powder_grass_immune=False,
 )
 
 # gen2: items, no abilities
@@ -140,6 +145,9 @@ GEN2_PROFILE = GenProfile(
     ability_weather_limited=False,
     type_chart_name="type_chart",
     data_subdir="gen2",
+    full_para_num=63,
+    full_para_denom=256,
+    powder_grass_immune=False,
 )
 
 # gen1: combined Special, type split, speed crit handled in damage_gen1
@@ -160,6 +168,9 @@ GEN1_PROFILE = GenProfile(
     enabled_hazards=frozenset(),
     type_chart_name="type_chart",
     data_subdir="gen1",
+    full_para_num=63,
+    full_para_denom=256,
+    powder_grass_immune=False,
 )
 
 PROFILE_REGISTRY: Dict[int, GenProfile] = {

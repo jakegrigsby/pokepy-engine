@@ -6,7 +6,9 @@ Used by tests/test_pokepy_parity_regressions.py. Parameterized by ``format``
 
 from __future__ import annotations
 
+import hashlib
 import json
+import os
 import re
 import subprocess
 import sys
@@ -35,6 +37,115 @@ from pokepy.utils.gen5_prng import Gen5PRNG
 
 REPO_ROOT = Path(__file__).resolve().parents[4]
 SHOWDOWN_BIN = REPO_ROOT / "server" / "pokemon-showdown" / "pokemon-showdown"
+
+# --------------------------------------------------------------------------
+# Showdown ground-truth cache
+#
+# `simulate-battle` is a pure function of its stdin script (format + seed +
+# packed teams + the scripted action log). Identical script -> identical
+# stdout, deterministically. Re-running the suite after a pokepy change that
+# does not alter the action sequence therefore re-simulates the exact same
+# battles. We memoize the raw stdout on disk keyed by a hash of the script so
+# repeat runs skip the (slow) `node` subprocess entirely.
+#
+# Correctness: the key covers everything Showdown reads, so any change to the
+# inputs (including a different pokepy-driven action log) yields a different
+# key and forces a fresh run. A Showdown rebuild changes the version token and
+# busts the whole cache. Only successful (returncode 0) runs are cached.
+#
+# Controls:
+#   POKEPY_SHOWDOWN_CACHE=0           disable read+write
+#   POKEPY_SHOWDOWN_CACHE_DIR=<path>  override location
+#   POKEPY_SHOWDOWN_CACHE_VERSION=<s> extra token to force-bust
+#   POKEPY_PRNG_TRACE=1               bypass cache (need live stderr trace)
+# --------------------------------------------------------------------------
+
+
+def _showdown_cache_enabled() -> bool:
+    if os.environ.get("POKEPY_PRNG_TRACE") == "1":
+        return False
+    return os.environ.get("POKEPY_SHOWDOWN_CACHE", "1").lower() not in (
+        "0",
+        "false",
+        "no",
+    )
+
+
+def _showdown_cache_dir() -> Path:
+    override = os.environ.get("POKEPY_SHOWDOWN_CACHE_DIR")
+    if override:
+        return Path(override)
+    return Path(__file__).resolve().parents[1] / ".cache" / "showdown_parity"
+
+
+_SHOWDOWN_VERSION_TOKEN: Optional[str] = None
+
+
+def _showdown_version_token() -> str:
+    """Token that changes when the vendored Showdown build changes.
+
+    Hash the CONTENT (not mtime) of every compiled file under dist/sim and
+    dist/data: running the CLI recompiles dist/ on each invocation, bumping
+    mtimes without changing behavior (which would bust the cache every run),
+    while edits to gen-specific conditions/scripts/moves change content in
+    those trees but not necessarily battle.js. Content-hashing the whole
+    behavior surface invalidates the cache on any real engine change and
+    nothing else. Memoized per process; bump POKEPY_SHOWDOWN_CACHE_VERSION
+    to force-invalidate manually.
+    """
+    global _SHOWDOWN_VERSION_TOKEN
+    if _SHOWDOWN_VERSION_TOKEN is None:
+        extra = os.environ.get("POKEPY_SHOWDOWN_CACHE_VERSION", "")
+        h = hashlib.sha256()
+        try:
+            dist = SHOWDOWN_BIN.parent / "dist"
+            files = sorted(
+                p
+                for sub in ("sim", "data")
+                for p in (dist / sub).rglob("*.js")
+            )
+            for p in files:
+                h.update(str(p.relative_to(dist)).encode())
+                h.update(p.read_bytes())
+            digest = h.hexdigest()[:16]
+        except OSError:
+            digest = "0"
+        _SHOWDOWN_VERSION_TOKEN = f"{extra}:{digest}"
+    return _SHOWDOWN_VERSION_TOKEN
+
+
+def _showdown_cache_path(script: str) -> Path:
+    key = hashlib.sha256(
+        (_showdown_version_token() + "\0" + script).encode("utf-8")
+    ).hexdigest()
+    return _showdown_cache_dir() / key[:2] / f"{key}.log"
+
+
+def _showdown_cache_read(path: Path) -> Optional[str]:
+    try:
+        return path.read_text(encoding="utf-8")
+    except OSError:
+        return None
+
+
+def _showdown_cache_write(path: Path, raw: str) -> None:
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        tmp = path.with_suffix(f".{os.getpid()}.tmp")
+        tmp.write_text(raw, encoding="utf-8")
+        os.replace(tmp, path)  # atomic; safe under xdist workers
+    except OSError:
+        pass
+
+# CI / full sweeps use 10. Set POKEPY_PARITY_TURNS=3 while debugging turn-2/3 drift.
+_DEFAULT_PARITY_TURNS = 10
+
+
+def parity_n_turns(default: int = _DEFAULT_PARITY_TURNS) -> int:
+    raw = __import__("os").environ.get("POKEPY_PARITY_TURNS")
+    if raw is None or raw == "":
+        return default
+    return max(1, int(raw))
 
 
 def _active_off(state, side: int) -> int:
@@ -165,8 +276,27 @@ def team_to_showdown_export(team: Dict[str, Any], mappings) -> str:
     return "\n".join(lines).strip() + "\n"
 
 
+_PACK_TEAM_MEMO: Dict[str, str] = {}
+
+
 def team_to_showdown_packed(team: Dict[str, Any], mappings) -> str:
     export = team_to_showdown_export(team, mappings)
+    # pack-team is a pure function of the export string. The same handful of
+    # mirror teams are packed thousands of times across the suite, each
+    # spawning a ~2s `node` process. Memoize on disk + in-process so we only
+    # ever shell out once per distinct team per Showdown build.
+    if export in _PACK_TEAM_MEMO:
+        return _PACK_TEAM_MEMO[export]
+
+    cache_path = None
+    if _showdown_cache_enabled():
+        cache_path = _showdown_cache_path("pack-team\0" + export)
+        cached = _showdown_cache_read(cache_path)
+        if cached is not None:
+            packed = cached.strip()
+            _PACK_TEAM_MEMO[export] = packed
+            return packed
+
     proc = subprocess.run(
         [str(SHOWDOWN_BIN), "pack-team"],
         input=export.encode(),
@@ -178,7 +308,11 @@ def team_to_showdown_packed(team: Dict[str, Any], mappings) -> str:
         raise RuntimeError(
             f"pack-team failed: {proc.stderr.decode(errors='replace')}"
         )
-    return proc.stdout.decode().strip()
+    packed = proc.stdout.decode().strip()
+    if cache_path is not None:
+        _showdown_cache_write(cache_path, packed)
+    _PACK_TEAM_MEMO[export] = packed
+    return packed
 
 
 def _parse_showdown_log(raw: str) -> List[Dict[str, Any]]:
@@ -593,10 +727,25 @@ def run_showdown(
             lines.append(f">p1 {p0_actions[i]}")
             lines.append(f">p2 {p1_actions[i]}")
 
+    script = "\n".join(lines) + "\n"
+
+    cache_enabled = _showdown_cache_enabled()
+    cache_path = _showdown_cache_path(script) if cache_enabled else None
+    if cache_path is not None:
+        cached = _showdown_cache_read(cache_path)
+        if cached is not None:
+            meta = {
+                "returncode": 0,
+                "timeout": False,
+                "error": None,
+                "cached": True,
+            }
+            return _parse_showdown_log(cached), cached, meta
+
     try:
         proc = subprocess.run(
             [str(SHOWDOWN_BIN), "simulate-battle"],
-            input="\n".join(lines).encode() + b"\n",
+            input=script.encode(),
             capture_output=True,
             cwd=str(SHOWDOWN_BIN.parent),
             timeout=timeout_s,
@@ -609,7 +758,10 @@ def run_showdown(
         "returncode": proc.returncode,
         "timeout": False,
         "error": proc.stderr.decode(errors="replace") if proc.returncode else None,
+        "cached": False,
     }
     if proc.returncode != 0:
         return [], raw, meta
+    if cache_path is not None:
+        _showdown_cache_write(cache_path, raw)
     return _parse_showdown_log(raw), raw, meta
