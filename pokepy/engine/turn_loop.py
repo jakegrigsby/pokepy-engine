@@ -59,12 +59,25 @@ class TurnDriver:
 
     def commit_choices(self, action0: int, action1: int) -> None:
         """Record player choices into the action queue (metadata for modular path)."""
-        from pokepy.core.constants import OFF_META, M_ACTIVE0, M_ACTIVE1, OFF_SIDE0, OFF_SIDE1, POKEMON_SIZE
+        from pokepy.core.constants import (
+            OFF_META,
+            M_ACTIVE0,
+            M_ACTIVE1,
+            OFF_SIDE0,
+            OFF_SIDE1,
+            POKEMON_SIZE,
+        )
 
         a0 = int(action0)
         a1 = int(action1)
-        p0 = OFF_SIDE0 + int(self.state.battle_state[OFF_META + M_ACTIVE0]) * POKEMON_SIZE
-        p1 = OFF_SIDE1 + int(self.state.battle_state[OFF_META + M_ACTIVE1]) * POKEMON_SIZE
+        p0 = (
+            OFF_SIDE0
+            + int(self.state.battle_state[OFF_META + M_ACTIVE0]) * POKEMON_SIZE
+        )
+        p1 = (
+            OFF_SIDE1
+            + int(self.state.battle_state[OFF_META + M_ACTIVE1]) * POKEMON_SIZE
+        )
         if a0 < 4:
             self.queue.insert_choice(
                 choice="move",

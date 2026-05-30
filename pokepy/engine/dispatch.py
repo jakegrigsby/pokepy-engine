@@ -258,7 +258,14 @@ class BitpackBattleContext:
         )
 
     def each_event(self, eventid: str, callback: Callable[[int], None]) -> None:
-        from pokepy.core.constants import OFF_SIDE0, OFF_SIDE1, M_ACTIVE0, M_ACTIVE1, OFF_META, POKEMON_SIZE
+        from pokepy.core.constants import (
+            OFF_SIDE0,
+            OFF_SIDE1,
+            M_ACTIVE0,
+            M_ACTIVE1,
+            OFF_META,
+            POKEMON_SIZE,
+        )
 
         actives = [
             OFF_SIDE0 + int(self.battle[OFF_META + M_ACTIVE0]) * POKEMON_SIZE,

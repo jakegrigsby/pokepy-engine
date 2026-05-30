@@ -64,7 +64,13 @@ class EffectRegistry:
         key = (table, int(effect_id), event)
         self.handlers[key] = fn
         self.by_event.setdefault(event, []).append(
-            {"table": table, "id": int(effect_id), "fn": fn, "priority": priority, "order": order}
+            {
+                "table": table,
+                "id": int(effect_id),
+                "fn": fn,
+                "priority": priority,
+                "order": order,
+            }
         )
 
     def lookup(self, table: str, effect_id: int, event: str) -> Optional[Handler]:
@@ -83,7 +89,9 @@ def _discover_effect_module_handlers() -> Dict[str, Handler]:
         if name.startswith("_"):
             continue
         obj = getattr(fx_pkg, name)
-        if callable(obj) and getattr(obj, "__module__", "").startswith("pokepy.effects"):
+        if callable(obj) and getattr(obj, "__module__", "").startswith(
+            "pokepy.effects"
+        ):
             out[name] = obj
     return out
 

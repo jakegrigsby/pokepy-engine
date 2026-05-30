@@ -52,7 +52,9 @@ def extract_gen_from_dex(gen: int, repo_root: Path, output_dir: Path) -> None:
 def main():
     repo_root = Path(__file__).resolve().parents[4]
     pokepy_data = Path(__file__).resolve().parents[1] / "pokepy" / "data" / "extracted"
-    parser = argparse.ArgumentParser(description="Extract gen-N data from showdown_dex JSON")
+    parser = argparse.ArgumentParser(
+        description="Extract gen-N data from showdown_dex JSON"
+    )
     parser.add_argument("--gen", type=int, required=True, choices=[1, 2, 3, 4])
     parser.add_argument(
         "--output",

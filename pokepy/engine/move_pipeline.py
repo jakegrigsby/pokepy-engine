@@ -126,9 +126,7 @@ def run_move_effects(
         gen5_prng=ctx.gen5_prng,
         game_data=ctx.game_data,
     )
-    fx.apply_life_orb_recoil(
-        ctx.battle, mc.user_offset, mc.damage, True, mc.move_id
-    )
+    fx.apply_life_orb_recoil(ctx.battle, mc.user_offset, mc.damage, True, mc.move_id)
 
 
 def spread_move_hit(

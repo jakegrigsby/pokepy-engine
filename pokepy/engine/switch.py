@@ -32,12 +32,21 @@ def run_switch_in_events(
     opp_active = ctx.battle[ctx.battle.shape[0] - 1]  # unused placeholder
     _ = opp_active
     if ctx.profile.has_abilities:
-        from pokepy.core.constants import OFF_META, M_ACTIVE0, M_ACTIVE1, OFF_SIDE0, OFF_SIDE1, POKEMON_SIZE
+        from pokepy.core.constants import (
+            OFF_META,
+            M_ACTIVE0,
+            M_ACTIVE1,
+            OFF_SIDE0,
+            OFF_SIDE1,
+            POKEMON_SIZE,
+        )
 
         if poff < OFF_SIDE1:
             opp_off = OFF_SIDE0 + int(ctx.battle[OFF_META + M_ACTIVE0]) * POKEMON_SIZE
             if poff >= OFF_SIDE0:
-                opp_off = OFF_SIDE1 + int(ctx.battle[OFF_META + M_ACTIVE1]) * POKEMON_SIZE
+                opp_off = (
+                    OFF_SIDE1 + int(ctx.battle[OFF_META + M_ACTIVE1]) * POKEMON_SIZE
+                )
         else:
             opp_off = OFF_SIDE0 + int(ctx.battle[OFF_META + M_ACTIVE0]) * POKEMON_SIZE
         if int(ctx.battle[opp_off + 1]) > 0:

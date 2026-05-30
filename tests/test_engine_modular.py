@@ -29,7 +29,10 @@ def test_dispatch_context_speed_sort_consumes_prng():
     prng = Gen5PRNG((1, 2, 3, 4))
     ctx = make_context(state, gd, me, chart, prng, profile=profile_for_gen(9))
     before = prng.call_count if hasattr(prng, "call_count") else None
-    lst = [{"order": 200, "priority": 0, "index": 0}, {"order": 200, "priority": 0, "index": 1}]
+    lst = [
+        {"order": 200, "priority": 0, "index": 0},
+        {"order": 200, "priority": 0, "index": 1},
+    ]
     ctx.speed_sort(lst)
     assert lst  # ordered
 
