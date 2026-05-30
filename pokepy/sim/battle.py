@@ -593,8 +593,29 @@ class Battle:
         self.queue.sort(self.speed_sort)
 
     def _insert_before_turn(self) -> None:
+        """battle-queue.ts insertChoice — place beforeTurn by priority/speed ties."""
         before = Action(choice="beforeTurn", order=ORDER_BEFORE_TURN)
-        self.queue.insert_choice(before, 0)
+        actions = [before]
+        first_index: int | None = None
+        last_index: int | None = None
+        for i, cur in enumerate(self.queue.list):
+            compared = self.queue.compare_priority(actions[0], cur)
+            if compared <= 0 and first_index is None:
+                first_index = i
+            if compared < 0:
+                last_index = i
+                break
+        if first_index is None:
+            self.queue.list.extend(actions)
+        else:
+            if last_index is None:
+                last_index = len(self.queue.list)
+            if first_index == last_index:
+                index = first_index
+            else:
+                index = int(self.random(first_index, last_index + 1))
+            for j, act in enumerate(actions):
+                self.queue.list.insert(index + j, act)
 
     def _append_residual(self) -> None:
         self.queue.add_choice(Action(choice="residual", order=ORDER_RESIDUAL))
@@ -603,14 +624,9 @@ class Battle:
         """battle.ts:2686-2864 runAction dispatch + shared postamble."""
         if action.choice == "beforeTurn":
             self.each_event(dispatch.BeforeTurn)
-            if self.profile.gen < 5:
-                self.each_event(dispatch.Update)
-            return
-        if action.choice == "switch":
+        elif action.choice == "switch":
             self.run_switch_action(action.side, action.switch_slot)
-            self._after_action()
-            return
-        if action.choice == "move":
+        elif action.choice == "move":
             from pokepy.sim import moves
 
             is_second = self._move_second_side is not None
@@ -621,11 +637,13 @@ class Battle:
                 action.move_slot,
                 is_second=is_second,
             )
-            self._after_action()
-            return
-        if action.choice == "residual":
+        elif action.choice == "residual":
             self.run_residual()
-            self._after_action()
+
+        self._after_action()
+        # battle.ts:2881 / 2938 — trailing Update after every action (gen5+ skips 'start').
+        if action.choice != "start":
+            self.each_event(dispatch.Update)
 
     def _after_action(self) -> None:
         """battle.ts:2856-2935 postamble — process faints and queue switch
@@ -705,7 +723,6 @@ class Battle:
             )
 
         self.run_event(dispatch.SwitchIn, target=PokemonView(self.battle, target_off))
-        self.each_event(dispatch.Update)
 
         if int(self.battle[target_off + 1]) <= 0:
             self._request_switch(side)
@@ -738,8 +755,8 @@ class Battle:
 
     def end_turn(self) -> Tuple[np.float32, np.float32, bool]:
         """battle.ts endTurn — increment turn, check win, set forced-switch phase."""
-        consume_endturn_quick_claw_roll(self.profile, self.prng)
         self.state.turn = np.int16(int(self.state.turn) + 1)
+        consume_endturn_quick_claw_roll(self.profile, self.prng)
         reward0, reward1, done, winner = terminal_rewards(self.state, self.max_turns)
         self.state.done = np.bool_(done)
         self.state.winner = np.int8(winner)

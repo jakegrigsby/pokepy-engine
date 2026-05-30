@@ -103,14 +103,14 @@ def consume_startup_prng(state: MultiFormatState, profile, prng) -> None:
     from pokepy.sim.startup import consume_team_preview_queue_sort_frames
 
     consume_team_preview_queue_sort_frames(state.battle_state, prng)
-    consume_endturn_quick_claw_roll(profile, prng)
 
 
 def consume_endturn_quick_claw_roll(profile, prng) -> None:
+    """battle.ts endTurn — gen2/3 Quick Claw pre-roll for the upcoming turn."""
     if profile.gen == 2:
-        prng.random(256)
+        prng.random_chance(60, 256)
     elif profile.gen == 3:
-        prng.random(5)
+        prng.random_chance(1, 5)
 
 
 def sync_showdown_order(order_arr: np.ndarray, new_active_slot: int) -> None:

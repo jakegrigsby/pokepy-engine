@@ -79,7 +79,6 @@ def run_move(
 
     # --- AfterMove ----------------------------------------------------------
     battle_ctx.run_event(dispatch.AfterMoveSelf, target=user, relay_var=True)
-    battle_ctx.each_event(dispatch.Update)
     return used
 
 
