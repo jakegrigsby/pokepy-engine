@@ -462,6 +462,8 @@ def _preroll_move_secondaries(
     gen5_prng,
     target_stats_raised_this_turn=False,
     target_hp_override=None,
+    *,
+    profile=None,
 ):
     """Pre-consume the secondary-chance PRNG frames for one move, matching
     Showdown's per-move `secondaryRoll` ordering (sim/battle-actions.ts:1357).
@@ -859,7 +861,10 @@ def _preroll_move_secondaries(
         and not sc_sheer_block
         and not sc_dust_block
     ):
-        prerolled["stat_change"] = gen5_prng.random(100)
+        if profile is not None and profile.gen <= 2:
+            prerolled["stat_change"] = gen5_prng.random(256)
+        else:
+            prerolled["stat_change"] = gen5_prng.random(100)
 
     # ------------------------------------------------------------------
     # FLINCH volatile (Iron Head 30%, Rock Slide 30%, ...). Showdown still
@@ -1021,6 +1026,11 @@ def _count_residual_speedsort_frames(
     speed_sort_consume so tied groups are always consecutive.
     """
     from functools import cmp_to_key
+    from pokepy.core.bitpack import (
+        get_encore_turns as _get_encore_turns_r,
+        get_heal_block_turns as _get_heal_block_turns_r,
+        get_taunt_turns as _get_taunt_turns_r,
+    )
     from pokepy.core.constants import (
         ITEM_LEFTOVERS as _ITEM_LEFT_R,
         ITEM_BLACK_SLUDGE as _ITEM_BS_R,
@@ -1037,6 +1047,14 @@ def _count_residual_speedsort_frames(
         OFF_FIELD as _OFF_FIELD_R,
         OFF_SIDE1 as _OFF_SIDE1_R,
         F_TERRAIN as _F_TERRAIN_R,
+        F_VOLATILE_0 as _F_VOL0_R,
+        F_VOLATILE_1 as _F_VOL1_R,
+        F_DISABLE_0 as _F_DIS0_R,
+        F_DISABLE_1 as _F_DIS1_R,
+        F_DISABLE_TURNS_0 as _F_DIST0_R,
+        F_DISABLE_TURNS_1 as _F_DIST1_R,
+        F_YAWN_TURNS_0 as _F_YAWN0_R,
+        F_YAWN_TURNS_1 as _F_YAWN1_R,
         M_CHARGING_0 as _M_CHG0_R,
         M_CHARGING_1 as _M_CHG1_R,
         MOVE_BOUNCE as _MOVE_BOUNCE_R,
@@ -1132,6 +1150,24 @@ def _count_residual_speedsort_frames(
         ):
             handlers.append((0, 0, spd, 0, 0))
             handlers.append((0, 0, spd, 0, 0))
+        side_idx = 0 if poff < _OFF_SIDE1_R else 1
+        vol = int(battle[_OFF_FIELD_R + (_F_VOL0_R if side_idx == 0 else _F_VOL1_R)])
+        # Duration volatiles collected via fieldEvent('Residual') getKey='duration'.
+        if _get_taunt_turns_r(vol) > 0:
+            handlers.append((15, 0, spd, 0, 0))
+        if _get_encore_turns_r(vol) > 0:
+            handlers.append((16, 0, spd, 0, 0))
+        dis_off = _OFF_FIELD_R + (_F_DIS0_R if side_idx == 0 else _F_DIS1_R)
+        dis_turns_off = _OFF_FIELD_R + (_F_DIST0_R if side_idx == 0 else _F_DIST1_R)
+        if int(battle[dis_off]) >= 0 and int(battle[dis_turns_off]) > 0:
+            handlers.append((17, 0, spd, 0, 0))
+        if _get_heal_block_turns_r(vol) > 0:
+            handlers.append((20, 0, spd, 0, 0))
+        yawn_turns = int(
+            battle[_OFF_FIELD_R + (_F_YAWN0_R if side_idx == 0 else _F_YAWN1_R)]
+        )
+        if yawn_turns > 0:
+            handlers.append((23, 0, spd, 0, 0))
     if len(handlers) < 2:
         return
 
@@ -1201,6 +1237,19 @@ def _consume_runswitch_tie_frame(
 
     if int(switcher_speed) == int(foe_speed):
         gen5_prng.random(0, 2)
+
+
+def _consume_endturn_quick_claw_roll(profile, gen5_prng) -> None:
+    """Mirror Showdown endTurn Quick Claw pre-roll (sim/battle.ts endTurn).
+
+    Gen 2 rolls randomChance(60, 256); gen 3 rolls randomChance(1, 5).
+    Showdown stores the result on battle.quickClawRoll before each turn's move
+    request, including the turn-0 -> turn-1 transition after lead switch-ins.
+    """
+    if profile.gen == 2:
+        gen5_prng.random(256)
+    elif profile.gen == 3:
+        gen5_prng.random(5)
 
 
 def _consume_switch_request_resume_tie_frames(
@@ -1468,6 +1517,7 @@ def step_battle_gen9_iter(
     resolve_mid_turn_switch0=None,
     wants_tera0: bool = False,
     wants_tera1: bool = False,
+    profile=None,
 ) -> Generator[SwitchRequest, Dict[int, int], Tuple[np.float32, np.float32, bool]]:
     """Execute one Gen 9 battle turn. Mutates `state` in place.
 
@@ -1480,6 +1530,13 @@ def step_battle_gen9_iter(
     from pokepy import effects as fx  # type: ignore  # noqa: F401  (TODO: real module)
 
     calc_damage_gen9 = _get_calc_damage()
+    if profile is None:
+        from pokepy.core.gen_profile import GEN9_PROFILE
+
+        profile = GEN9_PROFILE
+    if not profile.has_tera:
+        wants_tera0 = False
+        wants_tera1 = False
 
     battle = state.battle_state
     max_turns = getattr(state, "max_turns", 200)
@@ -1503,6 +1560,7 @@ def step_battle_gen9_iter(
                 gen5_prng.random(*tuple(int(a) for a in call_args))
         else:
             _consume_team_preview_queue_sort_frames(battle, gen5_prng)
+        _consume_endturn_quick_claw_roll(profile, gen5_prng)
     state.pending_opp_switch_in_slot = np.int8(-1)
     state.pending_opp_switch_action_speed = np.int16(0)
 
@@ -1642,6 +1700,10 @@ def step_battle_gen9_iter(
     _fx_apply_contact_damage = fx.apply_contact_damage
     _fx_apply_contact_status_ability = fx.apply_contact_status_ability
     _fx_apply_life_orb_recoil = fx.apply_life_orb_recoil
+
+    def _apply_recoil_drain_from_move_tracked(*args, **kwargs):
+        kwargs.setdefault("gen", profile.gen)
+        return fx.apply_recoil_drain_from_move(*args, **kwargs)
 
     def _apply_life_orb_recoil_tracked(*args, **kwargs) -> None:
         # (battle, user_off, dmg, hit, move_id). Life Orb recoil reveals the
@@ -1826,6 +1888,8 @@ def step_battle_gen9_iter(
         opponent_offset: int,
         did_switch: bool,
     ) -> None:
+        if not profile.has_abilities:
+            return
         before_switcher = _snapshot_boost_stages(switcher_offset)
         before_opponent = _snapshot_boost_stages(opponent_offset)
         _rev_sw_sig = _ability_reveal_signature(switcher_offset)
@@ -1839,6 +1903,8 @@ def step_battle_gen9_iter(
             opponent_offset,
             did_switch,
             gen5_prng=gen5_prng,
+            has_terrain=profile.has_terrain,
+            ability_weather_limited=profile.ability_weather_limited,
         )
         _mark_stats_raised_this_turn(switcher_offset, before_switcher)
         _mark_stats_raised_this_turn(opponent_offset, before_opponent)
@@ -1861,6 +1927,8 @@ def step_battle_gen9_iter(
         opponent_offset: int,
         did_switch: bool,
     ) -> None:
+        if not profile.has_abilities:
+            return
         before_switcher = _snapshot_boost_stages(switcher_offset)
         before_opponent = _snapshot_boost_stages(opponent_offset)
         _rev_sw_sig = _ability_reveal_signature(switcher_offset)
@@ -1874,6 +1942,8 @@ def step_battle_gen9_iter(
             opponent_offset,
             did_switch,
             gen5_prng=gen5_prng,
+            has_terrain=profile.has_terrain,
+            ability_weather_limited=profile.ability_weather_limited,
         )
         _mark_stats_raised_this_turn(switcher_offset, before_switcher)
         _mark_stats_raised_this_turn(opponent_offset, before_opponent)
@@ -1934,6 +2004,7 @@ def step_battle_gen9_iter(
                 move_effects,
                 gen5_prng,
                 prerolled_roll=prerolled_roll,
+                gen=profile.gen,
             )
             after_def = extract_boost(int(battle[int(user_offset) + 13]), 4)
             after_spd = extract_boost(int(battle[int(user_offset) + 13]), 12)
@@ -1977,6 +2048,7 @@ def step_battle_gen9_iter(
             move_effects,
             gen5_prng,
             prerolled_roll=prerolled_roll,
+            gen=profile.gen,
         )
         _mark_stats_raised_this_turn(user_offset, before_user)
         _mark_stats_raised_this_turn(target_offset, before_target)
@@ -2217,6 +2289,8 @@ def step_battle_gen9_iter(
         order_arr[idx] = np.int8(old_front)
 
     def _apply_seed_sower(source_off: int) -> None:
+        if not profile.has_terrain:
+            return
         if int(battle[source_off + 5]) != ABILITY_SEED_SOWER:
             return
         if int(battle[OFF_FIELD + F_TERRAIN]) == TERRAIN_GRASSY:
@@ -2326,11 +2400,11 @@ def step_battle_gen9_iter(
     )
 
     team_tera = getattr(state, "team_tera", None)
-    if wants_tera0 and not is_switch:
+    if profile.has_tera and wants_tera0 and not is_switch:
         fx.activate_terastallization(
             battle, 0, team_tera=team_tera, active_slot=active0
         )
-    if wants_tera1 and not opp_is_switch:
+    if profile.has_tera and wants_tera1 and not opp_is_switch:
         fx.activate_terastallization(
             battle, 1, team_tera=team_tera, active_slot=active1
         )
@@ -2962,22 +3036,28 @@ def step_battle_gen9_iter(
         (_order1, action_priority1, action_speed1, 0, 0),
     ]
     commit_shuffle = _sst.queue_sort(_s1_entries)
-    # S2 + S3: eachEvent('BeforeTurn') and post-BeforeTurn Update — speedSort
-    # actives by speed. These fire inside the beforeTurn action handler,
-    # BEFORE any switch action executes — so when a voluntary switch changes
-    # the active's species mid-turn they still see the PRE-switch actives.
-    # Use pre_switch speeds when a switch happens this turn.
+    # The beforeTurn action handler produces TWO speed-sort frames:
+    #   S2: eachEvent('BeforeTurn')                       (sim/battle.ts:2830)
+    #   S3: the trailing eachEvent('Update') that runAction runs after EVERY
+    #       action — `if (this.gen < 5) this.eachEvent('Update')` at
+    #       sim/battle.ts:2938 (gen>=5 runs the equivalent at :2881).
+    # Both speedSort the active Pokemon by speed, so each costs one shuffle
+    # frame when the actives' speeds tie. These fire BEFORE any switch action
+    # executes, so a voluntary switch this turn still sees the PRE-switch
+    # actives — use pre_switch speeds in that case.
     _bt_tied = pre_switch_speeds_tied if (is_switch or opp_is_switch) else speeds_tied
     if _bt_tied:
         _s2_speeds = [
             pre_switch_p0_speed if (is_switch or opp_is_switch) else p0_speed,
             pre_switch_p1_speed if (is_switch or opp_is_switch) else p1_speed,
         ]
-        _sst.each_event_update(_s2_speeds)  # S2: BeforeTurn speedSort
-        _sst.each_event_update(_s2_speeds)  # S3: post-BeforeTurn Update speedSort
+        _sst.each_event_update(_s2_speeds)  # S2: eachEvent('BeforeTurn')
+        _sst.each_event_update(_s2_speeds)  # S3: trailing eachEvent('Update')
     # S4: gen 8+ queue re-sort — only when no switch is ahead AND the two
     # move actions tie by comparePriority.
-    resort_shuffle = _sst.queue_sort(_s1_entries) if queue_sort_tied else 0
+    resort_shuffle = (
+        _sst.queue_sort(_s1_entries) if queue_sort_tied and profile.gen >= 8 else 0
+    )
     action_sort_roll = commit_shuffle ^ resort_shuffle
     tie_break = action_sort_roll == 0  # 0 = no net swap (side0 first)
 
@@ -3784,6 +3864,7 @@ def step_battle_gen9_iter(
             out_meta=_meta0,
             user_hurt_by_target_this_turn=user_hurt_by_target_this_turn,
             target_newly_switched=bool(opp_is_switch or _mid_turn_pivot_1),
+            profile=profile,
         )
 
     def _calc_p1(user_hurt_by_target_this_turn: bool = False):
@@ -3821,6 +3902,7 @@ def step_battle_gen9_iter(
             out_meta=_meta1,
             user_hurt_by_target_this_turn=user_hurt_by_target_this_turn,
             target_newly_switched=bool(is_switch or _mid_turn_pivot_0),
+            profile=profile,
         )
 
     # Pre-fetch HPs to determine if the first attacker's damage KOs the second
@@ -3957,6 +4039,7 @@ def step_battle_gen9_iter(
             gen5_prng,
             target_stats_raised_this_turn=stats_raised_this_turn1,
             target_hp_override=target_hp_override,
+            profile=profile,
         )
 
     def _preroll1(target_hp_override=None):
@@ -3975,6 +4058,7 @@ def step_battle_gen9_iter(
             gen5_prng,
             target_stats_raised_this_turn=stats_raised_this_turn0,
             target_hp_override=target_hp_override,
+            profile=profile,
         )
 
     # Between-moves Update count. Showdown fires `eachEvent('Update')` inside
@@ -4000,7 +4084,15 @@ def step_battle_gen9_iter(
             return 1
         if (not is_status_move) and int(damage_val) <= 0:
             return 1
-        return 2 if int(num_hits) > 1 else 3
+        if int(num_hits) > 1:
+            return 2
+        # Gen 1/2 tryMoveHit does not fire hitStepMoveHitLoop Updates for
+        # single-hit moves; only runAction's post-move Update (battle.ts:2938).
+        if profile.gen <= 2:
+            return 1
+        # Gen 3 spends one fewer tied-speed Update frame per damaging move
+        # hit loop / post-action chain than gen 4+ in Showdown.
+        return 2 if profile.gen <= 3 else 3
 
     def _blocked_first_action_update_count(
         first_action_immobile: bool,
@@ -4065,10 +4157,29 @@ def step_battle_gen9_iter(
     _MOVE_TOXIC_PRE = 92
     _acc0_pre = int(game_data.move_accuracy[move_id0])
     _acc1_pre = int(game_data.move_accuracy[move_id1])
-    _acc0_bypass_pre = _acc0_pre == 0 or _acc0_pre > 100
-    _acc1_bypass_pre = _acc1_pre == 0 or _acc1_pre > 100
     _move0_is_status_pre = cat0 == CAT_STATUS
     _move1_is_status_pre = cat1 == CAT_STATUS
+
+    def _showdown_accuracy_bypass(acc: int, is_status: bool, target_kind: int) -> bool:
+        """Showdown skips randomChance only when accuracy === true (loader: 127).
+
+        Gen2 tryMoveHit skips at scaled 255 (stored acc >= 100). Gen5+
+        hitStepAccuracy sets self-targeting status moves to accuracy === true.
+        """
+        if acc == 127 or acc == 0:
+            return True
+        if profile.gen >= 5 and is_status and target_kind == 3:
+            return True
+        if profile.gen == 2 and acc >= 100:
+            return True
+        return False
+
+    _acc0_bypass_pre = _showdown_accuracy_bypass(
+        _acc0_pre, _move0_is_status_pre, target0_kind
+    )
+    _acc1_bypass_pre = _showdown_accuracy_bypass(
+        _acc1_pre, _move1_is_status_pre, target1_kind
+    )
     # Showdown uses `tryMoveHit` (no accuracy check) for moves with
     # target in {all, foeSide, allySide, allyTeam} (pokepy targets 7, 9, 10).
     # Self-targeting status moves (pokepy target 3) get `accuracy = true` in
@@ -4151,7 +4262,8 @@ def step_battle_gen9_iter(
         target_t2 = (target_types >> 8) & 0xFF
         if (move_flags & FLAG_POWDER) != 0:
             target_item = int(battle[target_off + 6])
-            if (
+            # Grass powder immunity is gen6+ (Showdown battle-actions.ts onTryHit).
+            if int(getattr(game_data, "gen", 9)) >= 6 and (
                 target_t1 == TYPE_GRASS
                 or target_t2 == TYPE_GRASS
                 or target_ab == ABILITY_OVERCOAT
@@ -4310,7 +4422,11 @@ def step_battle_gen9_iter(
             user_off = p1_off
 
         is_par_cur = get_status(int(battle[user_off + 12])) == STATUS_PARALYSIS
-        para = bool(is_par_cur and int(gen5_prng.random(4)) == 0)
+        para = bool(
+            is_par_cur
+            and int(gen5_prng.random(int(profile.full_para_denom)))
+            < int(profile.full_para_num)
+        )
         if side_idx == 0:
             _status_chain_full_para0 = para
             _status_chain_immobile0 = _status_chain_immobile0 or para
@@ -4373,9 +4489,11 @@ def step_battle_gen9_iter(
             cat0 = int(game_data.move_category[move_id0])
             _cat0_status = cat0 == CAT_STATUS
             _move0_is_status_pre = _cat0_status
-            _acc0_pre = int(game_data.move_accuracy[move_id0])
-            _acc0_bypass_pre = _acc0_pre == 0 or _acc0_pre > 100
             target0_kind = int(game_data.move_target[move_id0])
+            _acc0_pre = int(game_data.move_accuracy[move_id0])
+            _acc0_bypass_pre = _showdown_accuracy_bypass(
+                _acc0_pre, _cat0_status, target0_kind
+            )
             move0_targets_foe_mon = target0_kind in (0, 1, 2, 4, 5, 6, 8, 11, 12)
             move0_can_change_foe_item = int(
                 move_effects.effect_type[move_id0]
@@ -4435,9 +4553,11 @@ def step_battle_gen9_iter(
             cat1 = int(game_data.move_category[move_id1])
             _cat1_status = cat1 == CAT_STATUS
             _move1_is_status_pre = _cat1_status
-            _acc1_pre = int(game_data.move_accuracy[move_id1])
-            _acc1_bypass_pre = _acc1_pre == 0 or _acc1_pre > 100
             target1_kind = int(game_data.move_target[move_id1])
+            _acc1_pre = int(game_data.move_accuracy[move_id1])
+            _acc1_bypass_pre = _showdown_accuracy_bypass(
+                _acc1_pre, _cat1_status, target1_kind
+            )
             move1_targets_foe_mon = target1_kind in (0, 1, 2, 4, 5, 6, 8, 11, 12)
             move1_can_change_foe_item = int(
                 move_effects.effect_type[move_id1]
@@ -4731,6 +4851,7 @@ def step_battle_gen9_iter(
                 True,
                 int(damage0),
                 gen5_prng,
+                gen=profile.gen,
             )
             return
 
@@ -4749,7 +4870,18 @@ def step_battle_gen9_iter(
             True,
             int(damage1),
             gen5_prng,
+            gen=profile.gen,
         )
+
+    def _schedule_cursed_body_after_calc(inflicter_side: int) -> None:
+        """Gen 5+ runs DamagingHit before move secondaries."""
+        if profile.gen >= 5:
+            _early_apply_cursed_body(inflicter_side)
+
+    def _schedule_cursed_body_after_preroll(inflicter_side: int) -> None:
+        """Gen 4 and below run DamagingHit after secondaryRoll."""
+        if profile.gen <= 4:
+            _early_apply_cursed_body(inflicter_side)
 
     def _early_apply_throat_chop(inflicter_side: int) -> None:
         """Apply a freshly-landed Throat Chop before the slower target moves.
@@ -4930,6 +5062,18 @@ def step_battle_gen9_iter(
         is_asleep = status_cur == STATUS_SLEEP
         is_frozen_cur = status_cur == STATUS_FREEZE
         sleep_blocked = is_asleep and sb_mv not in (MOVE_SLEEP_TALK, MOVE_SNORE)
+
+        # Gen 3: sleep counter decrements in slp.onBeforeMove when the mon
+        # attempts to act, not at end-of-turn (data/mods/gen3/conditions.ts).
+        if profile.gen == 3 and sleep_blocked and not switching:
+            sleep_turns = get_status_turns(int(battle[user_off + 12]))
+            sleep_turns -= 1
+            if sleep_turns <= 0:
+                battle[user_off + 12] = 0
+                sleep_blocked = False
+                is_asleep = False
+            else:
+                battle[user_off + 12] = set_status(STATUS_SLEEP, sleep_turns)
 
         thaw = False
         if is_frozen_cur and (not using_defrost) and (not switching):
@@ -5266,7 +5410,7 @@ def step_battle_gen9_iter(
         """
         _sim = battle.copy()
         _sim[int(_user_off) + 1] = np.int16(int(_user_hp_before_contact))
-        fx.apply_recoil_drain_from_move(
+        _apply_recoil_drain_from_move_tracked(
             _sim,
             _move_id,
             _user_off,
@@ -5517,7 +5661,7 @@ def step_battle_gen9_iter(
             _restore_off = int(restore_target_item_off)
             if int(_sim[_restore_off + 6]) == 0:
                 _sim[_restore_off + 6] = np.int16(int(restore_target_item))
-        fx.apply_recoil_drain_from_move(
+        _apply_recoil_drain_from_move_tracked(
             _sim,
             _move_id,
             _user_off,
@@ -5538,7 +5682,7 @@ def step_battle_gen9_iter(
             move_effects,
             num_hits=int(_num_hits),
         )
-        fx.apply_recoil_drain_from_move(
+        _apply_recoil_drain_from_move_tracked(
             _sim,
             _move_id,
             _user_off,
@@ -5603,6 +5747,7 @@ def step_battle_gen9_iter(
                 user_ability=p0_ab,
                 user_offset=user0_off,
                 source_hp_override=_hp0_after_postmove_pre,
+                enabled_hazards=profile.enabled_hazards,
             )
             _hazard_from_move_applied0 = True
             return
@@ -5618,6 +5763,7 @@ def step_battle_gen9_iter(
             user_ability=p1_ab,
             user_offset=user1_off,
             source_hp_override=_hp1_after_postmove_pre,
+            enabled_hazards=profile.enabled_hazards,
         )
         _hazard_from_move_applied1 = True
 
@@ -5796,6 +5942,8 @@ def step_battle_gen9_iter(
                 )
                 else _calc_p0()
             )
+            if int(damage0) > 0:
+                _schedule_cursed_body_after_calc(0)
             if (
                 _self_hit0
                 or _p0_immobile_pre
@@ -5805,7 +5953,8 @@ def step_battle_gen9_iter(
                 or is_charge_turn0
             ):
                 # Engine: self-hit already applied damage. Mark move as failed.
-                pass
+                if int(damage0) > 0:
+                    _schedule_cursed_body_after_preroll(0)
             else:
                 # Lockedmove self-effect PRNG (Showdown selfDrops, before
                 # secondaries). Must fire before _preroll0 and before the other
@@ -5820,6 +5969,7 @@ def step_battle_gen9_iter(
                     p0_off,
                 )
                 prerolled_move0 = _preroll0() if not is_switch else None
+                _schedule_cursed_body_after_preroll(0)
                 # Preroll contact status ability (Flame Body / Static / Poison
                 # Point / Poison Touch) for the first mover. In Showdown,
                 # DamagingHit fires after secondaries but BEFORE the second
@@ -6079,6 +6229,12 @@ def step_battle_gen9_iter(
                         int(_meta0.get("num_hits", 1)),
                     ),
                 )
+                # Gen 1/2: dual primary-status turns do not spend a tied-speed
+                # between-move Update before the slower runMove — only the
+                # post-action Update at runAction end. Extra frames here drift
+                # same-turn full-paralysis rolls (Thunder Wave mirrors).
+                if profile.gen <= 2 and _cat0_status and _cat1_status:
+                    _between_updates = 0
                 _target1_red_card_can_rewrite_slower = (
                     int(battle[p1_off + 6]) == ITEM_RED_CARD
                     and int(battle[p1_off + 1]) > 0
@@ -6202,7 +6358,6 @@ def step_battle_gen9_iter(
             # cancels side1's move (Showdown ordering).
             _early_apply_inflicted_status(0)
             _early_apply_toxic_chain(0)
-            _early_apply_cursed_body(0)
             _contact_status_early_applied0 = _apply_resolved_contact_status(0)
             _early_apply_throat_chop(0)
             # Gen 8+ Showdown refreshes queued move speeds after each
@@ -6899,6 +7054,41 @@ def step_battle_gen9_iter(
                         if not opp_is_switch
                         else None
                     )
+                    _schedule_cursed_body_after_preroll(1)
+                # Pre-apply the second mover's primary status (Thunder Wave,
+                # Spore, etc.) once its acc check passes — symmetric with the
+                # first-mover block above. Showdown resolves these inside the
+                # slower runMove before the legacy immobile pass.
+                if (
+                    cat1 == CAT_STATUS
+                    and not _p1_immobile_pre
+                    and not _self_hit1
+                    and not opp_is_switch
+                ):
+                    _preset_screen_if_status(move_id1, 1)
+                    _status_hit1_pre = _status_move_hits_pre(1, _prerolled_status_acc1)
+                    _eff1_pre_second = int(move_effects.effect_type[move_id1])
+                    _EFFECT_STATUS_EARLY1B = 2
+                    if (
+                        _eff1_pre_second == _EFFECT_STATUS_EARLY1B
+                        and _status_hit1_pre
+                        and not _sleep_talk_pending_slp0
+                        and not _status_early_applied1
+                    ):
+                        _status_early_applied1 = True
+                        fx.apply_status_from_move(
+                            battle,
+                            move_id1,
+                            p0_off,
+                            True,
+                            game_data,
+                            move_effects,
+                            gen5_prng,
+                            user_offset=p1_off,
+                            num_hits=1,
+                            prerolled_rolls=None,
+                        )
+                        _run_immediate_status_berry_updates(p0_off)
             else:
                 battle[p1_off + 1] = _saved_hp1
                 damage1 = 0
@@ -7027,6 +7217,8 @@ def step_battle_gen9_iter(
                 )
                 else _calc_p1()
             )
+            if int(damage1) > 0:
+                _schedule_cursed_body_after_calc(1)
             if not (
                 move1_no_target
                 or _self_hit1
@@ -7046,6 +7238,7 @@ def step_battle_gen9_iter(
                     p1_off,
                 )
                 prerolled_move1 = _preroll1() if not opp_is_switch else None
+                _schedule_cursed_body_after_preroll(1)
                 # Preroll contact status ability for the first mover (side1).
                 # Side1 pivot isn't implemented in pokepy, so no pivot skip needed.
                 if _meta1.get("contact_status_consumed"):
@@ -7067,6 +7260,8 @@ def step_battle_gen9_iter(
                     not _self_hit1 and damage1 > 0,
                     gen5_prng,
                 )
+            elif int(damage1) > 0:
+                _schedule_cursed_body_after_preroll(1)
         else:
             damage1 = 0
         if move0_targets_foe_mon and not is_delayed0 and int(battle[p1_off + 1]) <= 0:
@@ -7271,6 +7466,8 @@ def step_battle_gen9_iter(
                         int(_meta1.get("num_hits", 1)),
                     ),
                 )
+                if profile.gen <= 2 and _cat0_status and _cat1_status:
+                    _between_updates = 0
                 _target0_red_card_can_rewrite_slower = (
                     int(battle[p0_off + 6]) == ITEM_RED_CARD
                     and int(battle[p0_off + 1]) > 0
@@ -7376,7 +7573,6 @@ def step_battle_gen9_iter(
             _move1_preapplied_immediate_defender_state = True
             _early_apply_inflicted_status(1)
             _early_apply_toxic_chain(1)
-            _early_apply_cursed_body(1)
             _contact_status_early_applied1 = _apply_resolved_contact_status(1)
             _early_apply_throat_chop(1)
             # Mirror Showdown's gen8+ post-action queue speed refresh before
@@ -7914,6 +8110,8 @@ def step_battle_gen9_iter(
                 damage0 = 0
             else:
                 _p0_immobile_pre = _pre_calc_status_chain(0)
+                if _p0_immobile_pre:
+                    damage0 = 0
             if _move0_canceled_pre:
                 battle[p0_off + 1] = _saved_hp0
                 damage0_after_flinch = 0
@@ -7988,6 +8186,8 @@ def step_battle_gen9_iter(
                         user_hurt_by_target_this_turn=(_mirrored_damage1_on_p0 > 0)
                     )
                 )
+                if int(damage0) > 0:
+                    _schedule_cursed_body_after_calc(0)
                 battle[p1_off + 1] = np.int16(_saved_target_hp1)
                 _target1_has_sub_pre = int(battle[OFF_FIELD + F_SUBSTITUTE_1]) > 0
                 _knock_off_source_alive0 = (
@@ -8045,7 +8245,10 @@ def step_battle_gen9_iter(
                         if not is_switch
                         else None
                     )
+                    _schedule_cursed_body_after_preroll(0)
             else:
+                if int(damage0) > 0:
+                    _schedule_cursed_body_after_preroll(0)
                 battle[p0_off + 1] = _saved_hp0
                 damage0 = 0
         elif _first_attacker_flinches_target:
@@ -8217,13 +8420,10 @@ def step_battle_gen9_iter(
     ) == TYPE_POISON
     toxic_bypass0 = move_id0 == _MOVE_TOXIC and user0_is_poison
     toxic_bypass1 = move_id1 == _MOVE_TOXIC and user1_is_poison
-    # Showdown battle-actions.ts:600 gates the accuracy `randomChance(accuracy,
-    # 100)` behind `accuracy !== true`. Moves with `accuracy: true` in data/
-    # moves.ts (Stealth Rock, Spikes, Swords Dance, ...) skip the PRNG frame
-    # entirely. Pokepy encodes these as `move_accuracy[move_id] > 100` (the
-    # loader maps `accuracy: true` to 127). Match the skip.
-    acc0_bypass = acc0 == 0 or acc0 > 100
-    acc1_bypass = acc1 == 0 or acc1 > 100
+    # Showdown battle-actions.ts:733 gates randomChance behind accuracy !== true.
+    # Loader maps accuracy: true -> 127. Gen2 skips at scaled 255 (acc >= 100).
+    acc0_bypass = _showdown_accuracy_bypass(acc0, move0_is_status, target0_kind)
+    acc1_bypass = _showdown_accuracy_bypass(acc1, move1_is_status, target1_kind)
     # Status-move accuracy rolls were pre-consumed earlier in speed order
     # (see `_prerolled_status_accN` block above) so the frame lands at the
     # right Showdown offset. Re-use the prerolled value here; only roll
@@ -9292,7 +9492,7 @@ def step_battle_gen9_iter(
             _restore_off = int(restore_target_item_off)
             if int(_sim[_restore_off + 6]) == 0:
                 _sim[_restore_off + 6] = np.int16(int(restore_target_item))
-        fx.apply_recoil_drain_from_move(
+        _apply_recoil_drain_from_move_tracked(
             _sim,
             _move_id,
             _user_off,
@@ -9313,7 +9513,7 @@ def step_battle_gen9_iter(
             move_effects,
             num_hits=int(_num_hits),
         )
-        fx.apply_recoil_drain_from_move(
+        _apply_recoil_drain_from_move_tracked(
             _sim,
             _move_id,
             _user_off,
@@ -9378,7 +9578,7 @@ def step_battle_gen9_iter(
         """
         _sim = battle.copy()
         _sim[int(_user_off) + 1] = np.int16(int(_user_hp_before_contact))
-        fx.apply_recoil_drain_from_move(
+        _apply_recoil_drain_from_move_tracked(
             _sim,
             _move_id,
             _user_off,
@@ -10869,6 +11069,7 @@ def step_battle_gen9_iter(
                         user_ability=user_ability,
                         user_offset=user_off,
                         source_hp_override=user_postmove_hp,
+                        enabled_hazards=profile.enabled_hazards,
                     )
                     _hazard_from_move_applied0 = True
             else:
@@ -10883,6 +11084,7 @@ def step_battle_gen9_iter(
                         user_ability=user_ability,
                         user_offset=user_off,
                         source_hp_override=user_postmove_hp,
+                        enabled_hazards=profile.enabled_hazards,
                     )
                     _hazard_from_move_applied1 = True
             fx.apply_weather_from_move(
@@ -10893,14 +11095,15 @@ def step_battle_gen9_iter(
                 move_effects,
                 user_offset=user_off,
             )
-            fx.apply_terrain_from_move(
-                battle,
-                move_id,
-                did_hit,
-                game_data,
-                move_effects,
-                user_offset=user_off,
-            )
+            if profile.has_terrain:
+                fx.apply_terrain_from_move(
+                    battle,
+                    move_id,
+                    did_hit,
+                    game_data,
+                    move_effects,
+                    user_offset=user_off,
+                )
             fx.apply_trick_room_from_move(
                 battle,
                 move_id,
@@ -11197,7 +11400,7 @@ def step_battle_gen9_iter(
     if _first_is_drain and side0_first:
         # Side 0 used a drain move and moved first.
         battle[user0_off + 1] = np.int16(hp0_pre)
-        fx.apply_recoil_drain_from_move(
+        _apply_recoil_drain_from_move_tracked(
             battle,
             move_id0,
             user0_off,
@@ -11276,7 +11479,7 @@ def step_battle_gen9_iter(
             max(0, int(_hp0_postmove_baseline) - _actual_hp_removed_to_p0)
         )
         # Side 1 drain (second mover): normal, post-damage HP.
-        fx.apply_recoil_drain_from_move(
+        _apply_recoil_drain_from_move_tracked(
             battle,
             move_id1,
             user1_off,
@@ -11290,7 +11493,7 @@ def step_battle_gen9_iter(
     elif _first_is_drain and not side0_first:
         # Side 1 used a drain move and moved first.
         battle[user1_off + 1] = np.int16(hp1_pre)
-        fx.apply_recoil_drain_from_move(
+        _apply_recoil_drain_from_move_tracked(
             battle,
             move_id1,
             user1_off,
@@ -11365,7 +11568,7 @@ def step_battle_gen9_iter(
             max(0, int(_hp1_postmove_baseline) - _actual_hp_removed_to_p1)
         )
         # Side 0 drain (second mover): normal.
-        fx.apply_recoil_drain_from_move(
+        _apply_recoil_drain_from_move_tracked(
             battle,
             move_id0,
             user0_off,
@@ -11378,7 +11581,7 @@ def step_battle_gen9_iter(
         )
     else:
         # First mover has no drain — apply both normally.
-        fx.apply_recoil_drain_from_move(
+        _apply_recoil_drain_from_move_tracked(
             battle,
             move_id0,
             user0_off,
@@ -11389,7 +11592,7 @@ def step_battle_gen9_iter(
             target_offset=target0_off,
             phase="drain",
         )
-        fx.apply_recoil_drain_from_move(
+        _apply_recoil_drain_from_move_tracked(
             battle,
             move_id1,
             user1_off,
@@ -11593,6 +11796,7 @@ def step_battle_gen9_iter(
         skip_immediate_stateful_move1=_move1_preapplied_immediate_defender_state,
         skip_cursed_body0=_cursed_body_early_applied0,
         skip_cursed_body1=_cursed_body_early_applied1,
+        gen=profile.gen,
     )
     _sync_showdown_order_on_switch(
         side_order1,
@@ -11654,7 +11858,8 @@ def step_battle_gen9_iter(
         if current_action_speed0 == current_action_speed1:
             _sst.each_event_update([current_action_speed0, current_action_speed1])
         if (
-            _ng_restart_from_p0
+            profile.has_abilities
+            and _ng_restart_from_p0
             and int(battle[p1_off + 6]) != _ITEM_ABILITY_SHIELD_NG_END
         ):
             fx.apply_switch_in_ability(
@@ -11663,9 +11868,12 @@ def step_battle_gen9_iter(
                 p0_off,
                 True,
                 gen5_prng,
+                has_terrain=profile.has_terrain,
+                ability_weather_limited=profile.ability_weather_limited,
             )
         if (
-            _ng_restart_from_p1
+            profile.has_abilities
+            and _ng_restart_from_p1
             and int(battle[p0_off + 6]) != _ITEM_ABILITY_SHIELD_NG_END
         ):
             fx.apply_switch_in_ability(
@@ -11674,6 +11882,8 @@ def step_battle_gen9_iter(
                 p1_off,
                 True,
                 gen5_prng,
+                has_terrain=profile.has_terrain,
+                ability_weather_limited=profile.ability_weather_limited,
             )
 
     # Threshold berries are `onUpdate` items in Showdown, so they run after the
@@ -11811,7 +12021,7 @@ def step_battle_gen9_iter(
     # Head/Magic Guard blocking matches Showdown. Substitute caps drain/recoil
     # to the sub's HP (sim/data/moves.ts:substitute onTryPrimaryHit).
     if not _skip_recoil_hp_effects0:
-        fx.apply_recoil_drain_from_move(
+        _apply_recoil_drain_from_move_tracked(
             battle,
             move_id0,
             user0_off,
@@ -11833,7 +12043,7 @@ def step_battle_gen9_iter(
             ),
         )
     if not _skip_recoil_hp_effects1:
-        fx.apply_recoil_drain_from_move(
+        _apply_recoil_drain_from_move_tracked(
             battle,
             move_id1,
             user1_off,
@@ -12866,6 +13076,7 @@ def step_battle_gen9_iter(
             move_effects,
             type_chart,
             gen5_prng,
+            profile=profile,
         )
         active0 = int(battle[OFF_META + M_ACTIVE0])
         p0_off = OFF_SIDE0 + active0 * POKEMON_SIZE
@@ -13240,6 +13451,7 @@ def step_battle_gen9_iter(
                             suppress_attacker_boosts=not fs_src1_live,
                             override_field_atk_ability=field_atk_ability1,
                             override_field_def_ability=field_def_ability1,
+                            profile=profile,
                         )
                         battle[fs_src1_off + 5] = saved_ability1
                         battle[OFF_META + M_ACTIVE1] = saved_active1
@@ -13310,6 +13522,7 @@ def step_battle_gen9_iter(
                             suppress_attacker_boosts=not fs_src0_live,
                             override_field_atk_ability=field_atk_ability0,
                             override_field_def_ability=field_def_ability0,
+                            profile=profile,
                         )
                         battle[fs_src0_off + 5] = saved_ability0
                         battle[OFF_META + M_ACTIVE0] = saved_active0
@@ -13380,8 +13593,9 @@ def step_battle_gen9_iter(
                 fx.apply_black_sludge_effect(battle, _lb_off, game_data)
                 if int(battle[_lb_off + 1]) != _lb_hp:
                     _mark_item_revealed(_lb_off)
-            fx.apply_grassy_terrain_healing(battle, p0_off, game_data)
-            fx.apply_grassy_terrain_healing(battle, p1_off, game_data)
+            if profile.has_terrain:
+                fx.apply_grassy_terrain_healing(battle, p0_off, game_data)
+                fx.apply_grassy_terrain_healing(battle, p1_off, game_data)
             # Solar Power damage is part of order 5 (onResidual on the ability).
             # apply_misc_eot_abilities also covers Bad Dreams (28) — split it so
             # Solar Power runs here and Bad Dreams runs later at order 28.
@@ -13490,8 +13704,9 @@ def step_battle_gen9_iter(
         # group. Keep both decrements here so stale field state cannot leak
         # into the next turn's speed comparator or Booster Energy checks.
         fx.decrement_trick_room(battle)
-        _terrain_before_eot = int(battle[OFF_FIELD + F_TERRAIN])
-        fx.decrement_terrain(battle)
+        if profile.has_terrain:
+            _terrain_before_eot = int(battle[OFF_FIELD + F_TERRAIN])
+            fx.decrement_terrain(battle)
         _apply_booster_energy_update_tracked(p0_off)
         _apply_booster_energy_update_tracked(p1_off)
         # 28. Harvest (abilities.ts:1743) runs before Sticky Barb / status orbs
@@ -14233,6 +14448,7 @@ def step_battle_gen9_iter(
             state.phase = np.int8(Phase.FORCED_SWITCH)
             state.forced_switch_side = np.int8(1)
 
+    _consume_endturn_quick_claw_roll(profile, gen5_prng)
     state.turn = np.int16(int(state.turn) + 1)
     state.done = np.bool_(done)
     state.winner = np.int8(winner)
@@ -14250,6 +14466,8 @@ def step_battle_gen9(
     resolve_mid_turn_switch0=None,
     wants_tera0: bool = False,
     wants_tera1: bool = False,
+    profile=None,
+    defer_p1_forced_switch: bool = False,
 ) -> Tuple[np.float32, np.float32, bool]:
     """Synchronous wrapper around :func:`step_battle_gen9_iter`."""
     gen = step_battle_gen9_iter(
@@ -14263,6 +14481,7 @@ def step_battle_gen9(
         resolve_mid_turn_switch0=resolve_mid_turn_switch0,
         wants_tera0=wants_tera0,
         wants_tera1=wants_tera1,
+        profile=profile,
     )
     try:
         req = next(gen)
@@ -14279,7 +14498,11 @@ def step_battle_gen9(
     except StopIteration as stop:
         result = stop.value
         forced_side = int(getattr(state, "forced_switch_side", -1))
-        if int(state.phase) == Phase.FORCED_SWITCH and forced_side in (1, 2):
+        if (
+            not defer_p1_forced_switch
+            and int(state.phase) == Phase.FORCED_SWITCH
+            and forced_side in (1, 2)
+        ):
             active0 = int(state.battle_state[OFF_META + M_ACTIVE0])
             active1 = int(state.battle_state[OFF_META + M_ACTIVE1])
             _inline_post_faint_switch_side1(
@@ -14288,6 +14511,7 @@ def step_battle_gen9(
                 gen5_prng,
                 active0,
                 active1,
+                profile=profile,
             )
             if forced_side == 2:
                 state.forced_switch_side = np.int8(0)
@@ -14303,9 +14527,15 @@ def _inline_post_faint_switch_side1(
     gen5_prng,
     active0: int,
     active1: int,
+    profile=None,
 ) -> int:
     """Auto-switch side 1 after EOT faint (sync wrapper back-compat)."""
     from pokepy import effects as fx  # type: ignore
+
+    if profile is None:
+        from pokepy.core.gen_profile import GEN9_PROFILE
+
+        profile = GEN9_PROFILE
 
     battle = state.battle_state
     side_order1 = state.side_order1
@@ -14414,13 +14644,15 @@ def _inline_post_faint_switch_side1(
         _reset_toxic_counter_on_switch_in(battle, new_p1)
         if int(battle[new_p1 + 1]) > 0:
             _opp_target_off = OFF_SIDE0 + active0 * POKEMON_SIZE
-            if int(battle[_opp_target_off + 1]) > 0:
+            if int(battle[_opp_target_off + 1]) > 0 and profile.has_abilities:
                 fx.apply_switch_in_ability_with_trace_reaction(
                     battle,
                     new_p1,
                     _opp_target_off,
                     True,
                     gen5_prng=gen5_prng,
+                    has_terrain=profile.has_terrain,
+                    ability_weather_limited=profile.ability_weather_limited,
                 )
             else:
                 state.pending_opp_switch_in_slot = np.int8(active1)
@@ -14457,12 +14689,18 @@ def step_forced_switch(
     move_effects,
     type_chart: np.ndarray,
     gen5_prng,
+    profile=None,
 ) -> Tuple[np.float32, np.float32, bool]:
     """Forced switch after KO or pivot. No turn passes.
 
     Handles side 0 (player) and side 1 (opponent) symmetrically.
     """
     from pokepy import effects as fx  # type: ignore
+
+    if profile is None:
+        from pokepy.core.gen_profile import GEN9_PROFILE
+
+        profile = GEN9_PROFILE
 
     side = int(side)
     battle = state.battle_state
@@ -14618,38 +14856,57 @@ def step_forced_switch(
                 if not tr_active
                 else (self_switchin_speed <= opp_switchin_speed)
             )
-            if self_first:
-                fx.apply_switch_in_ability(
-                    battle, chosen, opp_off, True, gen5_prng=gen5_prng
-                )
-                if int(battle[opp_off + 1]) > 0:
-                    fx.apply_switch_in_ability(
-                        battle,
-                        opp_off,
-                        chosen,
-                        True,
-                        gen5_prng=gen5_prng,
-                    )
-            else:
-                fx.apply_switch_in_ability(
-                    battle, opp_off, chosen, True, gen5_prng=gen5_prng
-                )
-                if int(battle[chosen + 1]) > 0:
+            if profile.has_abilities:
+                if self_first:
                     fx.apply_switch_in_ability(
                         battle,
                         chosen,
                         opp_off,
                         True,
                         gen5_prng=gen5_prng,
+                        has_terrain=profile.has_terrain,
+                        ability_weather_limited=profile.ability_weather_limited,
                     )
+                    if int(battle[opp_off + 1]) > 0:
+                        fx.apply_switch_in_ability(
+                            battle,
+                            opp_off,
+                            chosen,
+                            True,
+                            gen5_prng=gen5_prng,
+                            has_terrain=profile.has_terrain,
+                            ability_weather_limited=profile.ability_weather_limited,
+                        )
+                else:
+                    fx.apply_switch_in_ability(
+                        battle,
+                        opp_off,
+                        chosen,
+                        True,
+                        gen5_prng=gen5_prng,
+                        has_terrain=profile.has_terrain,
+                        ability_weather_limited=profile.ability_weather_limited,
+                    )
+                    if int(battle[chosen + 1]) > 0:
+                        fx.apply_switch_in_ability(
+                            battle,
+                            chosen,
+                            opp_off,
+                            True,
+                            gen5_prng=gen5_prng,
+                            has_terrain=profile.has_terrain,
+                            ability_weather_limited=profile.ability_weather_limited,
+                        )
             _postswitch_opp_speed = pending_opp_speed
-        elif int(battle[opp_off + 1]) > 0:
+        elif int(battle[opp_off + 1]) > 0 and profile.has_abilities:
             fx.apply_switch_in_ability_with_trace_reaction(
                 battle,
                 chosen,
                 opp_off,
                 True,
                 gen5_prng=gen5_prng,
+                has_terrain=profile.has_terrain,
+                ability_weather_limited=profile.ability_weather_limited,
             )
         elif side == 1:
             state.pending_opp_switch_in_slot = np.int8(target_slot)

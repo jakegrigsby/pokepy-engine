@@ -915,9 +915,25 @@ def create_numpy_arrays(
 
     # === Items Data ===
     items_list = sorted(items_data.items(), key=lambda x: x[1].get("num", 9999))
-    item_id_to_idx = {}
+    item_id_to_idx: dict[str, int] = {}
+    item_entry_by_idx: dict[int, dict] = {}
 
-    max_items = max(i["num"] for _, i in items_list if i.get("num", 0) > 0) + 1
+    max_positive_num = max(
+        (i["num"] for _, i in items_list if i.get("num", 0) > 0), default=0
+    )
+    next_free_idx = max_positive_num + 1
+
+    for item_id, data in items_list:
+        num = data.get("num", 0)
+        if num > 0:
+            idx = num
+        else:
+            idx = next_free_idx
+            next_free_idx += 1
+        item_id_to_idx[item_id] = idx
+        item_entry_by_idx[idx] = data
+
+    max_items = max(item_entry_by_idx) + 1 if item_entry_by_idx else 1
 
     item_fling_power = np.zeros(max_items, dtype=np.int16)
     item_is_berry = np.zeros(max_items, dtype=bool)
@@ -925,16 +941,11 @@ def create_numpy_arrays(
 
     item_names = {}
 
-    for item_id, data in items_list:
-        num = data.get("num", 0)
-        if num <= 0 or num >= max_items:
-            continue
-
-        item_id_to_idx[item_id] = num
-        item_names[num] = data.get("name", item_id)
-        item_fling_power[num] = data.get("flingBasePower", 0)
-        item_is_berry[num] = data.get("isBerry", False)
-        item_is_choice[num] = data.get("isChoice", False)
+    for idx, data in item_entry_by_idx.items():
+        item_names[idx] = data.get("name", "")
+        item_fling_power[idx] = data.get("flingBasePower", 0)
+        item_is_berry[idx] = data.get("isBerry", False)
+        item_is_choice[idx] = data.get("isChoice", False)
 
     np.save(output_dir / "item_fling_power.npy", item_fling_power)
     np.save(output_dir / "item_is_berry.npy", item_is_berry)

@@ -46,8 +46,9 @@ from pokepy.data.loader import (
     load_move_effect_data,
     MoveEffectData,
 )
-from pokepy.data.type_charts import MODERN_TYPE_CHART
-from pokepy.engine.battle_gen9 import step_battle_gen9, step_forced_switch
+from pokepy.core.gen_profile import GEN9_PROFILE, GenProfile, profile_for_gen
+from pokepy.data.type_charts import MODERN_TYPE_CHART, load_type_chart_for_gen
+from pokepy.engine import get_engine, step_battle, step_forced_switch_for_gen
 from pokepy.engine.action_mask import get_action_mask
 from pokepy.mechanics.stats import calc_stat_modern
 from pokepy.utils.gen5_prng import Gen5PRNG
@@ -72,8 +73,13 @@ def _stats_from_resolved_inputs(
     evs: List[int],
     ivs: List[int],
     nature_mods: List[float],
+    *,
+    gen: int = 9,
 ) -> List[int]:
     base = game_data.species_base_stats[species_id]
+    if gen <= 2:
+        # Showdown sim/pokemon.ts: gen<=2 masks IVs with `& 30` (even DV encoding).
+        ivs = [int(v) & 30 for v in ivs]
     return [
         int(
             calc_stat_modern(
@@ -93,7 +99,22 @@ def _resolve_stats_inputs(
     evs: Optional[List[int]] = None,
     ivs: Optional[List[int]] = None,
     nature: Optional[Any] = None,
+    *,
+    use_natures_evs: bool = True,
 ) -> Tuple[List[int], List[int], List[float]]:
+    if not use_natures_evs:
+        if evs is None:
+            evs = [84] * 6
+        if ivs is None:
+            ivs = [31] * 6
+        return list(evs), list(ivs), [1.0] * 6
+    explicit_nature_mods = _nature_to_mods(nature) if nature is not None else None
+    if evs is not None and explicit_nature_mods is not None:
+        # Caller supplied both EVs and nature — use literally (Showdown parity,
+        # scripted teams). Do not snap to the gen9ou spread table.
+        if ivs is None:
+            ivs = [31] * 6
+        return list(evs), list(ivs), list(explicit_nature_mods)
     if evs is None:
         snapped_evs = [84] * 6
         nature_mods = [1.0] * 6
@@ -102,7 +123,7 @@ def _resolve_stats_inputs(
 
         evs_arr = np.asarray(evs, dtype=np.int16).reshape(6)
         diffs = np.abs(EV_SPREADS_ARRAY - evs_arr).sum(axis=1)
-        target_mods = _nature_to_mods(nature) if nature is not None else None
+        target_mods = explicit_nature_mods
         if target_mods is not None:
             mask = np.all(
                 np.isclose(
@@ -271,12 +292,14 @@ def init_battle_state(
     team1: Dict[str, Any],
     game_data: Optional[GameData] = None,
     seed: int = 12345,
+    gen: int = 9,
 ) -> MultiFormatState:
-    """Build a fully-initialized MultiFormatState ready for `step_battle_gen9`."""
+    """Build a fully-initialized MultiFormatState ready for battle stepping."""
+    profile = profile_for_gen(gen)
     if game_data is None:
-        game_data = load_game_data()
+        game_data = load_game_data(gen=gen)
 
-    state = MultiFormatState.create_empty(format_id=FORMAT_GEN9OU)
+    state = MultiFormatState.create_empty(format_id=profile.format_id)
     state.phase = np.int8(PHASE_BATTLE)
     state.gen5_seed = np.uint64(seed)
 
@@ -298,8 +321,16 @@ def init_battle_state(
         for i, sp in enumerate(team["species"]):
             species[i] = sp
             moves[i] = team["moves"][i]
-            items[i] = team["items"][i]
-            abilities[i] = team["abilities"][i]
+            ability_id = 0 if not profile.has_abilities else team["abilities"][i]
+            if profile.has_abilities and int(ability_id) == 0:
+                default_ability = int(
+                    np.asarray(game_data.species_abilities)[int(sp), 0]
+                )
+                if default_ability >= 0:
+                    ability_id = default_ability
+            item_id = 0 if not profile.has_items else team["items"][i]
+            items[i] = item_id
+            abilities[i] = ability_id
             tera[i] = team["tera_types"][i]
             for j, mid in enumerate(team["moves"][i]):
                 if mid >= 0:
@@ -318,6 +349,7 @@ def init_battle_state(
                 evs=evs_i,
                 ivs=ivs_i,
                 nature=nat_i,
+                use_natures_evs=profile.has_natures_evs,
             )
             stats = _stats_from_resolved_inputs(
                 sp,
@@ -326,6 +358,7 @@ def init_battle_state(
                 resolved_evs,
                 resolved_ivs,
                 resolved_nature_mods,
+                gen=profile.gen,
             )
             evs_full[i] = np.asarray(resolved_evs, dtype=np.int16)
             ivs_full[i] = np.asarray(resolved_ivs, dtype=np.int16)
@@ -340,8 +373,8 @@ def init_battle_state(
                 level=level,
                 type1=type1,
                 type2=type2,
-                ability_id=team["abilities"][i],
-                item_id=team["items"][i],
+                ability_id=ability_id,
+                item_id=item_id,
                 stats=stats,
                 tera_type=team["tera_types"][i],
             )
@@ -451,7 +484,8 @@ def init_battle_state(
     seed_lo = seed & 0xFFFF
     seed_hi = (seed >> 16) & 0xFFFF
     startup_prng = _RecordingPRNG(Gen5PRNG((seed_lo, seed_hi, 0, 0)))
-    _consume_team_preview_queue_sort_frames(bs, startup_prng)
+    if profile.has_teampreview:
+        _consume_team_preview_queue_sort_frames(bs, startup_prng)
 
     p0_off = OFF_SIDE0  # active = slot 0
     p1_off = OFF_SIDE1
@@ -508,7 +542,13 @@ def init_battle_state(
         sw_b = _lead_sig(switcher_off)
         opp_b = _lead_boosts(opp_off)
         apply_switch_in_ability(
-            bs, switcher_off, opp_off, did_switch=True, gen5_prng=startup_prng
+            bs,
+            switcher_off,
+            opp_off,
+            did_switch=True,
+            gen5_prng=startup_prng,
+            has_terrain=profile.has_terrain,
+            ability_weather_limited=profile.ability_weather_limited,
         )
         field_a = (int(bs[OFF_FIELD + F_WEATHER]), int(bs[OFF_FIELD + F_TERRAIN]))
         sw_a = _lead_sig(switcher_off)
@@ -524,13 +564,20 @@ def init_battle_state(
         if _lead_boost_changed(opp_b, opp_a, raised=True):
             _lead_abil_arr(opp_off)[0] = True
 
-    if p0_first:
-        _apply_lead_ability(p0_off, p1_off)
-        _apply_lead_ability(p1_off, p0_off)
-    else:
-        _apply_lead_ability(p1_off, p0_off)
-        _apply_lead_ability(p0_off, p1_off)
+    if profile.has_abilities:
+        if p0_first:
+            _apply_lead_ability(p0_off, p1_off)
+            _apply_lead_ability(p1_off, p0_off)
+        else:
+            _apply_lead_ability(p1_off, p0_off)
+            _apply_lead_ability(p0_off, p1_off)
     if sp0 == sp1:
+        # Showdown's startup runSwitch + SwitchIn fieldEvent path can burn
+        # multiple tied speedSort frames after the insertChoice roll. Formats
+        # without teampreview skip the preview queue.sort but still spend the
+        # third turn-0 shuffle before the post-runSwitch Update frame below.
+        if not profile.has_teampreview:
+            startup_prng.random(0, 2)
         startup_prng.random(0, 2)
     state.startup_prng_calls = tuple(startup_prng.calls)
 
@@ -552,11 +599,14 @@ class BattleEnv:
         mappings: Optional[IDMappings] = None,
         move_effects: Optional[MoveEffectData] = None,
         seed: int = 12345,
+        gen: int = 9,
     ):
-        self.game_data = game_data or load_game_data()
-        self.mappings = mappings or load_id_mappings()
-        self.move_effects = move_effects or load_move_effect_data()
-        self.type_chart = MODERN_TYPE_CHART
+        self.gen = int(gen)
+        self.profile = profile_for_gen(self.gen)
+        self.game_data = game_data or load_game_data(gen=self.gen)
+        self.mappings = mappings or load_id_mappings(gen=self.gen)
+        self.move_effects = move_effects or load_move_effect_data(gen=self.gen)
+        self.type_chart = load_type_chart_for_gen(self.gen)
         self.seed = seed
         self.prng = Gen5PRNG((seed & 0xFFFF, (seed >> 16) & 0xFFFF, 0, 0))
         self.state: Optional[MultiFormatState] = None
@@ -577,7 +627,9 @@ class BattleEnv:
         if seed is not None:
             self.seed = int(seed)
         self.prng = Gen5PRNG((self.seed & 0xFFFF, (self.seed >> 16) & 0xFFFF, 0, 0))
-        self.state = init_battle_state(team0, team1, self.game_data, self.seed)
+        self.state = init_battle_state(
+            team0, team1, self.game_data, self.seed, gen=self.gen
+        )
         return self.observe(side=0)
 
     def observe(self, side: int = 0) -> Dict[str, np.ndarray]:
@@ -600,7 +652,8 @@ class BattleEnv:
         """
         assert self.state is not None
         if int(self.state.phase) == PHASE_FORCED_SWITCH:
-            r0, r1, done = step_forced_switch(
+            r0, r1, done = step_forced_switch_for_gen(
+                self.gen,
                 self.state,
                 action0,
                 side=0,
@@ -610,7 +663,8 @@ class BattleEnv:
                 gen5_prng=self.prng,
             )
         else:
-            r0, r1, done = step_battle_gen9(
+            r0, r1, done = step_battle(
+                self.gen,
                 self.state,
                 action0,
                 action1,
@@ -618,8 +672,8 @@ class BattleEnv:
                 self.move_effects,
                 self.type_chart,
                 self.prng,
-                wants_tera0=tera0,
-                wants_tera1=tera1,
+                wants_tera0=tera0 if self.profile.has_tera else False,
+                wants_tera1=tera1 if self.profile.has_tera else False,
             )
         obs = self.observe(side=0)
         return obs, float(r0), float(r1), bool(done)

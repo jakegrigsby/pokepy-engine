@@ -197,3 +197,108 @@ def create_modern_type_chart() -> np.ndarray:
 
 
 MODERN_TYPE_CHART = create_modern_type_chart()
+
+_TYPE_CHART_CACHE: dict[int, np.ndarray] = {9: MODERN_TYPE_CHART}
+
+
+def _type_chart_from_showdown_json(gen: int) -> np.ndarray:
+    """Build type chart from metamon showdown_dex static JSON."""
+    import json
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parents[4] / "backend" / "showdown_dex" / "static"
+    chart_path = root / "typechart" / f"gen{gen}typechart.json"
+    if not chart_path.exists():
+        raise FileNotFoundError(chart_path)
+    with open(chart_path) as f:
+        json_chart = json.load(f)
+
+    from pokepy.core.constants import (
+        TYPE_NORMAL,
+        TYPE_FIRE,
+        TYPE_WATER,
+        TYPE_ELECTRIC,
+        TYPE_GRASS,
+        TYPE_ICE,
+        TYPE_FIGHTING,
+        TYPE_POISON,
+        TYPE_GROUND,
+        TYPE_FLYING,
+        TYPE_PSYCHIC,
+        TYPE_BUG,
+        TYPE_ROCK,
+        TYPE_GHOST,
+        TYPE_DRAGON,
+        TYPE_DARK,
+        TYPE_STEEL,
+        TYPE_FAIRY,
+    )
+
+    name_to_id = {
+        "NORMAL": TYPE_NORMAL,
+        "FIRE": TYPE_FIRE,
+        "WATER": TYPE_WATER,
+        "ELECTRIC": TYPE_ELECTRIC,
+        "GRASS": TYPE_GRASS,
+        "ICE": TYPE_ICE,
+        "FIGHTING": TYPE_FIGHTING,
+        "POISON": TYPE_POISON,
+        "GROUND": TYPE_GROUND,
+        "FLYING": TYPE_FLYING,
+        "PSYCHIC": TYPE_PSYCHIC,
+        "BUG": TYPE_BUG,
+        "ROCK": TYPE_ROCK,
+        "GHOST": TYPE_GHOST,
+        "DRAGON": TYPE_DRAGON,
+        "DARK": TYPE_DARK,
+        "STEEL": TYPE_STEEL,
+        "FAIRY": TYPE_FAIRY,
+    }
+    chart = np.ones((19, 19), dtype=np.float32)
+    for def_name, data in json_chart.items():
+        def_id = name_to_id.get(str(def_name).upper())
+        if def_id is None:
+            continue
+        for atk_name, taken in data.get("damageTaken", {}).items():
+            atk_id = name_to_id.get(str(atk_name).upper())
+            if atk_id is None:
+                continue
+            if taken == 3:
+                chart[def_id, atk_id] = 0.0
+            elif taken == 1:
+                chart[def_id, atk_id] = 2.0
+            elif taken == 2:
+                chart[def_id, atk_id] = 0.5
+            else:
+                chart[def_id, atk_id] = 1.0
+    return chart
+
+
+def load_type_chart_for_gen(gen: int = 9) -> np.ndarray:
+    """Return type effectiveness chart for ``gen`` (cached).
+
+    Prefer metamon ``showdown_dex/static/typechart/gen{N}typechart.json`` when
+    present — it matches Showdown's live Dex.forGen(N) effectiveness. The
+    legacy ``type_chart.npy`` extracted from PS mod diffs can drift (e.g. gen4
+    Psychic self-resist missing).
+    """
+    gen = int(gen)
+    if gen in _TYPE_CHART_CACHE:
+        return _TYPE_CHART_CACHE[gen]
+    if gen == 9:
+        chart = MODERN_TYPE_CHART
+    else:
+        try:
+            chart = _type_chart_from_showdown_json(gen)
+        except FileNotFoundError:
+            try:
+                from pokepy.data.loader import load_game_data
+
+                chart = load_game_data(gen=gen).type_chart
+            except FileNotFoundError:
+                if gen >= 6:
+                    chart = MODERN_TYPE_CHART
+                else:
+                    raise
+    _TYPE_CHART_CACHE[gen] = chart
+    return chart

@@ -63,6 +63,7 @@ def apply_hazard_from_move(
     user_ability: int = -1,
     user_offset: int | None = None,
     source_hp_override: int | None = None,
+    enabled_hazards: frozenset | None = None,
 ) -> None:
     """Port of _apply_hazard_from_move (line ~7816).
 
@@ -87,6 +88,17 @@ def apply_hazard_from_move(
     hazard_type = int(move_effects.hazard[move_id])
     if hazard_type == 0:
         return
+
+    if enabled_hazards is not None:
+        _hazard_names = {
+            HAZARD_STEALTH_ROCK: "stealthrock",
+            HAZARD_SPIKES: "spikes",
+            HAZARD_TOXIC_SPIKES: "toxicspikes",
+            HAZARD_STICKY_WEB: "stickyweb",
+        }
+        hname = _hazard_names.get(hazard_type)
+        if hname is not None and hname not in enabled_hazards:
+            return
 
     # Stone Axe / Ceaseless Edge gating: damaging hazard-setters need
     # source.hp > 0 and !Sheer Force, and they don't bounce.

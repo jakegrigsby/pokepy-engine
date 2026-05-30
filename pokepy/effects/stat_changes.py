@@ -290,6 +290,8 @@ def apply_stat_changes_from_move(
     move_effects,
     gen5_prng: Gen5PRNG,
     prerolled_roll: "int | None" = None,
+    *,
+    gen: int = 9,
 ) -> None:
     """Port of MultiFormatFastEnv._apply_stat_changes_from_move (line ~7225).
 
@@ -393,10 +395,20 @@ def apply_stat_changes_from_move(
         should_apply = True
     else:
         if prerolled_roll is None:
-            roll = gen5_prng.random(100)
+            if gen <= 2:
+                roll = gen5_prng.random(256)
+                threshold = int(stat_chance * 255 // 100)
+                should_apply = int(roll) < threshold
+            else:
+                roll = gen5_prng.random(100)
+                should_apply = int(roll) < stat_chance
         else:
             roll = int(prerolled_roll)
-        should_apply = roll < stat_chance
+            if gen <= 2:
+                threshold = int(stat_chance * 255 // 100)
+                should_apply = roll < threshold
+            else:
+                should_apply = roll < stat_chance
         if not should_apply:
             return
 

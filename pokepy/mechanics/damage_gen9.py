@@ -244,6 +244,8 @@ from pokepy.core.constants import (
     ITEM_SILK_SCARF,
     FLAG_BOOSTER_ENERGY_ACTIVE,
 )
+from pokepy.core.constants import GEN1_PHYSICAL_TYPES
+from pokepy.core.gen_profile import GEN9_PROFILE, GenProfile, crit_denom_from_table
 from pokepy.core.bitpack import extract_boost, get_status
 from pokepy.mechanics.stats import get_boost_multiplier
 from pokepy.effects.ability_suppression import effective_ability
@@ -742,6 +744,7 @@ def calc_damage_gen9(
     suppress_attacker_boosts: bool = False,
     override_field_atk_ability: int = -1,
     override_field_def_ability: int = -1,
+    profile: GenProfile = GEN9_PROFILE,
 ) -> int:
     """Returns damage as a Python int. Uses gen5_prng (Showdown LCG) for all rolls.
 
@@ -760,6 +763,58 @@ def calc_damage_gen9(
     resolved contact-status result so the engine can materialize it later
     without rerolling.
     """
+    if profile.gen == 1:
+        from pokepy.mechanics.damage_gen1 import calc_damage_gen1
+
+        return calc_damage_gen1(
+            battle,
+            atk_side,
+            move_idx,
+            player_moves,
+            opp_moves,
+            game_data,
+            move_effects,
+            type_chart,
+            is_moving_last=is_moving_last,
+            override_move_id=override_move_id,
+            gen5_prng=gen5_prng,
+            out_meta=out_meta,
+            target_hurt_this_turn=target_hurt_this_turn,
+            target_newly_switched=target_newly_switched,
+            user_hurt_by_target_this_turn=user_hurt_by_target_this_turn,
+            suppress_attacker_item=suppress_attacker_item,
+            suppress_attacker_boosts=suppress_attacker_boosts,
+            override_field_atk_ability=override_field_atk_ability,
+            override_field_def_ability=override_field_def_ability,
+            profile=profile,
+        )
+
+    if profile.gen == 2:
+        from pokepy.mechanics.damage_gen2 import calc_damage_gen2
+
+        return calc_damage_gen2(
+            battle,
+            atk_side,
+            move_idx,
+            player_moves,
+            opp_moves,
+            game_data,
+            move_effects,
+            type_chart,
+            is_moving_last=is_moving_last,
+            override_move_id=override_move_id,
+            gen5_prng=gen5_prng,
+            out_meta=out_meta,
+            target_hurt_this_turn=target_hurt_this_turn,
+            target_newly_switched=target_newly_switched,
+            user_hurt_by_target_this_turn=user_hurt_by_target_this_turn,
+            suppress_attacker_item=suppress_attacker_item,
+            suppress_attacker_boosts=suppress_attacker_boosts,
+            override_field_atk_ability=override_field_atk_ability,
+            override_field_def_ability=override_field_def_ability,
+            profile=profile,
+        )
+
     if gen5_prng is None:
         gen5_prng = Gen5PRNG((1, 1, 1, 1))
 
@@ -1145,7 +1200,14 @@ def calc_damage_gen9(
 
     # Accuracy
     accuracy = int(game_data.move_accuracy[move_id])
-    is_physical = move_cat == CAT_PHYSICAL
+    if profile.phys_spec_mode == "type":
+        is_physical = bool(np.isin(move_type, GEN1_PHYSICAL_TYPES))
+        # Showdown's Struggle is category Physical even in the gen 3/4 type
+        # split; only its effectiveness is typeless (???).
+        if is_struggle:
+            is_physical = True
+    else:
+        is_physical = move_cat == CAT_PHYSICAL
 
     atk_ability_pre = effective_ability(battle, atk_offset, def_offset)
     has_hustle = atk_ability_pre == ABILITY_HUSTLE
@@ -2764,15 +2826,8 @@ def calc_damage_gen9(
     # Focus Energy volatile adds +2 crit ratio (Showdown: pokemon.volatiles['focusenergy'])
     if (atk_ext_vol & EXT_VOL_FOCUS_ENERGY) != 0:
         crit_stage += 2
-    crit_stage = max(1, min(4, crit_stage))
-    if crit_stage >= 4:
-        crit_denom = 1
-    elif crit_stage == 3:
-        crit_denom = 2
-    elif crit_stage == 2:
-        crit_denom = 8
-    else:  # stage 1 = base
-        crit_denom = 24
+    crit_stage = max(1, min(profile.crit_stage_max, crit_stage))
+    crit_denom = crit_denom_from_table(crit_stage, profile)
     # Showdown willCrit moves: Frost Breath (524), Storm Throw (480),
     # Wicked Blow (817), Surging Strikes (818), Flower Trick (870),
     # Zippy Zap (729). Source: data/moves.ts grep `willCrit: true`.
@@ -2838,7 +2893,7 @@ def calc_damage_gen9(
     # NOT as a crit mult bump. Crit itself is a plain trunc(damage*1.5) per
     # sim/battle-actions.ts:1748. We apply Sniper separately in _dmg_chain below.
     has_sniper = atk_ability == ABILITY_SNIPER
-    crit_mult = 1.5 if is_crit else 1.0
+    crit_mult = profile.crit_damage_mult if is_crit else 1.0
 
     # Crits ignore positive defensive boosts / negative offensive boosts.
     # Showdown: crit sets defBoost=0 then recomputes defense stat + reapplies
@@ -3085,9 +3140,27 @@ def calc_damage_gen9(
         after_crit = int(base_damage * crit_mult)
     else:
         after_crit = base_damage
-    after_roll = math.floor(math.floor(after_crit * rand_pct) / 100)
-    after_stab = _show_modify(after_roll, stab_mult)
-    damage = math.floor(after_stab * type_mult)
+    if profile.gen <= 3:
+        # RSE/ADV (gen 3 and earlier): STAB + type effectiveness, then randomizer.
+        # Showdown data/mods/gen3/scripts.ts modifyDamage applies the damage
+        # roll last via battle.randomizer(baseDamage).
+        after_stab = (
+            _show_modify(after_crit, stab_mult) if stab_mult != 1.0 else after_crit
+        )
+        after_type = after_stab
+        if type_mult >= 2.0:
+            for _ in range(int(round(math.log2(type_mult)))):
+                after_type *= 2
+        elif 0.0 < type_mult < 1.0:
+            for _ in range(int(round(-math.log2(type_mult)))):
+                after_type = math.floor(after_type / 2)
+        damage = math.floor(math.floor(after_type * rand_pct) / 100)
+        if damage < 1:
+            damage = 1
+    else:
+        after_roll = math.floor(math.floor(after_crit * rand_pct) / 100)
+        after_stab = _show_modify(after_roll, stab_mult)
+        damage = math.floor(after_stab * type_mult)
 
     # Precompute burn condition — applied per hit below.
     is_burned = atk_status == STATUS_BURN

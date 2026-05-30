@@ -338,9 +338,12 @@ def _can_apply_status(
     target_item = int(battle[target_offset + 6])
     has_overcoat_status = target_ability == ABILITY_OVERCOAT
     has_goggles_status = target_item == ITEM_SAFETY_GOGGLES
+    gen = int(getattr(game_data, "gen", 9))
     grass_powder_immune = (
-        is_grass_type or has_overcoat_status or has_goggles_status
-    ) and is_powder_move
+        (is_grass_type or has_overcoat_status or has_goggles_status)
+        and is_powder_move
+        and gen >= 6
+    )
 
     # Safeguard blocks all non-volatile status from opponents.
     target_is_side0 = target_offset < OFF_SIDE1
@@ -419,14 +422,22 @@ def _try_apply_status(
     status_offset = target_offset + 12
 
     # Sleep is the only case that still needs a PRNG frame here.
-    # Showdown conditions.ts:slp.onStart uses random(2, 5), i.e. stored
-    # duration values 2..4 rather than 1..3.
+    # Showdown slp.onStart duration varies by gen (conditions.ts + gen3 mod).
     if status == STATUS_SLEEP:
-        initial_turns = (
-            int(prerolled_sleep_turns)
-            if prerolled_sleep_turns is not None
-            else gen5_prng.random(2, 5)
-        )
+        if prerolled_sleep_turns is not None:
+            initial_turns = int(prerolled_sleep_turns)
+        else:
+            gen = int(getattr(game_data, "gen", 9))
+            if gen == 1:
+                initial_turns = gen5_prng.random(1, 8)
+            elif gen == 2:
+                initial_turns = gen5_prng.random(2, 8)
+            elif gen == 3:
+                initial_turns = gen5_prng.random(2, 6)
+            elif gen == 4:
+                initial_turns = gen5_prng.random(2, 6)
+            else:
+                initial_turns = gen5_prng.random(2, 5)
     else:
         initial_turns = 0
 
@@ -782,7 +793,12 @@ def apply_end_of_turn_status(
     if status == STATUS_TOXIC:
         new_turns = new_toxic_turns
     elif status == STATUS_SLEEP:
-        new_turns = status_turns if skip_sleep_decrement else new_sleep_turns
+        gen = int(getattr(game_data, "gen", 9))
+        # Gen 3 decrements/cures sleep only in slp.onBeforeMove, not at EOT.
+        if gen == 3:
+            new_turns = status_turns
+        else:
+            new_turns = status_turns if skip_sleep_decrement else new_sleep_turns
     else:
         new_turns = status_turns
 

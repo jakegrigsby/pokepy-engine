@@ -183,7 +183,10 @@ def get_battle_move_mask(
     is_disabled = disable_move >= 0 and disable_turns > 0
     disable_mask = np.ones(4, dtype=bool)
     if is_disabled and 0 <= disable_move < 4:
-        disable_mask[disable_move] = False
+        disabled_mid = int(moves_arr[active, disable_move])
+        for slot in range(4):
+            if int(moves_arr[active, slot]) == disabled_mid:
+                disable_mask[slot] = False
 
     # Torment
     ext_vol = int(battle[f_extvol])
